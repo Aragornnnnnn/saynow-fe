@@ -1,0 +1,11 @@
+{
+  "name": "saynow-fe",
+  "private": true,
+  "scripts": {
+    "web:dev": "pnpm --filter web dev",
+    "web:build": "pnpm --filter web build",
+    "web:lint": "pnpm --filter web lint",
+    "mobile:start": "pnpm --filter mobile start"
+  },
+  "packageManager": "pnpm@9.0.0"
+}
