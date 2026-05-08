@@ -29,11 +29,11 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "oesnuj",
     "extra": {
       "eas": {
-        "projectId": "d3f2258a-c49d-4329-9571-53c7a210da3e"
+        "projectId": "97f2d216-f1c0-41d1-b912-fd31c5526f86"
       }
-    },
-    "owner": "oesnuj"
+    }
   }
 }
