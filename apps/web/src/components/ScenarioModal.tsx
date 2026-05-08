@@ -2,21 +2,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef, useState } from 'react';
-import { Scenario } from '@/lib/scenarios';
-
-const CATEGORY_IMAGES: Record<string, string> = {
-  카페: '☕',
-  공항: '✈️',
-  호텔: '🏨',
-  식당: '🍽️',
-  택시: '🚕',
-};
+import { useRef, useState, useEffect } from 'react';
+import { ApiScenarioSummary, getScenarioDetail, ApiScenarioDetail } from '@/lib/api';
 
 const DRAG_CLOSE_THRESHOLD = 100;
 
 interface ScenarioModalProps {
-  scenario: Scenario;
+  scenario: ApiScenarioSummary;
   onClose: () => void;
 }
 
@@ -24,6 +16,11 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
   const router = useRouter();
   const startYRef = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
+  const [detail, setDetail] = useState<ApiScenarioDetail | null>(null);
+
+  useEffect(() => {
+    getScenarioDetail(scenario.scenarioId).then(setDetail);
+  }, [scenario.scenarioId]);
 
   function handleStart(clientY: number) {
     startYRef.current = clientY;
@@ -64,9 +61,13 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
         {/* 핸들 */}
         <div className='mx-auto mb-5 h-1 w-10 rounded-full bg-border cursor-grab active:cursor-grabbing' />
 
-        {/* 카테고리 이미지 영역 */}
+        {/* 이미지 영역 */}
         <div className='mb-5 flex h-36 items-center justify-center rounded-2xl bg-[#FFF4ED]'>
-          <span className='text-7xl'>{CATEGORY_IMAGES[scenario.category]}</span>
+          {scenario.thumbnailUrl ? (
+            <img src={scenario.thumbnailUrl} alt={scenario.title} className='h-full w-full rounded-2xl object-cover' />
+          ) : (
+            <span className='text-7xl'>🗣️</span>
+          )}
         </div>
 
         {/* 제목 + 난이도 */}
@@ -74,25 +75,27 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
           <h2 className='text-lg font-bold text-foreground'>{scenario.title}</h2>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-              scenario.difficulty === '쉬움' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'
+              scenario.difficulty === 'EASY' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'
             }`}
           >
-            {scenario.difficulty}
+            {scenario.difficulty === 'EASY' ? '쉬움' : '어려움'}
           </span>
         </div>
 
         {/* 상황 설명 */}
-        <p className='mb-4 text-sm text-muted-foreground leading-relaxed'>{scenario.description}</p>
+        <p className='mb-4 text-sm text-muted-foreground leading-relaxed'>
+          {detail?.situationDescription ?? '...'}
+        </p>
 
         {/* 달성 목표 */}
         <div className='mb-6 rounded-xl bg-[#FFF4ED] px-4 py-3'>
           <p className='text-xs font-semibold text-primary mb-0.5'>달성 목표</p>
-          <p className='text-sm text-foreground'>{scenario.goal}</p>
+          <p className='text-sm text-foreground'>{scenario.successGoal}</p>
         </div>
 
         {/* 시작 버튼 */}
         <button
-          onClick={() => router.push(`/conversation/${scenario.id}`)}
+          onClick={() => router.push(`/conversation/${scenario.scenarioId}`)}
           className='w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white active:opacity-80 transition-opacity'
         >
           시작하기

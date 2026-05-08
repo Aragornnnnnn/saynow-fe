@@ -1,23 +1,20 @@
 // 대화 페이지 — 시나리오별 외국인 대사를 순차적으로 연습하는 화면
 'use client';
 
-import { use, useRef, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic, Square } from 'lucide-react';
-// TODO: API 연동 시 SCENARIOS, SCENARIO_TURNS 제거하고 아래 API로 교체
-// POST /api/v1/sessions { scenarioId } → sessionId, 첫 babsaeText 반환 → setSessionId, setCurrentLine
-// POST /api/v1/sessions/{sessionId}/turns (multipart: audio + request) → 다음 babsaeText, transcript 반환
-// PUT /api/v1/sessions/{sessionId}/metrics/micReady { latencyMs } → 마이크 준비 지연 기록
-// POST /api/v1/sessions/{sessionId}/exit → 나가기 확인 후 호출
-import { SCENARIOS, SCENARIO_TURNS } from '@/lib/scenarios';
+import { startSession, submitTurn, recordMicReady, exitSession } from '@/lib/api';
+import { useNativeBridge } from '@/hooks/useNativeBridge';
+import { useAppStore } from '@/store/appStore';
 import ExitConfirmModal from './ExitConfirmModal';
 
 const CATEGORY_BG: Record<string, string> = {
-  카페: 'from-amber-900 via-amber-700 to-amber-500',
-  공항: 'from-sky-900 via-sky-700 to-sky-500',
-  호텔: 'from-indigo-900 via-indigo-700 to-indigo-500',
-  식당: 'from-rose-900 via-rose-700 to-rose-500',
-  택시: 'from-yellow-900 via-yellow-700 to-yellow-500',
+  cafe: 'from-amber-900 via-amber-700 to-amber-500',
+  airport: 'from-sky-900 via-sky-700 to-sky-500',
+  hotel: 'from-indigo-900 via-indigo-700 to-indigo-500',
+  restaurant: 'from-rose-900 via-rose-700 to-rose-500',
+  taxi: 'from-yellow-900 via-yellow-700 to-yellow-500',
 };
 
 type RecordingState = 'idle' | 'recording' | 'done';
@@ -26,56 +23,112 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const { id } = use(params);
   const router = useRouter();
 
-  const scenario = SCENARIOS.find((s) => s.id === id);
-  const turns = SCENARIO_TURNS[id] ?? [];
-  const totalTurns = turns.length;
-
-  // API 연동 시 POST /api/v1/sessions 응답의 sessionId로 세팅
-  const [sessionId, setSessionId] = useState<string | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [turnIndex, setTurnIndex] = useState(0);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [currentLine, setCurrentLine] = useState('');
+  const [followUpCount, setFollowUpCount] = useState(0);
+  const [maxFollowUpCount, setMaxFollowUpCount] = useState(5);
+  const [feedbackAvailable, setFeedbackAvailable] = useState(false);
+  const [categoryId, setCategoryId] = useState('');
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [transcript, setTranscript] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
-  const micPressedAtRef = useRef<number | null>(null); // 마이크 버튼 누른 시각 (ms)
+  const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  if (!scenario) {
-    return (
-      <main className="flex h-full items-center justify-center bg-background">
-        <p className="text-muted-foreground">시나리오를 찾을 수 없습니다.</p>
-      </main>
-    );
-  }
+  const micPermission = useAppStore((s) => s.micPermission);
+  const micPressedAtRef = useRef<number | null>(null);
+  const speechStartedAfterMsRef = useRef(0);
+  const sessionStartedRef = useRef(false);
 
-  const bgGradient = CATEGORY_BG[scenario.category] ?? 'from-gray-900 via-gray-700 to-gray-500';
-  const currentTurn = turns[turnIndex];
-  const isLastTurn = turnIndex === totalTurns - 1;
+  useEffect(() => {
+    if (sessionStartedRef.current) return;
+    sessionStartedRef.current = true;
+    startSession(id)
+      .then((data) => {
+        setSessionId(data.sessionId);
+        setCurrentLine(data.babsaeText);
+        setMaxFollowUpCount(data.maxFollowUpCount);
+        setCategoryId(data.scenarioId.split('_')[0]);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, [id]);
+
+  const { startRecording, stopRecording, isNative } = useNativeBridge(
+    async (uri) => {
+      if (!sessionId) return;
+      try {
+        const result = await submitTurn(sessionId, uri, speechStartedAfterMsRef.current);
+        setTranscript(result.transcript);
+        setRecordingState('done');
+        setCurrentLine(result.babsaeText);
+        setFollowUpCount(result.followUpCount);
+        setFeedbackAvailable(result.feedbackAvailable);
+      } catch (e) {
+        setError((e as Error).message);
+        setRecordingState('idle');
+      }
+    },
+    () => setShowMicDeniedModal(true),
+  );
+
+  const bgGradient = CATEGORY_BG[categoryId] ?? 'from-gray-900 via-gray-700 to-gray-500';
+  const isLastTurn = feedbackAvailable || followUpCount >= maxFollowUpCount;
   const canProceed = recordingState === 'done';
 
   function handleMicPress() {
+    if (micPermission === 'denied') {
+      setShowMicDeniedModal(true);
+      return;
+    }
     if (recordingState === 'idle') {
       micPressedAtRef.current = Date.now();
       setRecordingState('recording');
       setTranscript('');
+      startRecording();
+      if (sessionId) {
+        recordMicReady(sessionId, 0);
+      }
     } else if (recordingState === 'recording') {
-      const speechStartedAfterMs = micPressedAtRef.current
+      speechStartedAfterMsRef.current = micPressedAtRef.current
         ? Date.now() - micPressedAtRef.current
         : 0;
-      // API 연동 시 speechStartedAfterMs를 턴 제출 요청에 포함
-      console.log('speechStartedAfterMs:', speechStartedAfterMs);
-      setRecordingState('done');
-      setTranscript('I\'d like an iced americano, please.');
+      stopRecording();
     }
   }
 
   function handleNext() {
     if (isLastTurn) {
-      // sessionId는 API 연동 시 실제 값으로 교체됨. 현재는 scenarioId로 임시 사용
-      router.push(`/feedback/${sessionId ?? id}`);
+      router.push(`/feedback/${sessionId}`);
     } else {
-      setTurnIndex((i) => i + 1);
       setRecordingState('idle');
       setTranscript('');
     }
+  }
+
+  async function handleExit() {
+    if (sessionId) await exitSession(sessionId).catch(() => {});
+    router.push('/');
+  }
+
+  if (error) {
+    return (
+      <main className="flex h-full items-center justify-center bg-background px-6">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">{error}</p>
+          <button onClick={() => router.push('/')} className="text-sm text-primary font-medium">
+            돌아가기
+          </button>
+        </div>
+      </main>
+    );
+  }
+
+  if (!currentLine) {
+    return (
+      <main className="flex h-full items-center justify-center bg-background">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </main>
+    );
   }
 
   return (
@@ -92,27 +145,21 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           <ChevronLeft size={20} />
           <span className="text-sm font-medium">나가기</span>
         </button>
-        {/* 진행 표시 */}
         <span className="ml-auto text-xs text-white/60 font-medium">
-          {turnIndex + 1} / {totalTurns}
+          {followUpCount} / {maxFollowUpCount}
         </span>
       </div>
 
       {/* 외국인 대사 박스 */}
       <div className="relative z-10 mx-4 mt-4">
         <div className="rounded-2xl bg-white/15 backdrop-blur-md px-5 py-4 border border-white/20">
-          <p className="text-xs font-semibold text-white/60 mb-2 uppercase tracking-wide">
-            {scenario.emoji} {scenario.category}
-          </p>
-          <p className="text-base font-medium text-white leading-relaxed">
-            {currentTurn?.foreignerLine}
-          </p>
+          <p className="text-base font-medium text-white leading-relaxed">{currentLine}</p>
         </div>
       </div>
 
-      {/* 중앙 이모지 배경 장식 */}
+      {/* 중앙 장식 */}
       <div className="relative z-10 flex flex-1 items-center justify-center">
-        <span className="text-[120px] opacity-20 select-none">{scenario.emoji}</span>
+        <span className="text-[120px] opacity-20 select-none">🗣️</span>
       </div>
 
       {/* 하단 — 마이크 + 자막 + 버튼 */}
@@ -121,7 +168,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         <div className="mb-4 min-h-12 flex items-center justify-center">
           {recordingState === 'recording' && (
             <div className="flex items-center gap-3">
-              {/* 음파 애니메이션 */}
               <WaveAnimation />
               <span className="text-sm text-white/70 italic">듣고 있어요...</span>
             </div>
@@ -174,9 +220,39 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {showExitModal && (
         <ExitConfirmModal
-          onConfirm={() => router.push('/')}
+          onConfirm={handleExit}
           onCancel={() => setShowExitModal(false)}
         />
+      )}
+
+      {showMicDeniedModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setShowMicDeniedModal(false)}>
+          <div className="mx-6 w-full max-w-sm rounded-2xl bg-card px-6 py-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-base font-bold text-foreground mb-2">마이크 권한이 필요해요</h2>
+            <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+              영어 회화 연습을 위해 마이크 접근 권한이 필요해요. 설정에서 권한을 허용해주세요.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowMicDeniedModal(false)}
+                className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-foreground"
+              >
+                닫기
+              </button>
+              {isNative && (
+                <button
+                  onClick={() => {
+                    setShowMicDeniedModal(false);
+                    window.ReactNativeWebView?.postMessage('OPEN_SETTINGS');
+                  }}
+                  className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white"
+                >
+                  설정으로 이동
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </main>
   );

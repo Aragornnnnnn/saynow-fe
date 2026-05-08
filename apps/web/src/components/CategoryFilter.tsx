@@ -1,27 +1,28 @@
 // 시나리오 선택 페이지 상단 카테고리 필터 칩
 'use client';
 
-import { Category, CATEGORIES } from '@/lib/scenarios';
+import { ApiCategory } from '@/lib/api';
 
 interface CategoryFilterProps {
-  selected: Category;
-  onChange: (category: Category) => void;
+  categories: ApiCategory[];
+  selectedId: string | null;
+  onChange: (categoryId: string) => void;
 }
 
-export function CategoryFilter({ selected, onChange }: CategoryFilterProps) {
+export function CategoryFilter({ categories, selectedId, onChange }: CategoryFilterProps) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-      {CATEGORIES.map((category) => (
+      {categories.map((cat) => (
         <button
-          key={category}
-          onClick={() => onChange(category)}
+          key={cat.categoryId}
+          onClick={() => onChange(cat.categoryId)}
           className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-            selected === category
+            selectedId === cat.categoryId
               ? 'bg-primary text-white'
               : 'bg-card text-muted-foreground'
           }`}
         >
-          {category}
+          {cat.name}
         </button>
       ))}
     </div>

@@ -2,11 +2,12 @@
 'use client';
 
 import { useState } from 'react';
-import { Scenario } from '@/lib/scenarios';
+import Image from 'next/image';
+import { ApiScenarioSummary } from '@/lib/api';
 
 interface ScenarioCardProps {
-  scenario: Scenario;
-  onClick: (scenario: Scenario) => void;
+  scenario: ApiScenarioSummary;
+  onClick: (scenario: ApiScenarioSummary) => void;
 }
 
 export function ScenarioCard({ scenario, onClick }: ScenarioCardProps) {
@@ -21,27 +22,30 @@ export function ScenarioCard({ scenario, onClick }: ScenarioCardProps) {
       onTouchCancel={() => setPressed(false)}
       className={`flex flex-col gap-2 rounded-2xl p-4 text-left shadow-sm transition-colors duration-100 ${pressed ? 'bg-[#F0F0EE]' : 'bg-card'}`}
     >
-      <span className="text-3xl">{scenario.emoji}</span>
+      <div className="w-10 h-10 rounded-xl overflow-hidden bg-muted flex items-center justify-center">
+        {scenario.thumbnailUrl ? (
+          <Image src={scenario.thumbnailUrl} alt={scenario.title} width={40} height={40} className="object-cover" />
+        ) : (
+          <span className="text-2xl">🗣️</span>
+        )}
+      </div>
       <div className="flex flex-col gap-1">
         <span className="text-sm font-semibold text-foreground leading-snug">{scenario.title}</span>
-        <span className="text-xs text-muted-foreground">{scenario.category}</span>
       </div>
       <DifficultyBadge difficulty={scenario.difficulty} />
     </button>
   );
 }
 
-function DifficultyBadge({ difficulty }: { difficulty: Scenario['difficulty'] }) {
-  const isEasy = difficulty === '쉬움';
+function DifficultyBadge({ difficulty }: { difficulty: ApiScenarioSummary['difficulty'] }) {
+  const isEasy = difficulty === 'EASY';
   return (
     <span
       className={`self-start rounded-full px-2 py-0.5 text-xs font-medium ${
-        isEasy
-          ? 'bg-green-100 text-green-700'
-          : 'bg-orange-100 text-orange-600'
+        isEasy ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'
       }`}
     >
-      {difficulty}
+      {isEasy ? '쉬움' : '어려움'}
     </span>
   );
 }

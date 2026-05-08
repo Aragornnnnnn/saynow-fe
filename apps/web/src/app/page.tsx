@@ -2,18 +2,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-// TODO: API 연동 시 SCENARIOS, CATEGORIES 제거하고 아래 API로 교체
-// GET /api/v1/categories → 카테고리 목록
-// GET /api/v1/categories/{categoryId}/scenarios → 카테고리별 시나리오 목록
-// (또는 백엔드에 전체 시나리오 목록 API 추가 요청 후 GET /api/v1/scenarios 단일 호출)
-import { Category, SCENARIOS, Scenario } from '@/lib/scenarios';
+import { getCategories, getScenariosByCategory, ApiCategory, ApiScenarioSummary } from '@/lib/api';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ScenarioCard } from '@/components/ScenarioCard';
 import { ScenarioModal } from '@/components/ScenarioModal';
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] = useState<Category>('전체');
-  const [selectedScenario, setSelectedScenario] = useState<Scenario | null>(null);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [scenarios, setScenarios] = useState<ApiScenarioSummary[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedScenario, setSelectedScenario] = useState<ApiScenarioSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getCategories().then((data) => {
+      setCategories(data.categories);
+      if (data.categories.length > 0) {
+        setSelectedCategoryId(data.categories[0].categoryId);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCategoryId) return;
+    setLoading(true);
+    getScenariosByCategory(selectedCategoryId).then((data) => {
+      setScenarios(data.scenarios);
+      setLoading(false);
+    });
+  }, [selectedCategoryId]);
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
@@ -29,28 +46,35 @@ export default function Home() {
     };
   }, [selectedScenario]);
 
-  const filtered =
-    selectedCategory === '전체'
-      ? SCENARIOS
-      : SCENARIOS.filter((s) => s.category === selectedCategory);
-
   return (
     <main className="flex flex-col h-dvh bg-background">
       <div className="px-4 pt-6 pb-4">
         <h1 className="text-xl font-bold text-foreground mb-4">시나리오 선택</h1>
-        <CategoryFilter selected={selectedCategory} onChange={setSelectedCategory} />
+        <CategoryFilter
+          categories={categories}
+          selectedId={selectedCategoryId}
+          onChange={setSelectedCategoryId}
+        />
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-6 overscroll-y-contain">
-        <div className="grid grid-cols-2 gap-3">
-          {filtered.map((scenario) => (
-            <ScenarioCard
-              key={scenario.id}
-              scenario={scenario}
-              onClick={setSelectedScenario}
-            />
-          ))}
-        </div>
+        {loading ? (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-28 rounded-2xl bg-card animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {scenarios.map((scenario) => (
+              <ScenarioCard
+                key={scenario.scenarioId}
+                scenario={scenario}
+                onClick={setSelectedScenario}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
       {selectedScenario && (
