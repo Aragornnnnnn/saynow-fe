@@ -5,7 +5,7 @@
     "entryPoint": "./index.ts",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/1024.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -20,7 +20,7 @@
     "android": {
       "package": "com.saynow.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/1024.png",
         "backgroundColor": "#FAFAF8"
       },
       "edgeToEdgeEnabled": true,
