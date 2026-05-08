@@ -16,6 +16,7 @@ export function ScenarioCard({ scenario, onClick }: ScenarioCardProps) {
     <button
       onClick={() => onClick(scenario)}
       onTouchStart={() => setPressed(true)}
+      onTouchMove={() => setPressed(false)}
       onTouchEnd={() => setPressed(false)}
       onTouchCancel={() => setPressed(false)}
       className={`flex flex-col gap-2 rounded-2xl p-4 text-left shadow-sm transition-colors duration-100 ${pressed ? 'bg-[#F0F0EE]' : 'bg-card'}`}
