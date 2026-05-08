@@ -7,20 +7,20 @@
       "developmentClient": true,
       "distribution": "internal",
       "android": {
-        "image": "ubuntu-22.04-jdk-17-ndk-r27"
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "image": "ubuntu-22.04-jdk-17-ndk-r27"
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
       }
     },
     "production": {
       "android": {
         "buildType": "app-bundle",
-        "image": "ubuntu-22.04-jdk-17-ndk-r27"
+        "image": "ubuntu-22.04-jdk-17-ndk-r26b"
       }
     }
   },
