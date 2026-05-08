@@ -10,17 +10,24 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return json.data as T;
 }
 
-// --- Scenario ---
+// --- Category ---
 
 export interface ApiCategory {
   categoryId: string;
   name: string;
 }
 
+export function getCategories(): Promise<{ categories: ApiCategory[] }> {
+  return request('/api/v1/categories');
+}
+
+// --- Scenario ---
+
 export interface ApiScenarioSummary {
   scenarioId: string;
+  categoryId: string;
   title: string;
-  difficulty: 'EASY' | 'HARD';
+  difficulty: string;
   successGoal: string;
   thumbnailUrl: string | null;
 }
@@ -29,7 +36,7 @@ export interface ApiScenarioDetail {
   scenarioId: string;
   categoryId: string;
   title: string;
-  difficulty: 'EASY' | 'HARD';
+  difficulty: string;
   situationDescription: string;
   successGoal: string;
   openingBabsaeText: string;
@@ -37,12 +44,9 @@ export interface ApiScenarioDetail {
   maxFollowUpCount: number;
 }
 
-export function getCategories(): Promise<{ categories: ApiCategory[] }> {
-  return request('/api/v1/categories');
-}
-
-export function getScenariosByCategory(categoryId: string): Promise<{ categoryId: string; scenarios: ApiScenarioSummary[] }> {
-  return request(`/api/v1/categories/${categoryId}/scenarios`);
+export function getScenarios(categoryId?: string): Promise<{ scenarios: ApiScenarioSummary[] }> {
+  const query = categoryId ? `?categoryId=${categoryId}` : '';
+  return request(`/api/v1/scenarios${query}`);
 }
 
 export function getScenarioDetail(scenarioId: string): Promise<ApiScenarioDetail> {

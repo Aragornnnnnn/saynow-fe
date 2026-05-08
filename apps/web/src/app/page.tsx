@@ -2,7 +2,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getCategories, getScenariosByCategory, ApiCategory, ApiScenarioSummary } from '@/lib/api';
+import { getCategories, getScenarios, ApiCategory, ApiScenarioSummary } from '@/lib/api';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ScenarioCard } from '@/components/ScenarioCard';
 import { ScenarioModal } from '@/components/ScenarioModal';
@@ -15,36 +15,30 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getCategories().then((data) => {
-      setCategories(data.categories);
-      if (data.categories.length > 0) {
-        setSelectedCategoryId(data.categories[0].categoryId);
-      }
-    });
+    getCategories().then((data) => setCategories(data.categories));
+    fetchScenarios(null);
   }, []);
 
   useEffect(() => {
-    if (!selectedCategoryId) return;
+    const handler = (e: MessageEvent) => {
+      if (e.data === 'BACK_PRESSED' && selectedScenario) setSelectedScenario(null);
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [selectedScenario]);
+
+  function fetchScenarios(categoryId: string | null) {
     setLoading(true);
-    getScenariosByCategory(selectedCategoryId).then((data) => {
+    getScenarios(categoryId ?? undefined).then((data) => {
       setScenarios(data.scenarios);
       setLoading(false);
     });
-  }, [selectedCategoryId]);
+  }
 
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (e.data === 'BACK_PRESSED' && selectedScenario) {
-        setSelectedScenario(null);
-      }
-    };
-    window.addEventListener('message', handler);
-    document.addEventListener('message', handler as EventListener);
-    return () => {
-      window.removeEventListener('message', handler);
-      document.removeEventListener('message', handler as EventListener);
-    };
-  }, [selectedScenario]);
+  function handleCategoryChange(categoryId: string | null) {
+    setSelectedCategoryId(categoryId);
+    fetchScenarios(categoryId);
+  }
 
   return (
     <main className="flex flex-col h-dvh bg-background">
@@ -53,7 +47,7 @@ export default function Home() {
         <CategoryFilter
           categories={categories}
           selectedId={selectedCategoryId}
-          onChange={setSelectedCategoryId}
+          onChange={handleCategoryChange}
         />
       </div>
 
@@ -67,21 +61,14 @@ export default function Home() {
         ) : (
           <div className="grid grid-cols-2 gap-3">
             {scenarios.map((scenario) => (
-              <ScenarioCard
-                key={scenario.scenarioId}
-                scenario={scenario}
-                onClick={setSelectedScenario}
-              />
+              <ScenarioCard key={scenario.scenarioId} scenario={scenario} onClick={setSelectedScenario} />
             ))}
           </div>
         )}
       </div>
 
       {selectedScenario && (
-        <ScenarioModal
-          scenario={selectedScenario}
-          onClose={() => setSelectedScenario(null)}
-        />
+        <ScenarioModal scenario={selectedScenario} onClose={() => setSelectedScenario(null)} />
       )}
     </main>
   );
