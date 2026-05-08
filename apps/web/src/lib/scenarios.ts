@@ -107,3 +107,80 @@ export const SCENARIOS: Scenario[] = [
 ];
 
 export const CATEGORIES: Category[] = ['전체', '카페', '공항', '호텔', '식당', '택시'];
+
+export interface ConversationTurn {
+  foreignerLine: string;
+}
+
+export const SCENARIO_TURNS: Record<string, ConversationTurn[]> = {
+  '1': [
+    { foreignerLine: "Hi! What can I get for you today?" },
+    { foreignerLine: "Would you like that iced or hot?" },
+    { foreignerLine: "What size would you like?" },
+    { foreignerLine: "Can I get a name for the order?" },
+    { foreignerLine: "That'll be $4.50. Will that be cash or card?" },
+  ],
+  '2': [
+    { foreignerLine: "Hi there! What can I get started for you?" },
+    { foreignerLine: "What size would you like — tall, grande, or venti?" },
+    { foreignerLine: "How many espresso shots would you like?" },
+    { foreignerLine: "Any milk preference? We have oat, almond, or regular." },
+    { foreignerLine: "Anything else to add, like syrups or toppings?" },
+  ],
+  '3': [
+    { foreignerLine: "Hello, can I help you?" },
+    { foreignerLine: "Which gate are you looking for?" },
+    { foreignerLine: "Do you have your boarding pass handy?" },
+    { foreignerLine: "It's at the end of Terminal B, past security checkpoint 3." },
+    { foreignerLine: "Is there anything else you need help with?" },
+  ],
+  '4': [
+    { foreignerLine: "Hello, how can I assist you?" },
+    { foreignerLine: "Can you describe your bag for me?" },
+    { foreignerLine: "What flight did you arrive on?" },
+    { foreignerLine: "Can I have your contact number and local address?" },
+    { foreignerLine: "We'll contact you within 24 hours. Is that okay?" },
+  ],
+  '5': [
+    { foreignerLine: "Good evening! Welcome. Do you have a reservation?" },
+    { foreignerLine: "Can I see your ID and the credit card used for booking?" },
+    { foreignerLine: "Would you prefer a smoking or non-smoking room?" },
+    { foreignerLine: "Breakfast is included — it starts at 7am in the dining hall." },
+    { foreignerLine: "Here's your key card. Your room is on the 5th floor." },
+  ],
+  '6': [
+    { foreignerLine: "Front desk, how can I help you?" },
+    { foreignerLine: "I'm sorry to hear that. What seems to be the issue?" },
+    { foreignerLine: "How long has this been going on?" },
+    { foreignerLine: "Would you like us to send a technician, or would you prefer a different room?" },
+    { foreignerLine: "We'll have someone up within 15 minutes. Apologies for the inconvenience." },
+  ],
+  '7': [
+    { foreignerLine: "Hi, welcome! Are you ready to order or do you need a moment?" },
+    { foreignerLine: "Our most popular dish today is the grilled salmon. Would you like to try that?" },
+    { foreignerLine: "Would you like that with a side salad or fries?" },
+    { foreignerLine: "Anything to drink with that?" },
+    { foreignerLine: "Great choice! I'll have that right out for you." },
+  ],
+  '8': [
+    { foreignerLine: "Hi, are you ready to order?" },
+    { foreignerLine: "Do you have any food allergies I should know about?" },
+    { foreignerLine: "The pasta contains gluten and dairy — is that okay?" },
+    { foreignerLine: "We do have a gluten-free option. Would you like to try that?" },
+    { foreignerLine: "Perfect. I'll let the kitchen know about your allergy. Just to confirm — no nuts, correct?" },
+  ],
+  '9': [
+    { foreignerLine: "Hey, where to?" },
+    { foreignerLine: "Do you have the address?" },
+    { foreignerLine: "Is that near downtown?" },
+    { foreignerLine: "Alright, estimated time is about 15 minutes. Is that okay?" },
+    { foreignerLine: "Great, let's go!" },
+  ],
+  '10': [
+    { foreignerLine: "Hello? I'm having trouble finding your location." },
+    { foreignerLine: "I'm near a big intersection — can you describe any landmarks nearby?" },
+    { foreignerLine: "Okay, I see a convenience store. Should I turn left or right?" },
+    { foreignerLine: "How far down should I go after the turn?" },
+    { foreignerLine: "Okay, I think I can see you now. Are you waving?" },
+  ],
+};
