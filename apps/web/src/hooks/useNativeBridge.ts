@@ -13,11 +13,14 @@ declare global {
 export function useNativeBridge(
   onRecordingDone: (uri: string) => void,
   onPermissionDenied?: () => void,
+  onPermissionGranted?: () => void,
 ) {
   const onRecordingDoneRef = useRef(onRecordingDone);
   onRecordingDoneRef.current = onRecordingDone;
   const onPermissionDeniedRef = useRef(onPermissionDenied);
   onPermissionDeniedRef.current = onPermissionDenied;
+  const onPermissionGrantedRef = useRef(onPermissionGranted);
+  onPermissionGrantedRef.current = onPermissionGranted;
   const setMicPermission = useAppStore((s) => s.setMicPermission);
 
   useEffect(() => {
@@ -26,7 +29,11 @@ export function useNativeBridge(
         const data = JSON.parse(e.data);
         if (data.type === 'RECORDING_DONE') onRecordingDoneRef.current(data.uri);
         if (data.type === 'MIC_PERMISSION_DENIED') onPermissionDeniedRef.current?.();
-        if (data.type === 'MIC_PERMISSION_STATUS') setMicPermission(data.granted ? 'granted' : 'denied');
+        if (data.type === 'MIC_PERMISSION_STATUS') {
+          setMicPermission(data.granted ? 'granted' : 'denied');
+          if (data.granted) onPermissionGrantedRef.current?.();
+          else onPermissionDeniedRef.current?.();
+        }
       } catch {}
     };
     window.addEventListener('message', handler);

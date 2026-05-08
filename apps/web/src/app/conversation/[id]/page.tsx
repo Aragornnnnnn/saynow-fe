@@ -67,6 +67,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       .catch((e: Error) => setError(e.message));
   }, [id]);
 
+  const pendingRecordRef = useRef(false);
+
   const { startRecording, stopRecording, isNative, requestMicPermission } = useNativeBridge(
     async (uri) => {
       if (!session.sessionId) return;
@@ -85,7 +87,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         setRecordingState('idle');
       }
     },
-    () => setShowMicDeniedModal(true),
+    () => { pendingRecordRef.current = false; setShowMicDeniedModal(true); },
+    () => { if (pendingRecordRef.current) { pendingRecordRef.current = false; startRecordingFlow(); } },
   );
 
   useEffect(() => {
@@ -96,14 +99,23 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const isLastTurn = session.feedbackAvailable || session.followUpCount >= session.maxFollowUpCount;
   const canProceed = recordingState === 'done';
 
+  function startRecordingFlow() {
+    micPressedAtRef.current = Date.now();
+    setRecordingState('recording');
+    setTranscript('');
+    startRecording();
+    if (session.sessionId) recordMicReady(session.sessionId, 0);
+  }
+
   function handleMicPress() {
     if (micPermission === 'denied') { setShowMicDeniedModal(true); return; }
     if (recordingState === 'idle') {
-      micPressedAtRef.current = Date.now();
-      setRecordingState('recording');
-      setTranscript('');
-      startRecording();
-      if (session.sessionId) recordMicReady(session.sessionId, 0);
+      if (micPermission === 'unknown') {
+        pendingRecordRef.current = true;
+        requestMicPermission();
+        return;
+      }
+      startRecordingFlow();
     } else if (recordingState === 'recording') {
       speechStartedAfterMsRef.current = micPressedAtRef.current ? Date.now() - micPressedAtRef.current : 0;
       stopRecording();
