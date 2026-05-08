@@ -9,14 +9,17 @@ import { ScenarioModal } from '@/components/ScenarioModal';
 
 export default function Home() {
   const [categories, setCategories] = useState<ApiCategory[]>([]);
-  const [scenarios, setScenarios] = useState<ApiScenarioSummary[]>([]);
+  const [allScenarios, setAllScenarios] = useState<ApiScenarioSummary[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<ApiScenarioSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     getCategories().then((data) => setCategories(data.categories));
-    fetchScenarios(null);
+    getScenarios().then((data) => {
+      setAllScenarios(data.scenarios);
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -27,17 +30,12 @@ export default function Home() {
     return () => window.removeEventListener('message', handler);
   }, [selectedScenario]);
 
-  function fetchScenarios(categoryId: string | null) {
-    setLoading(true);
-    getScenarios(categoryId ?? undefined).then((data) => {
-      setScenarios(data.scenarios);
-      setLoading(false);
-    });
-  }
+  const scenarios = selectedCategoryId
+    ? allScenarios.filter((s) => s.categoryId === selectedCategoryId)
+    : allScenarios;
 
   function handleCategoryChange(categoryId: string | null) {
     setSelectedCategoryId(categoryId);
-    fetchScenarios(categoryId);
   }
 
   return (

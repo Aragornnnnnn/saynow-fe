@@ -44,9 +44,9 @@ export interface ApiScenarioDetail {
   maxFollowUpCount: number;
 }
 
-export function getScenarios(categoryId?: string): Promise<{ scenarios: ApiScenarioSummary[] }> {
-  const query = categoryId ? `?categoryId=${categoryId}` : '';
-  return request(`/api/v1/scenarios${query}`);
+// 카테고리 필터링은 클라이언트에서 처리 — 시나리오 수가 많아지면 ?categoryId= 쿼리로 전환
+export function getScenarios(): Promise<{ scenarios: ApiScenarioSummary[] }> {
+  return request('/api/v1/scenarios');
 }
 
 export function getScenarioDetail(scenarioId: string): Promise<ApiScenarioDetail> {
