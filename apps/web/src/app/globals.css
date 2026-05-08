@@ -77,13 +77,16 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+  }
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -95,4 +98,14 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+}
+
+@keyframes wave {
+  from { transform: scaleY(0.4); }
+  to   { transform: scaleY(1); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }
