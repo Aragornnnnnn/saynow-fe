@@ -72,7 +72,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
             </p>
           </div>
           <div className="flex flex-col items-end ml-4 shrink-0">
-            <span className={`text-5xl font-bold leading-none ${comprehensionColor(feedback.totalUnderstoodScore)}`}>
+            <span className={`text-5xl font-bold leading-none ${comprehensionStyle(feedback.totalUnderstoodScore).color}`}>
               {feedback.totalUnderstoodScore}%
             </span>
             <span className="text-xs text-muted-foreground mt-1">총 이해도</span>
@@ -102,17 +102,18 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
 
 function TurnCard({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
   const [expanded, setExpanded] = useState(false);
+  const s = comprehensionStyle(turn.understoodScore);
 
   return (
     <div className="rounded-2xl bg-card border border-border overflow-hidden">
       {/* 이해도 */}
-      <div className={`px-4 pt-4 pb-3 flex items-center justify-between ${comprehensionBg(turn.understoodScore)}`}>
+      <div className={`px-4 pt-4 pb-3 flex items-center justify-between ${s.bg}`}>
         <div className="flex items-center gap-2">
-          <span className={`text-2xl font-bold ${comprehensionColor(turn.understoodScore)}`}>
+          <span className={`text-2xl font-bold ${s.color}`}>
             {turn.understoodScore}%
           </span>
-          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${comprehensionBadge(turn.understoodScore)}`}>
-            {comprehensionLabel(turn.understoodScore)}
+          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${s.badge}`}>
+            {s.label}
           </span>
         </div>
         <span className="text-xs text-muted-foreground">반응까지 {turn.speechStartedAfterSeconds}초</span>
@@ -167,26 +168,8 @@ function TurnCard({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
   );
 }
 
-function comprehensionColor(score: number) {
-  if (score >= 70) return 'text-green-600';
-  if (score >= 40) return 'text-orange-500';
-  return 'text-red-500';
-}
-
-function comprehensionBg(score: number) {
-  if (score >= 70) return 'bg-green-50';
-  if (score >= 40) return 'bg-orange-50';
-  return 'bg-red-50';
-}
-
-function comprehensionBadge(score: number) {
-  if (score >= 70) return 'bg-green-100 text-green-700';
-  if (score >= 40) return 'bg-orange-100 text-orange-600';
-  return 'bg-red-100 text-red-600';
-}
-
-function comprehensionLabel(score: number) {
-  if (score >= 70) return '잘 전달됨';
-  if (score >= 40) return '보통';
-  return '전달 어려움';
+function comprehensionStyle(score: number) {
+  if (score >= 70) return { color: 'text-green-600', bg: 'bg-green-50', badge: 'bg-green-100 text-green-700', label: '잘 전달됨' };
+  if (score >= 40) return { color: 'text-orange-500', bg: 'bg-orange-50', badge: 'bg-orange-100 text-orange-600', label: '보통' };
+  return { color: 'text-red-500', bg: 'bg-red-50', badge: 'bg-red-100 text-red-600', label: '전달 어려움' };
 }
