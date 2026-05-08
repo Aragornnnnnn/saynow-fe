@@ -17,6 +17,7 @@ pnpm --filter mobile start
 
 @docs/architecture.md
 @docs/tech-stack.md
+@docs/planning.md
 
 ## 코딩 규칙
 
