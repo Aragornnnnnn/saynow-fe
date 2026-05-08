@@ -5,12 +5,12 @@
     "entryPoint": "./index.ts",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/1024.png",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
-      "resizeMode": "cover",
+      "resizeMode": "contain",
       "backgroundColor": "#FAFAF8"
     },
     "ios": {
@@ -20,7 +20,7 @@
     "android": {
       "package": "com.saynow.app",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/1024.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FAFAF8"
       },
       "edgeToEdgeEnabled": true,
