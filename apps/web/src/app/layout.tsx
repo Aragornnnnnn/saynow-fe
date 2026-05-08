@@ -1,5 +1,6 @@
 // 앱 전체 루트 레이아웃 — 폰트, 메타데이터, 모바일 뷰포트 설정
 import type { Metadata, Viewport } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -27,7 +28,10 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css"
         />
       </head>
-      <body className="h-full bg-background text-foreground">{children}</body>
+      <body className="h-full bg-background text-foreground">
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }
