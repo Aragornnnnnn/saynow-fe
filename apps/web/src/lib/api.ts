@@ -1,9 +1,7 @@
 // 백엔드 API 호출 함수 및 응답 타입 정의
 
-const BASE = process.env.NEXT_PUBLIC_API_BASE_URL;
-
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(path, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
