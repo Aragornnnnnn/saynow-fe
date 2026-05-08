@@ -16,7 +16,6 @@ const WEB_URL = __DEV__
 
 export default function App() {
   const webviewRef = useRef<WebView>(null);
-  const canGoBackRef = useRef(false);
 
   const handleRecorded = useCallback((uri: string) => {
     webviewRef.current?.postMessage(JSON.stringify({ type: 'RECORDING_DONE', uri }));
@@ -38,17 +37,19 @@ export default function App() {
 
   async function handleLoadEnd() {
     SplashScreen.hideAsync();
-    const { granted } = await Audio.requestPermissionsAsync();
-    webviewRef.current?.postMessage(
-      JSON.stringify({ type: 'MIC_PERMISSION_STATUS', granted }),
-    );
   }
 
-  function handleMessage(e: WebViewMessageEvent) {
+  async function handleMessage(e: WebViewMessageEvent) {
     const data = e.nativeEvent.data;
     if (data === 'START_RECORDING') start();
     else if (data === 'STOP_RECORDING') stop();
     else if (data === 'OPEN_SETTINGS') openSettings();
+    else if (data === 'REQUEST_MIC_PERMISSION') {
+      const { granted } = await Audio.requestPermissionsAsync();
+      webviewRef.current?.postMessage(
+        JSON.stringify({ type: 'MIC_PERMISSION_STATUS', granted }),
+      );
+    }
   }
 
   return (
@@ -60,9 +61,6 @@ export default function App() {
           style={styles.webview}
           onLoadEnd={handleLoadEnd}
           onMessage={handleMessage}
-          onNavigationStateChange={(state) => {
-            canGoBackRef.current = state.canGoBack;
-          }}
         />
         <StatusBar style="auto" />
       </SafeAreaView>

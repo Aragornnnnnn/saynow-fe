@@ -30,10 +30,8 @@ export function useNativeBridge(
       } catch {}
     };
     window.addEventListener('message', handler);
-    document.addEventListener('message', handler as EventListener);
     return () => {
       window.removeEventListener('message', handler);
-      document.removeEventListener('message', handler as EventListener);
     };
   }, []);
 
@@ -47,5 +45,9 @@ export function useNativeBridge(
     window.ReactNativeWebView?.postMessage('STOP_RECORDING');
   }
 
-  return { isNative, startRecording, stopRecording };
+  function requestMicPermission() {
+    window.ReactNativeWebView?.postMessage('REQUEST_MIC_PERMISSION');
+  }
+
+  return { isNative, startRecording, stopRecording, requestMicPermission };
 }
