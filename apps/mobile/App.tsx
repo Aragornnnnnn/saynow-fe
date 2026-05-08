@@ -1,4 +1,5 @@
 // 웹뷰 껍데기 앱 진입점
+import { Audio } from 'expo-av';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useRef } from 'react';
@@ -21,7 +22,11 @@ export default function App() {
     webviewRef.current?.postMessage(JSON.stringify({ type: 'RECORDING_DONE', uri }));
   }, []);
 
-  const { start, stop } = useRecorder(handleRecorded);
+  const handlePermissionDenied = useCallback(() => {
+    webviewRef.current?.postMessage(JSON.stringify({ type: 'MIC_PERMISSION_DENIED' }));
+  }, []);
+
+  const { start, stop, openSettings } = useRecorder(handleRecorded, handlePermissionDenied);
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -31,10 +36,19 @@ export default function App() {
     return () => subscription.remove();
   }, []);
 
+  async function handleLoadEnd() {
+    SplashScreen.hideAsync();
+    const { granted } = await Audio.requestPermissionsAsync();
+    webviewRef.current?.postMessage(
+      JSON.stringify({ type: 'MIC_PERMISSION_STATUS', granted }),
+    );
+  }
+
   function handleMessage(e: WebViewMessageEvent) {
     const data = e.nativeEvent.data;
     if (data === 'START_RECORDING') start();
     else if (data === 'STOP_RECORDING') stop();
+    else if (data === 'OPEN_SETTINGS') openSettings();
   }
 
   return (
@@ -44,7 +58,7 @@ export default function App() {
           ref={webviewRef}
           source={{ uri: WEB_URL }}
           style={styles.webview}
-          onLoadEnd={() => SplashScreen.hideAsync()}
+          onLoadEnd={handleLoadEnd}
           onMessage={handleMessage}
           onNavigationStateChange={(state) => {
             canGoBackRef.current = state.canGoBack;

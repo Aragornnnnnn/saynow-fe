@@ -1,16 +1,28 @@
 // 마이크 녹음 시작/중지 및 권한 요청을 담당하는 훅
 import { Audio } from 'expo-av';
+import { Linking } from 'react-native';
 import { useRef, useState } from 'react';
 
 type RecorderState = 'idle' | 'recording';
 
-export function useRecorder(onRecorded: (uri: string) => void) {
+export function useRecorder(
+  onRecorded: (uri: string) => void,
+  onPermissionDenied: () => void,
+) {
   const recordingRef = useRef<Audio.Recording | null>(null);
   const [state, setState] = useState<RecorderState>('idle');
 
   async function start() {
-    const { granted } = await Audio.requestPermissionsAsync();
-    if (!granted) return;
+    const { granted, canAskAgain } = await Audio.getPermissionsAsync();
+    if (!granted) {
+      if (canAskAgain) {
+        const result = await Audio.requestPermissionsAsync();
+        if (!result.granted) { onPermissionDenied(); return; }
+      } else {
+        onPermissionDenied();
+        return;
+      }
+    }
 
     await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
 
@@ -30,5 +42,5 @@ export function useRecorder(onRecorded: (uri: string) => void) {
     if (uri) onRecorded(uri);
   }
 
-  return { state, start, stop };
+  return { state, start, stop, openSettings: Linking.openSettings };
 }
