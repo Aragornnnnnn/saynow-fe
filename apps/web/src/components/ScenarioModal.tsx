@@ -2,6 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useRef, useState } from 'react';
 import { Scenario } from '@/lib/scenarios';
 
 const CATEGORY_IMAGES: Record<string, string> = {
@@ -12,6 +13,8 @@ const CATEGORY_IMAGES: Record<string, string> = {
   택시: '🚕',
 };
 
+const DRAG_CLOSE_THRESHOLD = 100;
+
 interface ScenarioModalProps {
   scenario: Scenario;
   onClose: () => void;
@@ -19,22 +22,50 @@ interface ScenarioModalProps {
 
 export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
   const router = useRouter();
+  const startYRef = useRef<number | null>(null);
+  const [dragY, setDragY] = useState(0);
 
-  function handleStart() {
-    router.push(`/conversation/${scenario.id}`);
+  function handleStart(clientY: number) {
+    startYRef.current = clientY;
+  }
+
+  function handleMove(clientY: number) {
+    if (startYRef.current === null) return;
+    const delta = clientY - startYRef.current;
+    if (delta > 0) setDragY(delta);
+  }
+
+  function handleEnd() {
+    if (dragY >= DRAG_CLOSE_THRESHOLD) {
+      onClose();
+    } else {
+      setDragY(0);
+    }
+    startYRef.current = null;
   }
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 touch-none overscroll-none"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-md rounded-t-3xl bg-card pb-10 pt-6 px-6 animate-in slide-in-from-bottom-4 duration-200"
+        className="w-full max-w-md rounded-t-3xl bg-card pb-10 pt-6 px-6"
+        style={{
+          transform: `translateY(${dragY}px)`,
+          transition: 'none',
+          animation: 'slide-up 0.35s cubic-bezier(0.32, 0.72, 0, 1)',
+        }}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={(e) => handleStart(e.touches[0].clientY)}
+        onTouchMove={(e) => handleMove(e.touches[0].clientY)}
+        onTouchEnd={handleEnd}
+        onMouseDown={(e) => handleStart(e.clientY)}
+        onMouseMove={(e) => e.buttons === 1 && handleMove(e.clientY)}
+        onMouseUp={handleEnd}
       >
         {/* 핸들 */}
-        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-border" />
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-border cursor-grab active:cursor-grabbing" />
 
         {/* 카테고리 이미지 영역 */}
         <div className="mb-5 flex h-36 items-center justify-center rounded-2xl bg-[#FFF4ED]">
@@ -68,7 +99,7 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
 
         {/* 시작 버튼 */}
         <button
-          onClick={handleStart}
+          onClick={() => router.push(`/conversation/${scenario.id}`)}
           className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white active:opacity-80 transition-opacity"
         >
           시작하기
