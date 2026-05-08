@@ -3,6 +3,9 @@
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
+// TODO: API 연동 시 MOCK_FEEDBACK, SCENARIOS 제거하고 아래 API로 교체
+// GET /api/v1/sessions/{sessionId}/feedback → 피드백 데이터
+// 202 FEEDBACK_GENERATING 응답 시 폴링 처리 필요 (일정 간격으로 재요청)
 import { MOCK_FEEDBACK, TurnFeedback } from '@/lib/feedback';
 import { SCENARIOS } from '@/lib/scenarios';
 

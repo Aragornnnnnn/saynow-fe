@@ -2,6 +2,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+// TODO: API 연동 시 SCENARIOS, CATEGORIES 제거하고 아래 API로 교체
+// GET /api/v1/categories → 카테고리 목록
+// GET /api/v1/categories/{categoryId}/scenarios → 카테고리별 시나리오 목록
+// (또는 백엔드에 전체 시나리오 목록 API 추가 요청 후 GET /api/v1/scenarios 단일 호출)
 import { Category, SCENARIOS, Scenario } from '@/lib/scenarios';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ScenarioCard } from '@/components/ScenarioCard';

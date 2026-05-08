@@ -1,9 +1,14 @@
 // 대화 페이지 — 시나리오별 외국인 대사를 순차적으로 연습하는 화면
 'use client';
 
-import { use, useState } from 'react';
+import { use, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic, Square } from 'lucide-react';
+// TODO: API 연동 시 SCENARIOS, SCENARIO_TURNS 제거하고 아래 API로 교체
+// POST /api/v1/sessions { scenarioId } → sessionId, 첫 babsaeText 반환 → setSessionId, setCurrentLine
+// POST /api/v1/sessions/{sessionId}/turns (multipart: audio + request) → 다음 babsaeText, transcript 반환
+// PUT /api/v1/sessions/{sessionId}/metrics/micReady { latencyMs } → 마이크 준비 지연 기록
+// POST /api/v1/sessions/{sessionId}/exit → 나가기 확인 후 호출
 import { SCENARIOS, SCENARIO_TURNS } from '@/lib/scenarios';
 import ExitConfirmModal from './ExitConfirmModal';
 
@@ -25,10 +30,13 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const turns = SCENARIO_TURNS[id] ?? [];
   const totalTurns = turns.length;
 
+  // API 연동 시 POST /api/v1/sessions 응답의 sessionId로 세팅
+  const [sessionId, setSessionId] = useState<string | null>(null); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [turnIndex, setTurnIndex] = useState(0);
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [transcript, setTranscript] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
+  const micPressedAtRef = useRef<number | null>(null); // 마이크 버튼 누른 시각 (ms)
 
   if (!scenario) {
     return (
@@ -45,18 +53,24 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   function handleMicPress() {
     if (recordingState === 'idle') {
+      micPressedAtRef.current = Date.now();
       setRecordingState('recording');
       setTranscript('');
     } else if (recordingState === 'recording') {
+      const speechStartedAfterMs = micPressedAtRef.current
+        ? Date.now() - micPressedAtRef.current
+        : 0;
+      // API 연동 시 speechStartedAfterMs를 턴 제출 요청에 포함
+      console.log('speechStartedAfterMs:', speechStartedAfterMs);
       setRecordingState('done');
-      // 실제 구현 시 여기서 AI 서버로 음성 전송
       setTranscript('I\'d like an iced americano, please.');
     }
   }
 
   function handleNext() {
     if (isLastTurn) {
-      router.push(`/feedback/${id}`);
+      // sessionId는 API 연동 시 실제 값으로 교체됨. 현재는 scenarioId로 임시 사용
+      router.push(`/feedback/${sessionId ?? id}`);
     } else {
       setTurnIndex((i) => i + 1);
       setRecordingState('idle');
@@ -65,7 +79,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <main className={`relative flex h-full flex-col bg-gradient-to-b ${bgGradient} overflow-hidden`}>
+    <main className={`relative flex h-full flex-col bg-linear-to-b ${bgGradient} overflow-hidden`}>
       {/* 배경 오버레이 */}
       <div className="absolute inset-0 bg-black/30" />
 
@@ -104,7 +118,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       {/* 하단 — 마이크 + 자막 + 버튼 */}
       <div className="relative z-10 px-4 pb-10">
         {/* STT 자막 */}
-        <div className="mb-4 min-h-[48px] flex items-center justify-center">
+        <div className="mb-4 min-h-12 flex items-center justify-center">
           {recordingState === 'recording' && (
             <div className="flex items-center gap-3">
               {/* 음파 애니메이션 */}
@@ -170,11 +184,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
 function WaveAnimation() {
   return (
-    <div className="flex items-center gap-[3px]">
+    <div className="flex items-center gap-0.75">
       {[1, 2, 3, 4, 5].map((i) => (
         <div
           key={i}
-          className="w-[3px] rounded-full bg-primary"
+          className="w-0.75 rounded-full bg-primary"
           style={{
             height: `${12 + (i % 3) * 8}px`,
             animation: `wave 0.8s ease-in-out ${i * 0.1}s infinite alternate`,
