@@ -1,20 +1,20 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet } from 'react-native';
+import { WebView } from 'react-native-webview';
+
+const WEB_URL = __DEV__ ? 'http://10.0.2.2:3000' : 'https://saynow.vercel.app';
 
 export default function App() {
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
+    <>
+      <WebView source={{ uri: WEB_URL }} style={styles.webview} />
       <StatusBar style="auto" />
-    </View>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  webview: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });
