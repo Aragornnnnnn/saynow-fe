@@ -1,4 +1,7 @@
 // 시나리오 선택 페이지의 개별 카드 컴포넌트
+'use client';
+
+import { useState } from 'react';
 import { Scenario } from '@/lib/scenarios';
 
 interface ScenarioCardProps {
@@ -7,10 +10,15 @@ interface ScenarioCardProps {
 }
 
 export function ScenarioCard({ scenario, onClick }: ScenarioCardProps) {
+  const [pressed, setPressed] = useState(false);
+
   return (
     <button
       onClick={() => onClick(scenario)}
-      className="flex flex-col gap-2 rounded-2xl bg-card p-4 text-left shadow-sm active:scale-95 transition-transform duration-100"
+      onTouchStart={() => setPressed(true)}
+      onTouchEnd={() => setPressed(false)}
+      onTouchCancel={() => setPressed(false)}
+      className={`flex flex-col gap-2 rounded-2xl p-4 text-left shadow-sm transition-colors duration-100 ${pressed ? 'bg-[#F0F0EE]' : 'bg-card'}`}
     >
       <span className="text-3xl">{scenario.emoji}</span>
       <div className="flex flex-col gap-1">
