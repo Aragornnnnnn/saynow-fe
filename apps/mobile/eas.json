@@ -3,17 +3,23 @@
     "version": ">= 18.0.0"
   },
   "build": {
+    "base": {
+      "image": "ubuntu-22.04-jdk-17-ndk-r27"
+    },
     "development": {
+      "extends": "base",
       "developmentClient": true,
       "distribution": "internal"
     },
     "preview": {
+      "extends": "base",
       "distribution": "internal",
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
+      "extends": "base",
       "android": {
         "buildType": "app-bundle"
       }
