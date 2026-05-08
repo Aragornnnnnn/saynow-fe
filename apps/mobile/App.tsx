@@ -12,7 +12,7 @@ SplashScreen.preventAutoHideAsync();
 
 const WEB_URL = __DEV__
   ? (process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000')
-  : 'https://saynow.vercel.app';
+  : 'https://saynow-fe-web.vercel.app';
 
 export default function App() {
   const webviewRef = useRef<WebView>(null);
