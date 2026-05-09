@@ -1,13 +1,68 @@
 // 백엔드 API 호출 함수 및 응답 타입 정의
 
+// zustand store를 직접 import하면 SSR 문제가 생기므로 런타임에 동적으로 접근
+function getAuthStore() {
+  if (typeof window === 'undefined') return null;
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  return require('@/store/authStore').useAuthStore.getState();
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(path, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-  });
+  const auth = getAuthStore();
+  const accessToken = auth?.accessToken ?? null;
+
+  const headers: Record<string, string> = {
+    ...(init?.headers as Record<string, string>),
+  };
+  if (!(init?.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json';
+  }
+  if (accessToken) {
+    headers['Authorization'] = `Bearer ${accessToken}`;
+  }
+
+  const res = await fetch(path, { ...init, headers });
+
+  // 401이면 refresh 1회 시도
+  if (res.status === 401 && auth?.refreshToken) {
+    const refreshed = await tryRefresh(auth.refreshToken);
+    if (refreshed) {
+      const retryHeaders = { ...headers, Authorization: `Bearer ${refreshed}` };
+      const retry = await fetch(path, { ...init, headers: retryHeaders });
+      const retryJson = await retry.json();
+      if (!retryJson.success) throw new Error(retryJson.error?.message ?? '서버 오류');
+      return retryJson.data as T;
+    } else {
+      auth.clearAuth();
+      if (typeof window !== 'undefined') window.location.href = '/login';
+      throw new Error('세션이 만료됐습니다. 다시 로그인해 주세요.');
+    }
+  }
+
   const json = await res.json();
-  if (!json.success) throw new Error(json.error?.message ?? '서버 오류');
+  if (!json.success) {
+    if (process.env.NODE_ENV === 'development') console.error('[API] error response:', json);
+    throw new Error(json.error?.message ?? '서버 오류');
+  }
   return json.data as T;
+}
+
+// refresh 성공 시 새 access token 반환, 실패 시 null
+async function tryRefresh(refreshToken: string): Promise<string | null> {
+  try {
+    const res = await fetch('/api/v1/auth/token/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    });
+    const json = await res.json();
+    if (!json.success) return null;
+    const auth = getAuthStore();
+    auth?.setAuth(json.data.accessToken, json.data.refreshToken, auth.member);
+    return json.data.accessToken as string;
+  } catch {
+    return null;
+  }
 }
 
 // --- Category ---
@@ -44,7 +99,6 @@ export interface ApiScenarioDetail {
   maxFollowUpCount: number;
 }
 
-// 카테고리 필터링은 클라이언트에서 처리 — 시나리오 수가 많아지면 ?categoryId= 쿼리로 전환
 export function getScenarios(): Promise<{ scenarios: ApiScenarioSummary[] }> {
   return request('/api/v1/scenarios');
 }
@@ -90,7 +144,7 @@ export function startSession(scenarioId: string): Promise<ApiSessionStarted> {
 export function submitTurn(sessionId: string, audioUri: string, speechStartedAfterMs: number): Promise<ApiTurnResult> {
   const formData = new FormData();
   formData.append('audio', { uri: audioUri, name: 'audio.m4a', type: 'audio/m4a' } as unknown as Blob);
-  formData.append('request', JSON.stringify({ speechStartedAfterMs }));
+  formData.append('request', JSON.stringify({ inputType: 'AUDIO', speechStartedAfterMs }));
   return request(`/api/v1/sessions/${sessionId}/turns`, {
     method: 'POST',
     headers: {},
@@ -99,7 +153,7 @@ export function submitTurn(sessionId: string, audioUri: string, speechStartedAft
 }
 
 export function recordMicReady(sessionId: string, latencyMs: number): Promise<void> {
-  return request(`/api/v1/sessions/${sessionId}/micReady`, {
+  return request(`/api/v1/sessions/${sessionId}/metrics/micReady`, {
     method: 'PUT',
     body: JSON.stringify({ latencyMs }),
   });
@@ -136,4 +190,31 @@ export interface ApiFeedback {
 
 export function getSessionFeedback(sessionId: string): Promise<ApiFeedback> {
   return request(`/api/v1/sessions/${sessionId}/feedback`);
+}
+
+// --- Auth ---
+
+export type SocialProvider = 'GOOGLE' | 'KAKAO';
+
+export interface SocialLoginResponse {
+  accessToken: string;
+  refreshToken: string;
+  member: {
+    memberId: string;
+    nickname: string | null;
+    email: string | null;
+    provider: string;
+    newMember: boolean;
+  };
+}
+
+export function socialLogin(
+  provider: SocialProvider,
+  idToken: string,
+  nonce: string
+): Promise<SocialLoginResponse> {
+  return request('/api/v1/auth/social-login', {
+    method: 'POST',
+    body: JSON.stringify({ provider, idToken, nonce }),
+  });
 }
