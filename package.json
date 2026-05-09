@@ -1,11 +1,13 @@
 {
   "name": "saynow-fe",
   "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "web:dev": "pnpm --filter web dev",
-    "web:build": "pnpm --filter web build",
-    "web:lint": "pnpm --filter web lint",
-    "mobile:start": "pnpm --filter mobile start"
-  },
-  "packageManager": "pnpm@9.0.0"
+    "web:dev": "npm -w web run dev",
+    "web:build": "npm -w web run build",
+    "web:lint": "npm -w web run lint",
+    "mobile:start": "npm -w mobile run start"
+  }
 }

@@ -29,7 +29,7 @@
 
 ## 패키지 매니저
 
-pnpm + pnpm workspaces (모노레포)
+npm + npm workspaces (모노레포)
 
 Turborepo는 미사용 — MVP 규모에서 오버헤드, 추후 필요시 추가 가능.
 
