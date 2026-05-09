@@ -7,6 +7,7 @@ import { ChevronLeft, Mic, Square } from 'lucide-react';
 import { startSession, submitTurn, recordMicReady, exitSession } from '@/lib/api';
 import { useNativeBridge } from '@/hooks/useNativeBridge';
 import { useAppStore } from '@/store/appStore';
+import { useTts } from '@/hooks/useTts';
 import ExitConfirmModal from './ExitConfirmModal';
 import MicDeniedModal from './MicDeniedModal';
 
@@ -23,6 +24,7 @@ type RecordingState = 'idle' | 'recording' | 'done';
 interface SessionState {
   sessionId: string | null;
   currentLine: string;
+  currentTtsUrl: string | null;
   followUpCount: number;
   maxFollowUpCount: number;
   feedbackAvailable: boolean;
@@ -36,6 +38,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [session, setSession] = useState<SessionState>({
     sessionId: null,
     currentLine: '',
+    currentTtsUrl: null,
     followUpCount: 0,
     maxFollowUpCount: 5,
     feedbackAvailable: false,
@@ -59,6 +62,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       .then((data) => setSession({
         sessionId: data.sessionId,
         currentLine: data.babsaeText,
+        currentTtsUrl: data.babsaeTtsUrl,
         maxFollowUpCount: data.maxFollowUpCount,
         feedbackAvailable: false,
         followUpCount: 0,
@@ -69,16 +73,20 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   const pendingRecordRef = useRef(false);
 
+  const { speak } = useTts();
   const { startRecording, stopRecording, isNative, requestMicPermission } = useNativeBridge(
     async (uri) => {
       if (!session.sessionId) return;
+      if (process.env.NODE_ENV === 'development') console.log('[Turn] uri:', uri, 'sessionId:', session.sessionId, 'speechStartedAfterMs:', speechStartedAfterMsRef.current);
       try {
         const result = await submitTurn(session.sessionId, uri, speechStartedAfterMsRef.current);
+        if (process.env.NODE_ENV === 'development') console.log('[Turn] result:', result);
         setTranscript(result.transcript);
         setRecordingState('done');
         setSession((s) => ({
           ...s,
           currentLine: result.babsaeText,
+          currentTtsUrl: result.babsaeTtsUrl,
           followUpCount: result.followUpCount,
           feedbackAvailable: result.feedbackAvailable,
         }));
@@ -95,11 +103,17 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     if (isNative) requestMicPermission();
   }, [isNative]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 뱁새 대사 TTS 자동 재생 — ttsUrl 있으면 네이티브, 없으면 Web Speech API
+  useEffect(() => {
+    if (session.currentLine) speak(session.currentLine, session.currentTtsUrl);
+  }, [session.currentLine]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const bgGradient = CATEGORY_BG[session.categoryId] ?? 'from-gray-900 via-gray-700 to-gray-500';
   const isLastTurn = session.feedbackAvailable || session.followUpCount >= session.maxFollowUpCount;
   const canProceed = recordingState === 'done';
 
   function startRecordingFlow() {
+    if (process.env.NODE_ENV === 'development') console.log('[Mic] startRecordingFlow');
     micPressedAtRef.current = Date.now();
     setRecordingState('recording');
     setTranscript('');
@@ -108,8 +122,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   function handleMicPress() {
-    if (micPermission === 'denied') { setShowMicDeniedModal(true); return; }
+    if (process.env.NODE_ENV === 'development') console.log('[Mic] handleMicPress — state:', recordingState, 'permission:', micPermission);
     if (recordingState === 'idle') {
+      if (micPermission === 'denied') { setShowMicDeniedModal(true); return; }
       if (micPermission === 'unknown') {
         pendingRecordRef.current = true;
         requestMicPermission();
