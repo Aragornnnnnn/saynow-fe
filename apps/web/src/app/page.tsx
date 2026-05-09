@@ -2,17 +2,28 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { getCategories, getScenarios, ApiCategory, ApiScenarioSummary } from '@/lib/api';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ScenarioCard } from '@/components/ScenarioCard';
 import { ScenarioModal } from '@/components/ScenarioModal';
+import { useAuthStore } from '@/store/authStore';
 
 export default function Home() {
+  const router = useRouter();
+  const { accessToken, refreshToken, _hasHydrated } = useAuthStore();
   const [categories, setCategories] = useState<ApiCategory[]>([]);
   const [allScenarios, setAllScenarios] = useState<ApiScenarioSummary[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<ApiScenarioSummary | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // hydration 완료 후 토큰 없으면 로그인 페이지로
+  useEffect(() => {
+    if (_hasHydrated && !accessToken && !refreshToken) {
+      router.replace('/login');
+    }
+  }, [_hasHydrated, accessToken, refreshToken, router]);
 
   useEffect(() => {
     getCategories().then((data) => setCategories(data.categories));
@@ -37,6 +48,8 @@ export default function Home() {
   function handleCategoryChange(categoryId: string | null) {
     setSelectedCategoryId(categoryId);
   }
+
+  if (!_hasHydrated) return null;
 
   return (
     <main className="flex flex-col h-dvh bg-background">
