@@ -1,13 +1,10 @@
 {
   "name": "saynow-fe",
   "private": true,
-  "workspaces": [
-    "apps/*"
-  ],
   "scripts": {
-    "web:dev": "npm -w web run dev",
-    "web:build": "npm -w web run build",
-    "web:lint": "npm -w web run lint",
-    "mobile:start": "npm -w mobile run start"
+    "web:dev": "npm --prefix apps/web run dev",
+    "web:build": "npm --prefix apps/web run build",
+    "web:lint": "npm --prefix apps/web run lint",
+    "mobile:start": "npm --prefix apps/mobile run start"
   }
 }
