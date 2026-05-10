@@ -10,6 +10,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const [feedback, setFeedback] = useState<ApiFeedback | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [summaryExpanded, setSummaryExpanded] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -19,9 +20,9 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
         .then((data) => {
           if (!cancelled) setFeedback(data);
         })
-        .catch((e: Error) => {
+        .catch((e: Error & { code?: string }) => {
           if (!cancelled) {
-            if (e.message.includes('진행 중')) {
+            if (e.code === 'SESSION_IN_PROGRESS' || e.code === 'FEEDBACK_NOT_READY') {
               setTimeout(poll, 2000);
             } else {
               setError(e.message);
@@ -61,37 +62,43 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   return (
     <main className="flex flex-col h-full bg-background">
       {/* 상단 헤더 — sticky 고정 */}
-      <div className="sticky top-0 z-10 bg-card border-b border-border px-5 pt-10 pb-5">
-        <div className="flex items-end justify-between">
-          <div>
-            <p className="text-2xl font-bold text-foreground leading-tight">
-              {cleared ? '클리어! 🎉' : '아쉬워요 😅'}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {feedback.summary}
-            </p>
-          </div>
-          <div className="flex flex-col items-end ml-4 shrink-0">
-            <span className={`text-5xl font-bold leading-none ${comprehensionStyle(feedback.totalUnderstoodScore).color}`}>
-              {feedback.totalUnderstoodScore}%
-            </span>
-            <span className="text-xs text-muted-foreground mt-1">총 이해도</span>
-          </div>
-        </div>
+      <div className="sticky top-0 z-10 bg-card border-b border-border px-5 pt-4 pb-3 flex items-baseline justify-between">
+        <p className="text-lg font-bold text-foreground">{cleared ? '클리어! 🎉' : '아쉬워요 😅'}</p>
+        <p className="text-sm text-muted-foreground">
+          총 이해도{' '}
+          <span className={`text-2xl font-bold ${comprehensionStyle(feedback.totalUnderstoodScore).color}`}>
+            {feedback.totalUnderstoodScore}%
+          </span>
+        </p>
       </div>
 
       {/* 발화별 카드 목록 */}
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 py-4 space-y-3 pb-6">
+        {/* 총평 카드 */}
+        <div className="rounded-2xl bg-card border border-border px-4 py-3">
+          <p className="text-xs font-semibold text-muted-foreground mb-1.5">총평</p>
+          <p className={`text-sm text-muted-foreground ${summaryExpanded ? '' : 'line-clamp-2'}`}>
+            {feedback.summary}
+          </p>
+          {feedback.summary.length > 80 && (
+            <button
+              onClick={() => setSummaryExpanded((v) => !v)}
+              className="text-sm text-primary mt-1.5 font-medium py-1 pr-2"
+            >
+              {summaryExpanded ? '접기' : '자세히 보기'}
+            </button>
+          )}
+        </div>
         {feedback.turnFeedback.map((turn, i) => (
           <TurnCard key={turn.turnId} turn={turn} index={i} />
         ))}
       </div>
 
       {/* 하단 나가기 버튼 */}
-      <div className="px-4 pb-10 pt-3 bg-card border-t border-border">
+      <div className="px-4 py-3 bg-card border-t border-border">
         <button
           onClick={() => router.push('/')}
-          className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white active:opacity-80 transition-opacity"
+          className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
         >
           나가기
         </button>
@@ -135,7 +142,7 @@ function TurnCard({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
           {turn.userTranscript.length > 60 && (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="text-xs text-primary mt-1 font-medium"
+              className="text-sm text-primary mt-1.5 font-medium py-1 pr-2"
             >
               {expanded ? '접기' : '더보기'}
             </button>
@@ -149,13 +156,15 @@ function TurnCard({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
         </div>
 
         {/* 더 나은 표현 */}
-        {turn.scoreDelta > 0 && (
+        {turn.betterExpression && (
           <div className="rounded-xl bg-orange-50 border border-orange-200 px-3 py-3">
             <div className="flex items-center justify-between mb-1.5">
               <p className="text-xs font-bold text-primary">더 나은 표현</p>
-              <span className="text-xs font-bold text-primary bg-orange-100 px-2 py-0.5 rounded-full">
-                +{turn.scoreDelta}%p
-              </span>
+              {turn.improvedUnderstoodScore - turn.understoodScore > 0 && (
+                <span className="text-xs font-bold text-primary bg-orange-100 px-2 py-0.5 rounded-full">
+                  +{turn.improvedUnderstoodScore - turn.understoodScore}%p
+                </span>
+              )}
             </div>
             <p className="text-sm font-semibold text-foreground">{turn.betterExpression}</p>
             {turn.reason && (
