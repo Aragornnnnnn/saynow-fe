@@ -1,45 +1,25 @@
 // 피드백 페이지 — 대화 결과 이해도 및 발화별 상세 피드백
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSessionFeedback, ApiFeedback, ApiTurnFeedback } from '@/lib/api';
+import type { ApiTurnFeedback } from '@/lib/api';
+import { isFeedbackPending, useSessionFeedbackQuery } from '@/queries/feedback';
 
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const [feedback, setFeedback] = useState<ApiFeedback | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [summaryExpanded, setSummaryExpanded] = useState(false);
+  const feedbackQuery = useSessionFeedbackQuery(id);
+  const feedback = feedbackQuery.data;
+  const error = feedbackQuery.error;
+  const isWaitingForFeedback = feedbackQuery.isPending || isFeedbackPending(error);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    function poll() {
-      getSessionFeedback(id)
-        .then((data) => {
-          if (!cancelled) setFeedback(data);
-        })
-        .catch((e: Error & { code?: string }) => {
-          if (!cancelled) {
-            if (e.code === 'SESSION_IN_PROGRESS' || e.code === 'FEEDBACK_NOT_READY') {
-              setTimeout(poll, 2000);
-            } else {
-              setError(e.message);
-            }
-          }
-        });
-    }
-
-    poll();
-    return () => { cancelled = true; };
-  }, [id]);
-
-  if (error) {
+  if (error && !isFeedbackPending(error)) {
     return (
       <main className="flex h-full items-center justify-center bg-background px-6">
         <div className="text-center space-y-4">
-          <p className="text-muted-foreground">{error}</p>
+          <p className="text-muted-foreground">{error.message}</p>
           <button onClick={() => router.push('/')} className="text-sm text-primary font-medium">
             돌아가기
           </button>
@@ -48,7 +28,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  if (!feedback) {
+  if (isWaitingForFeedback || !feedback) {
     return (
       <main className="flex h-full flex-col items-center justify-center bg-background gap-4">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />

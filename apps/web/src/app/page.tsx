@@ -3,20 +3,21 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getCategories, getScenarios, ApiCategory, ApiScenarioSummary } from '@/lib/api';
+import type { ApiScenarioSummary } from '@/lib/api';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ScenarioCard } from '@/components/ScenarioCard';
 import { ScenarioModal } from '@/components/ScenarioModal';
+import { useCategoriesQuery, useScenariosQuery } from '@/queries/scenarios';
 import { useAuthStore } from '@/store/authStore';
 
 export default function Home() {
   const router = useRouter();
   const { accessToken, refreshToken, _hasHydrated } = useAuthStore();
-  const [categories, setCategories] = useState<ApiCategory[]>([]);
-  const [allScenarios, setAllScenarios] = useState<ApiScenarioSummary[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<ApiScenarioSummary | null>(null);
-  const [loading, setLoading] = useState(true);
+  const canFetch = _hasHydrated && (!!accessToken || !!refreshToken);
+  const categoriesQuery = useCategoriesQuery(canFetch);
+  const scenariosQuery = useScenariosQuery(canFetch);
 
   // hydration 완료 후 토큰 없으면 로그인 페이지로
   useEffect(() => {
@@ -26,14 +27,6 @@ export default function Home() {
   }, [_hasHydrated, accessToken, refreshToken, router]);
 
   useEffect(() => {
-    getCategories().then((data) => setCategories(data.categories));
-    getScenarios().then((data) => {
-      setAllScenarios(data.scenarios);
-      setLoading(false);
-    });
-  }, []);
-
-  useEffect(() => {
     const handler = (e: MessageEvent) => {
       if (e.data === 'BACK_PRESSED' && selectedScenario) setSelectedScenario(null);
     };
@@ -41,15 +34,36 @@ export default function Home() {
     return () => window.removeEventListener('message', handler);
   }, [selectedScenario]);
 
+  const categories = categoriesQuery.data ?? [];
+  const allScenarios = scenariosQuery.data ?? [];
   const scenarios = selectedCategoryId
     ? allScenarios.filter((s) => s.categoryId === selectedCategoryId)
     : allScenarios;
+  const dataError = categoriesQuery.error ?? scenariosQuery.error;
 
   function handleCategoryChange(categoryId: string | null) {
     setSelectedCategoryId(categoryId);
   }
 
-  if (!_hasHydrated) return null;
+  function handleRetry() {
+    categoriesQuery.refetch();
+    scenariosQuery.refetch();
+  }
+
+  if (!_hasHydrated || !canFetch) return null;
+
+  if (dataError) {
+    return (
+      <main className="flex h-dvh items-center justify-center bg-background px-6">
+        <div className="text-center space-y-4">
+          <p className="text-muted-foreground">{dataError.message}</p>
+          <button onClick={handleRetry} className="text-sm text-primary font-medium">
+            다시 시도
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex flex-col h-dvh bg-background">
@@ -63,7 +77,7 @@ export default function Home() {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar px-4 pb-6 overscroll-y-contain">
-        {loading ? (
+        {scenariosQuery.isPending ? (
           <div className="grid grid-cols-2 gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="h-28 rounded-2xl bg-card animate-pulse" />
