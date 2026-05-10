@@ -1,25 +1,70 @@
-// 웹뷰 껍데기 앱 진입점
 import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
+import { generateNonce } from './auth/nonce';
+import {
+  refreshAuthSession,
+  socialLogin,
+  type NativeAuthSession,
+  type SocialProvider,
+} from './auth/mobileApi';
+import { clearAuthSession, loadAuthSession, saveAuthSession } from './auth/sessionStorage';
+import { requestSocialIdToken } from './auth/socialLogin';
 import { usePostToWeb, useWebViewBridge } from './bridge/useWebViewBridge';
 import type { WebCommandHandlers } from './bridge/useWebViewBridge';
+import { NativeLoginScreen } from './components/NativeLoginScreen';
 import { useRecorder } from './hooks/useRecorder';
 
 SplashScreen.preventAutoHideAsync();
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? (__DEV__ ? 'http://localhost:3000' : undefined);
 
+type AuthStatus = 'checking' | 'signedOut' | 'signedIn';
+
 export default function App() {
   const webviewRef = useRef<WebView>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
+  const [authSession, setAuthSession] = useState<NativeAuthSession | null>(null);
+  const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const postToWeb = usePostToWeb(webviewRef);
   const { start, stop, openSettings } = useRecorder();
+
+  const bootstrapSession = useCallback(async () => {
+    try {
+      const storedSession = await loadAuthSession();
+      if (!storedSession?.refreshToken || !storedSession.member) {
+        setAuthStatus('signedOut');
+        return;
+      }
+
+      const refreshedSession = await refreshAuthSession(
+        storedSession.refreshToken,
+        storedSession.member,
+      );
+      await saveAuthSession(refreshedSession);
+      setAuthSession(refreshedSession);
+      setAuthStatus('signedIn');
+    } catch (error) {
+      console.warn('[Auth] 저장된 세션 복구 실패:', error);
+      await clearAuthSession();
+      setAuthSession(null);
+      setAuthStatus('signedOut');
+    } finally {
+      SplashScreen.hideAsync();
+    }
+  }, []);
+
+  useEffect(() => {
+    bootstrapSession();
+  }, [bootstrapSession]);
+
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
     START_RECORDING: async () => {
       const started = await start();
@@ -38,8 +83,38 @@ export default function App() {
       const { granted } = await Audio.requestPermissionsAsync();
       postToWeb({ type: 'MIC_PERMISSION_STATUS', granted });
     },
+    AUTH_SESSION_UPDATED: async (message) => {
+      const session = {
+        accessToken: message.accessToken,
+        refreshToken: message.refreshToken,
+        member: message.member,
+      };
+      await saveAuthSession(session);
+      setAuthSession(session);
+    },
   }), [openSettings, postToWeb, start, stop]);
   const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb);
+
+  const handleNativeLogin = useCallback(async (provider: SocialProvider) => {
+    try {
+      setPendingProvider(provider);
+      setLoginError(null);
+
+      const nonce = generateNonce();
+      const idToken = await requestSocialIdToken(provider, nonce);
+      const session = await socialLogin(provider, idToken, nonce);
+
+      await saveAuthSession(session);
+      setAuthSession(session);
+      setHasError(false);
+      setAuthStatus('signedIn');
+    } catch (error) {
+      console.error('[Auth] 로그인 실패:', error);
+      setLoginError(error instanceof Error ? error.message : '로그인에 실패했습니다.');
+    } finally {
+      setPendingProvider(null);
+    }
+  }, []);
 
   async function handleLoadEnd() {
     SplashScreen.hideAsync();
@@ -55,6 +130,11 @@ export default function App() {
     webviewRef.current?.reload();
   }
 
+  const authInjection = useMemo(
+    () => (authSession ? createAuthInjection(authSession) : ''),
+    [authSession],
+  );
+
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
@@ -64,9 +144,19 @@ export default function App() {
             <Text style={styles.errorTitle}>앱 설정이 필요해요</Text>
             <Text style={styles.errorMessage}>EXPO_PUBLIC_WEB_URL을 설정해주세요.</Text>
           </View>
+        ) : authStatus === 'checking' ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#E07A3A" />
+          </View>
+        ) : authStatus === 'signedOut' ? (
+          <NativeLoginScreen
+            errorMessage={loginError}
+            pendingProvider={pendingProvider}
+            onLogin={handleNativeLogin}
+          />
         ) : hasError ? (
           <View style={styles.errorContainer}>
-            <Text style={styles.errorEmoji}>🐦</Text>
+            <Text style={styles.errorEmoji}>!</Text>
             <Text style={styles.errorTitle}>연결할 수 없어요</Text>
             <Text style={styles.errorMessage}>인터넷 연결을 확인하고{'\n'}다시 시도해주세요.</Text>
             <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
@@ -75,9 +165,12 @@ export default function App() {
           </View>
         ) : (
           <WebView
+            key={authSession?.refreshToken}
             ref={webviewRef}
             source={{ uri: WEB_URL }}
             style={styles.webview}
+            injectedJavaScriptBeforeContentLoaded={authInjection}
+            injectedJavaScript={authInjection}
             onLoadEnd={handleLoadEnd}
             onMessage={handleMessage}
             onError={handleError}
@@ -94,6 +187,31 @@ export default function App() {
       </SafeAreaView>
     </SafeAreaProvider>
   );
+}
+
+function createAuthInjection(session: NativeAuthSession) {
+  const persistedAuth = {
+    state: {
+      accessToken: session.accessToken,
+      refreshToken: session.refreshToken,
+      member: session.member,
+    },
+    version: 0,
+  };
+
+  return `
+    (function () {
+      try {
+        localStorage.setItem('saynow-auth', ${JSON.stringify(JSON.stringify(persistedAuth))});
+        if (window.location.pathname === '/login') {
+          window.location.replace('/');
+        }
+      } catch (error) {
+        console.error('[SayNow Native Auth]', error);
+      }
+    })();
+    true;
+  `;
 }
 
 const styles = StyleSheet.create({

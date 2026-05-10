@@ -58,7 +58,7 @@ function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHan
       return handlers.OPEN_SETTINGS?.(message);
     case 'PLAY_TTS':
       return handlers.PLAY_TTS?.(message);
-    case 'REQUEST_SOCIAL_LOGIN':
-      return handlers.REQUEST_SOCIAL_LOGIN?.(message);
+    case 'AUTH_SESSION_UPDATED':
+      return handlers.AUTH_SESSION_UPDATED?.(message);
   }
 }

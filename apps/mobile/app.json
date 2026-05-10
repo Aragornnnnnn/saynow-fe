@@ -4,6 +4,7 @@
     "slug": "saynow",
     "entryPoint": "./index.ts",
     "version": "1.0.0",
+    "scheme": "saynow",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -34,6 +35,32 @@
       "eas": {
         "projectId": "97f2d216-f1c0-41d1-b912-fd31c5526f86"
       }
-    }
+    },
+    "plugins": [
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": [
+              "https://devrepo.kakao.com/nexus/content/groups/public/"
+            ]
+          }
+        }
+      ],
+      [
+        "@react-native-kakao/core",
+        {
+          "nativeAppKey": "09462cccdbd1a0723c5f87929a94a528",
+          "android": {
+            "authCodeHandlerActivity": true
+          },
+          "ios": {
+            "handleKakaoOpenUrl": true
+          }
+        }
+      ],
+      "expo-secure-store"
+    ]
   }
 }

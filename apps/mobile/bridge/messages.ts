@@ -1,4 +1,10 @@
-export type BridgeSocialProvider = 'GOOGLE' | 'KAKAO';
+export type BridgeAuthMember = {
+  memberId: string;
+  nickname: string | null;
+  email: string | null;
+  provider: string;
+  newMember: boolean;
+};
 
 export type WebToNativeMessage =
   | { type: 'START_RECORDING' }
@@ -6,13 +12,17 @@ export type WebToNativeMessage =
   | { type: 'REQUEST_MIC_PERMISSION' }
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
-  | { type: 'REQUEST_SOCIAL_LOGIN'; provider: BridgeSocialProvider; nonce: string };
+  | {
+      type: 'AUTH_SESSION_UPDATED';
+      accessToken: string;
+      refreshToken: string;
+      member: BridgeAuthMember;
+    };
 
 export type NativeToWebMessage =
   | { type: 'RECORDING_DONE'; base64: string; mimeType?: string }
   | { type: 'MIC_PERMISSION_DENIED' }
   | { type: 'MIC_PERMISSION_STATUS'; granted: boolean }
-  | { type: 'SOCIAL_LOGIN_RESULT'; provider: BridgeSocialProvider; idToken: string }
   | { type: 'BACK_PRESSED' };
 
 export function serializeNativeMessage(message: NativeToWebMessage): string {
@@ -56,9 +66,16 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
       return typeof value.text === 'string'
         ? { type: value.type, text: value.text, url: optionalString(value.url) ?? null }
         : null;
-    case 'REQUEST_SOCIAL_LOGIN':
-      return isBridgeProvider(value.provider) && typeof value.nonce === 'string'
-        ? { type: value.type, provider: value.provider, nonce: value.nonce }
+    case 'AUTH_SESSION_UPDATED':
+      return typeof value.accessToken === 'string' &&
+        typeof value.refreshToken === 'string' &&
+        isBridgeAuthMember(value.member)
+        ? {
+            type: value.type,
+            accessToken: value.accessToken,
+            refreshToken: value.refreshToken,
+            member: value.member,
+          }
         : null;
     default:
       return null;
@@ -73,6 +90,13 @@ function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
-function isBridgeProvider(value: unknown): value is BridgeSocialProvider {
-  return value === 'GOOGLE' || value === 'KAKAO';
+function isBridgeAuthMember(value: unknown): value is BridgeAuthMember {
+  return (
+    isRecord(value) &&
+    typeof value.memberId === 'string' &&
+    (typeof value.nickname === 'string' || value.nickname === null) &&
+    (typeof value.email === 'string' || value.email === null) &&
+    typeof value.provider === 'string' &&
+    typeof value.newMember === 'boolean'
+  );
 }
