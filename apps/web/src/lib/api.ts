@@ -145,14 +145,16 @@ export function submitTurn(
   sessionId: string,
   audioBase64: string,
   speechStartedAfterMs: number,
+  mimeType = 'audio/x-m4a',
 ): Promise<ApiTurnResult> {
   const binary = atob(audioBase64);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const audioBlob = new Blob([bytes], { type: 'audio/x-m4a' });
+  const audioBlob = new Blob([bytes], { type: mimeType });
+  const ext = mimeType.includes('webm') ? 'webm' : 'm4a';
 
   const formData = new FormData();
-  formData.append('audio', audioBlob, 'audio.m4a');
+  formData.append('audio', audioBlob, `audio.${ext}`);
   const requestBlob = new Blob([JSON.stringify({ inputType: 'AUDIO', speechStartedAfterMs })], { type: 'application/json' });
   formData.append('request', requestBlob, 'request.json');
   return request(`/api/v1/sessions/${sessionId}/turns`, {
