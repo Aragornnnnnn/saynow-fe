@@ -7,10 +7,10 @@
 ## 개발 명령어
 
 ```bash
-pnpm --filter web dev
-pnpm --filter web build
-pnpm --filter web lint
-pnpm --filter mobile start
+npm run dev -w apps/web
+npm run build -w apps/web
+npm run lint -w apps/web
+npm run start -w apps/mobile
 ```
 
 ## 아키텍처
