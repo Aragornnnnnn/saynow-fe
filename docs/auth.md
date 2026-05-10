@@ -14,7 +14,7 @@ SayNow 인증은 provider OIDC idToken을 백엔드가 검증하고, 자체 SayN
 | provider | issuer | 주요 scope | 식별자 |
 | --- | --- | --- | --- |
 | `GOOGLE` | `https://accounts.google.com` | `openid email profile` | idToken `sub` |
-| `KAKAO` | `https://kauth.kakao.com` | `openid account_email profile_nickname` | idToken `sub` |
+| `KAKAO` | `https://kauth.kakao.com` | `openid profile_nickname` | idToken `sub` |
 
 백엔드는 provider별로 idToken의 signature, issuer, audience, expiry, nonce를 검증한다.
 

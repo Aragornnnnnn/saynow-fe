@@ -12,7 +12,7 @@ export const SOCIAL_LOGIN_STORAGE_KEY = 'saynow-social-login';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const KAKAO_AUTH_URL = 'https://kauth.kakao.com/oauth/authorize';
-const KAKAO_SCOPES = ['openid', 'account_email', 'profile_nickname'];
+const KAKAO_SCOPES = ['openid', 'profile_nickname'];
 
 export async function startWebSocialLogin(provider: SocialProvider, nonce: string) {
   const state = generateRandomHex(16);
@@ -101,7 +101,7 @@ function createKakaoAuthorizationUrl(pending: PendingSocialLogin) {
     response_type: 'code',
     client_id: clientId,
     redirect_uri: pending.redirectUri,
-    scope: KAKAO_SCOPES.join(' '),
+    scope: KAKAO_SCOPES.join(','),
     nonce: pending.nonce,
     state: pending.state,
   });
