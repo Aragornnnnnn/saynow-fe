@@ -51,7 +51,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
 
   const micPermission = useAppStore((s) => s.micPermission);
-  const micPressedAtRef = useRef<number | null>(null);
+  const turnStartedAtRef = useRef<number | null>(null);
   const speechStartedAfterMsRef = useRef(0);
   const sessionStartedRef = useRef(false);
 
@@ -59,15 +59,18 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     if (sessionStartedRef.current) return;
     sessionStartedRef.current = true;
     startSession(id)
-      .then((data) => setSession({
-        sessionId: data.sessionId,
-        currentLine: data.babsaeText,
-        currentTtsUrl: data.babsaeTtsUrl,
-        maxFollowUpCount: data.maxFollowUpCount,
-        feedbackAvailable: false,
-        followUpCount: 0,
-        categoryId: data.scenarioId.split('_')[0],
-      }))
+      .then((data) => {
+        turnStartedAtRef.current = Date.now();
+        setSession({
+          sessionId: data.sessionId,
+          currentLine: data.babsaeText,
+          currentTtsUrl: data.babsaeTtsUrl,
+          maxFollowUpCount: data.maxFollowUpCount,
+          feedbackAvailable: false,
+          followUpCount: 0,
+          categoryId: data.scenarioId.split('_')[0],
+        });
+      })
       .catch((e: Error) => setError(e.message));
   }, [id]);
 
@@ -114,11 +117,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   function startRecordingFlow() {
     if (process.env.NODE_ENV === 'development') console.log('[Mic] startRecordingFlow');
-    micPressedAtRef.current = Date.now();
+    speechStartedAfterMsRef.current = turnStartedAtRef.current ? Date.now() - turnStartedAtRef.current : 0;
     setRecordingState('recording');
     setTranscript('');
     startRecording();
-    if (session.sessionId) recordMicReady(session.sessionId, 0);
+    if (session.sessionId) recordMicReady(session.sessionId, speechStartedAfterMsRef.current).catch(() => {});
   }
 
   function handleMicPress() {
@@ -132,7 +135,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       }
       startRecordingFlow();
     } else if (recordingState === 'recording') {
-      speechStartedAfterMsRef.current = micPressedAtRef.current ? Date.now() - micPressedAtRef.current : 0;
       stopRecording();
     }
   }
@@ -141,6 +143,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     if (isLastTurn) {
       router.push(`/feedback/${session.sessionId}`);
     } else {
+      turnStartedAtRef.current = Date.now();
       setRecordingState('idle');
       setTranscript('');
     }
