@@ -1,4 +1,10 @@
-export type BridgeSocialProvider = 'GOOGLE' | 'KAKAO';
+export type BridgeAuthMember = {
+  memberId: string;
+  nickname: string | null;
+  email: string | null;
+  provider: string;
+  newMember: boolean;
+};
 
 export type WebToNativeMessage =
   | { type: 'START_RECORDING' }
@@ -6,13 +12,17 @@ export type WebToNativeMessage =
   | { type: 'REQUEST_MIC_PERMISSION' }
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
-  | { type: 'REQUEST_SOCIAL_LOGIN'; provider: BridgeSocialProvider; nonce: string };
+  | {
+      type: 'AUTH_SESSION_UPDATED';
+      accessToken: string;
+      refreshToken: string;
+      member: BridgeAuthMember;
+    };
 
 export type NativeToWebMessage =
   | { type: 'RECORDING_DONE'; base64: string; mimeType?: string }
   | { type: 'MIC_PERMISSION_DENIED' }
   | { type: 'MIC_PERMISSION_STATUS'; granted: boolean }
-  | { type: 'SOCIAL_LOGIN_RESULT'; provider: BridgeSocialProvider; idToken: string }
   | { type: 'BACK_PRESSED' };
 
 export function serializeWebMessage(message: WebToNativeMessage): string {
@@ -42,10 +52,6 @@ function normalizeNativeMessage(value: unknown): NativeToWebMessage | null {
       return { type: value.type };
     case 'MIC_PERMISSION_STATUS':
       return typeof value.granted === 'boolean' ? { type: value.type, granted: value.granted } : null;
-    case 'SOCIAL_LOGIN_RESULT':
-      return isBridgeProvider(value.provider) && typeof value.idToken === 'string'
-        ? { type: value.type, provider: value.provider, idToken: value.idToken }
-        : null;
     case 'BACK_PRESSED':
       return { type: value.type };
     default:
@@ -59,8 +65,4 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function optionalString(value: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
-}
-
-function isBridgeProvider(value: unknown): value is BridgeSocialProvider {
-  return value === 'GOOGLE' || value === 'KAKAO';
 }

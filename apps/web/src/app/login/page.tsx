@@ -1,12 +1,12 @@
 // 소셜 로그인 진입 페이지 — 카카오/구글 로그인 버튼 제공
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/authStore';
-import { socialLogin, SocialProvider } from '@/lib/api';
-import { useLoginBridge } from '@/hooks/useLoginBridge';
+import type { SocialProvider } from '@/lib/api';
+import { startWebSocialLogin } from '@/lib/webSocialLogin';
 
 const DEV_LOGIN_ENABLED =
   process.env.NODE_ENV === 'development' &&
@@ -16,6 +16,8 @@ export default function LoginPage() {
   const router = useRouter();
   const { accessToken, setAuth } = useAuthStore();
   const nonce = useRef<string>('');
+  const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 이미 로그인된 경우 홈으로
   useEffect(() => {
@@ -28,26 +30,17 @@ export default function LoginPage() {
     return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  async function handleSocialLoginResult(provider: SocialProvider, idToken: string) {
+  async function startLogin(provider: SocialProvider) {
+    nonce.current = generateNonce();
+    setPendingProvider(provider);
+    setErrorMessage(null);
+
     try {
-      const data = await socialLogin(provider, idToken, nonce.current);
-      setAuth(data.accessToken, data.refreshToken, data.member);
-      router.replace('/');
+      await startWebSocialLogin(provider, nonce.current);
     } catch (err) {
-      console.error('로그인 실패:', err);
+      setPendingProvider(null);
+      setErrorMessage(err instanceof Error ? err.message : '로그인에 실패했습니다.');
     }
-  }
-
-  const { requestLogin } = useLoginBridge(handleSocialLoginResult);
-
-  function handleKakao() {
-    nonce.current = generateNonce();
-    requestLogin('KAKAO', nonce.current);
-  }
-
-  function handleGoogle() {
-    nonce.current = generateNonce();
-    requestLogin('GOOGLE', nonce.current);
   }
 
   function handleDevLogin() {
@@ -56,6 +49,7 @@ export default function LoginPage() {
 
     if (!accessToken || !refreshToken) {
       console.warn('개발용 로그인 토큰 환경변수가 설정되지 않았습니다.');
+      setErrorMessage('개발용 로그인 토큰 환경변수가 설정되지 않았습니다.');
       return;
     }
 
@@ -94,19 +88,26 @@ export default function LoginPage() {
       {/* 하단 버튼 영역 */}
       <div className="w-full flex flex-col gap-3 pb-safe">
         <button
-          onClick={handleKakao}
+          onClick={() => startLogin('KAKAO')}
+          disabled={pendingProvider !== null}
           className="w-full h-14 rounded-xl bg-[#FEE500] flex items-center justify-center gap-3 font-semibold text-[#191919] text-base active:brightness-95 transition-all"
         >
           <KakaoIcon />
-          카카오로 시작하기
+          {pendingProvider === 'KAKAO' ? '카카오 로그인 중...' : '카카오로 시작하기'}
         </button>
         <button
-          onClick={handleGoogle}
+          onClick={() => startLogin('GOOGLE')}
+          disabled={pendingProvider !== null}
           className="w-full h-14 rounded-xl bg-card border border-border flex items-center justify-center gap-3 font-semibold text-foreground text-base active:brightness-95 transition-all"
         >
           <GoogleIcon />
-          구글로 시작하기
+          {pendingProvider === 'GOOGLE' ? '구글 로그인 중...' : '구글로 시작하기'}
         </button>
+        {errorMessage && (
+          <p className="px-1 text-center text-sm leading-relaxed text-red-600">
+            {errorMessage}
+          </p>
+        )}
         {DEV_LOGIN_ENABLED && (
           <button
             onClick={handleDevLogin}

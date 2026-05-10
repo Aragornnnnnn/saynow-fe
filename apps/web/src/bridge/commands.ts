@@ -1,4 +1,4 @@
-import type { BridgeSocialProvider } from './messages';
+import type { BridgeAuthMember } from './messages';
 import { webBridge } from './webBridge';
 
 export function startNativeRecording() {
@@ -21,6 +21,10 @@ export function playNativeTts(text: string, url: string | null) {
   return webBridge.send({ type: 'PLAY_TTS', text, url });
 }
 
-export function requestNativeSocialLogin(provider: BridgeSocialProvider, nonce: string) {
-  return webBridge.send({ type: 'REQUEST_SOCIAL_LOGIN', provider, nonce });
+export function updateNativeAuthSession(
+  accessToken: string,
+  refreshToken: string,
+  member: BridgeAuthMember,
+) {
+  return webBridge.send({ type: 'AUTH_SESSION_UPDATED', accessToken, refreshToken, member });
 }

@@ -1,4 +1,5 @@
 import type { AuthMember } from '@/store/authStore';
+import { updateNativeAuthSession } from '@/bridge/commands';
 
 type AuthStoreState = {
   accessToken: string | null;
@@ -9,8 +10,19 @@ type AuthStoreState = {
 };
 
 type ApiEnvelope<T> =
-  | { success: true; data: T }
-  | { success: false; error?: { code?: string; message?: string } };
+  | { success: true; data: T; error?: null }
+  | { success: false; data?: null; error?: { code?: string; message?: string } };
+
+type RefreshTokenResponse = {
+  tokenType: string;
+  accessToken: string;
+  accessTokenExpiresIn: number;
+  refreshToken: string;
+  refreshTokenExpiresIn: number;
+};
+
+const REFRESH_PATH = '/api/v1/auth/token/refresh';
+let refreshPromise: Promise<string | null> | null = null;
 
 function getAuthStore(): AuthStoreState | null {
   if (typeof window === 'undefined') return null;
@@ -21,23 +33,22 @@ function getAuthStore(): AuthStoreState | null {
 export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const auth = getAuthStore();
   const accessToken = auth?.accessToken ?? null;
-  const headers: Record<string, string> = {
-    ...(init?.headers as Record<string, string>),
-  };
+  const headers = new Headers(init?.headers);
 
-  if (!(init?.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
+  if (!(init?.body instanceof FormData) && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
   }
   if (accessToken) {
-    headers.Authorization = `Bearer ${accessToken}`;
+    headers.set('Authorization', `Bearer ${accessToken}`);
   }
 
   const response = await fetch(path, { ...init, headers });
 
-  if (response.status === 401 && auth?.refreshToken) {
-    const refreshed = await tryRefresh(auth);
+  if (response.status === 401 && auth?.refreshToken && path !== REFRESH_PATH) {
+    const refreshed = await refreshAccessToken(auth);
     if (refreshed) {
-      const retryHeaders = { ...headers, Authorization: `Bearer ${refreshed}` };
+      const retryHeaders = new Headers(headers);
+      retryHeaders.set('Authorization', `Bearer ${refreshed}`);
       const retry = await fetch(path, { ...init, headers: retryHeaders });
       return readEnvelope<T>(retry);
     }
@@ -51,7 +62,18 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function readEnvelope<T>(response: Response): Promise<T> {
-  const json = (await response.json()) as ApiEnvelope<T>;
+  const text = await response.text();
+  if (!text) {
+    if (response.ok) return undefined as T;
+    throw new Error(`요청에 실패했습니다. (${response.status})`);
+  }
+
+  let json: ApiEnvelope<T>;
+  try {
+    json = JSON.parse(text) as ApiEnvelope<T>;
+  } catch {
+    throw new Error(`서버 응답을 읽지 못했습니다. (${response.status})`);
+  }
 
   if (!json.success) {
     if (process.env.NODE_ENV === 'development') console.error('[API] error response:', json);
@@ -63,20 +85,27 @@ async function readEnvelope<T>(response: Response): Promise<T> {
   return json.data;
 }
 
+function refreshAccessToken(auth: AuthStoreState): Promise<string | null> {
+  refreshPromise ??= tryRefresh(auth).finally(() => {
+    refreshPromise = null;
+  });
+  return refreshPromise;
+}
+
 async function tryRefresh(auth: AuthStoreState): Promise<string | null> {
   if (!auth.member) return null;
 
   try {
-    const response = await fetch('/api/v1/auth/token/refresh', {
+    const response = await fetch(REFRESH_PATH, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken: auth.refreshToken }),
     });
-    const json = (await response.json()) as ApiEnvelope<{ accessToken: string; refreshToken: string }>;
-    if (!json.success) return null;
+    const data = await readEnvelope<RefreshTokenResponse>(response);
 
-    auth.setAuth(json.data.accessToken, json.data.refreshToken, auth.member);
-    return json.data.accessToken;
+    auth.setAuth(data.accessToken, data.refreshToken, auth.member);
+    updateNativeAuthSession(data.accessToken, data.refreshToken, auth.member);
+    return data.accessToken;
   } catch {
     return null;
   }
