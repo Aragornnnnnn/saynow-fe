@@ -7,7 +7,7 @@ pnpm workspaces 기반 모노레포.
 ```
 saynow-fe/
   apps/
-    mobile/   # React Native (Expo) — 웹뷰 껍데기
+    mobile/   # React Native (Expo) — 네이티브 로그인 + WebView shell
     web/      # Next.js — 실제 앱 로직
   docs/
   package.json
@@ -17,9 +17,11 @@ saynow-fe/
 ## 앱 구성
 
 ### mobile (Expo)
-웹뷰 서빙이 주 역할. 네이티브 기능이 필요한 경우에만 브릿징 사용.
+네이티브 로그인, SecureStore 세션 저장, 웹뷰 서빙이 주 역할. 네이티브 기능이 필요한 경우에는 브릿지를 사용한다.
 
 네이티브에서 처리하는 것:
+- Google/Kakao 로그인
+- SayNow refresh token 보관 (`expo-secure-store`)
 - 마이크 녹음 (`expo-av`)
 - 권한 요청 (마이크)
 
@@ -29,6 +31,8 @@ saynow-fe/
 ## 웹뷰 ↔ 네이티브 통신
 
 `postMessage` 방식 사용.
+
+인증 시작은 bridge로 처리하지 않는다. 앱은 네이티브 로그인 화면에서 먼저 로그인하고, 로그인 성공 후 WebView에 `saynow-auth`를 주입한다.
 
 **마이크 녹음 플로우:**
 ```
@@ -57,10 +61,11 @@ saynow-fe/
 
 ```
 apps/web/.env.local     # 웹 API 엔드포인트
-apps/mobile/.env.local  # 모바일 환경변수
+apps/mobile/.env        # 모바일 환경변수
 ```
 
 ## 미결 사항
 
-- 인증/세션 방식 (Supabase Auth vs 백엔드 처리)
+- Kakao nonce 패치 정식화
+- 앱/WebView 로그아웃 동기화
 - 브랜치 컨벤션

@@ -7,6 +7,9 @@
 | Expo | React Native 프레임워크 | 설정 최소화, EAS Build 배포 편함, 네이티브 브릿징 필요시 Expo Modules로 대응 |
 | react-native-webview | 웹뷰 렌더링 | 표준 라이브러리 |
 | expo-av | 마이크 녹음 | 네이티브 마이크 접근 (iOS 웹뷰 마이크 제한 우회, 자연스러운 권한 UX) |
+| expo-secure-store | 앱 토큰 저장 | refresh token을 앱 OS 보안 저장소에 보관 |
+| expo-auth-session | 앱 Google 로그인 | 현재 Google OAuth code flow 처리 |
+| @react-native-kakao/user | 앱 Kakao 로그인 | Kakao Native SDK 기반 로그인 |
 
 ## Web (`apps/web`)
 
@@ -35,4 +38,5 @@ Turborepo는 미사용 — MVP 규모에서 오버헤드, 추후 필요시 추�
 
 ## 미결 사항
 
-- 인증/세션 방식 (Supabase Auth vs 백엔드 처리)
+- Kakao nonce 패치 정식화
+- 앱/WebView 로그아웃 동기화
