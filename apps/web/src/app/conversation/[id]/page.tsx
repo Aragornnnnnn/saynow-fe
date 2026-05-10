@@ -5,7 +5,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic, Square } from 'lucide-react';
 import { startSession, submitTurn, recordMicReady, exitSession } from '@/lib/api';
-import { useNativeBridge } from '@/hooks/useNativeBridge';
+import { useRecordingBridge } from '@/hooks/useRecordingBridge';
 import { useAppStore } from '@/store/appStore';
 import { useTts } from '@/hooks/useTts';
 import ExitConfirmModal from './ExitConfirmModal';
@@ -80,7 +80,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const pendingRecordRef = useRef(false);
 
   const { speak } = useTts();
-  const { startRecording, stopRecording, isNative, requestMicPermission } = useNativeBridge(
+  const { startRecording, stopRecording, isNative, requestMicPermission } = useRecordingBridge(
     async (base64, mimeType) => {
       if (!session.sessionId) return;
       setRecordingState('submitting');
