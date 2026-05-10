@@ -1,6 +1,8 @@
 // 마이크 권한 거부 시 표시되는 안내 모달
 'use client';
 
+import { openNativeSettings } from '@/bridge/commands';
+
 interface MicDeniedModalProps {
   isNative: boolean;
   onClose: () => void;
@@ -25,7 +27,7 @@ export default function MicDeniedModal({ isNative, onClose }: MicDeniedModalProp
             <button
               onClick={() => {
                 onClose();
-                window.ReactNativeWebView?.postMessage('OPEN_SETTINGS');
+                openNativeSettings();
               }}
               className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white"
             >

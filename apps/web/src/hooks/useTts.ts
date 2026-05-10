@@ -1,17 +1,12 @@
-// 뱁새 대사 TTS 재생 훅 — 네이티브 앱으로 postMessage, 브라우저 개발 환경은 Web Speech API fallback
 'use client';
 
 import { useCallback } from 'react';
+import { playNativeTts } from '@/bridge/commands';
 
 export function useTts() {
   const speak = useCallback((text: string, ttsUrl: string | null) => {
-    if (typeof window !== 'undefined' && window.ReactNativeWebView) {
-      window.ReactNativeWebView.postMessage(
-        JSON.stringify({ type: 'PLAY_TTS', text, url: ttsUrl ?? null })
-      );
-      return;
-    }
-    // 브라우저 개발 환경 fallback
+    if (playNativeTts(text, ttsUrl ?? null)) return;
+
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
