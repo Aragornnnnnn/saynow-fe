@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { ApiScenarioSummary } from '@/lib/api';
+import { SCENARIO_EMOJI } from '@/lib/scenarios';
 
 interface ScenarioCardProps {
   scenario: ApiScenarioSummary;
@@ -22,15 +23,15 @@ export function ScenarioCard({ scenario, onClick }: ScenarioCardProps) {
       onTouchCancel={() => setPressed(false)}
       className={`flex flex-col gap-2 rounded-2xl p-4 text-left shadow-sm transition-colors duration-100 ${pressed ? 'bg-[#F0F0EE]' : 'bg-card'}`}
     >
-      <div className="w-10 h-10 rounded-xl overflow-hidden bg-muted flex items-center justify-center">
+      <div className="w-10 h-10 flex items-center justify-center">
         {scenario.thumbnailUrl ? (
-          <Image src={scenario.thumbnailUrl} alt={scenario.title} width={40} height={40} className="object-cover" />
+          <Image src={scenario.thumbnailUrl} alt={scenario.title} width={40} height={40} className="object-cover rounded-xl" />
         ) : (
-          <span className="text-2xl">🗣️</span>
+          <span className="text-2xl">{SCENARIO_EMOJI[scenario.scenarioId] ?? '🗣️'}</span>
         )}
       </div>
-      <div className="flex flex-col gap-1">
-        <span className="text-sm font-semibold text-foreground leading-snug">{scenario.title}</span>
+      <div className="flex flex-col gap-1 min-h-10 justify-start">
+        <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2">{scenario.title}</span>
       </div>
       <DifficultyBadge difficulty={scenario.difficulty} />
     </button>

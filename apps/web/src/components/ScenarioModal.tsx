@@ -2,8 +2,9 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useRef, useState, useEffect } from 'react';
-import { ApiScenarioSummary, getScenarioDetail, ApiScenarioDetail } from '@/lib/api';
+import { useRef, useState } from 'react';
+import { ApiScenarioSummary } from '@/lib/api';
+import { SCENARIO_EMOJI } from '@/lib/scenarios';
 
 const DRAG_CLOSE_THRESHOLD = 100;
 
@@ -16,11 +17,6 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
   const router = useRouter();
   const startYRef = useRef<number | null>(null);
   const [dragY, setDragY] = useState(0);
-  const [detail, setDetail] = useState<ApiScenarioDetail | null>(null);
-
-  useEffect(() => {
-    getScenarioDetail(scenario.scenarioId).then(setDetail);
-  }, [scenario.scenarioId]);
 
   function handleStart(clientY: number) {
     startYRef.current = clientY;
@@ -66,7 +62,7 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
           {scenario.thumbnailUrl ? (
             <img src={scenario.thumbnailUrl} alt={scenario.title} className='h-full w-full rounded-2xl object-cover' />
           ) : (
-            <span className='text-7xl'>🗣️</span>
+            <span className='text-7xl'>{SCENARIO_EMOJI[scenario.scenarioId] ?? '🗣️'}</span>
           )}
         </div>
 
@@ -84,7 +80,7 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
 
         {/* 상황 설명 */}
         <p className='mb-4 text-sm text-muted-foreground leading-relaxed'>
-          {detail?.situationDescription ?? '...'}
+          {scenario.situationDescription}
         </p>
 
         {/* 달성 목표 */}

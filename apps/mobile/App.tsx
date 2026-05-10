@@ -109,7 +109,7 @@ export default function App() {
             startInLoadingState
           />
         )}
-        <StatusBar style="auto" />
+        <StatusBar style="dark" />
       </SafeAreaView>
     </SafeAreaProvider>
   );

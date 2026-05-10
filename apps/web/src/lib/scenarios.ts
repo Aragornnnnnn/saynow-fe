@@ -1,5 +1,18 @@
 // 시나리오 목업 데이터 및 타입 정의
 
+export const SCENARIO_EMOJI: Record<string, string> = {
+  cafe_iced_americano: '🥤',
+  cafe_to_go_order: '🛍️',
+  airport_immigration: '🛂',
+  airport_baggage: '🧳',
+  hotel_check_in: '🛎️',
+  hotel_towel_request: '🛁',
+  restaurant_menu_recommendation: '📋',
+  restaurant_check: '💳',
+  taxi_destination: '📍',
+  taxi_card_payment: '💰',
+};
+
 export type Category = '전체' | '카페' | '공항' | '호텔' | '식당' | '택시';
 export type Difficulty = '쉬움' | '어려움';
 

@@ -19,7 +19,7 @@ const CATEGORY_BG: Record<string, string> = {
   taxi: 'from-yellow-900 via-yellow-700 to-yellow-500',
 };
 
-type RecordingState = 'idle' | 'recording' | 'done';
+type RecordingState = 'idle' | 'recording' | 'submitting' | 'done';
 
 interface SessionState {
   sessionId: string | null;
@@ -46,6 +46,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   });
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [transcript, setTranscript] = useState('');
+  const pendingNextRef = useRef<{ babsaeText: string; babsaeTtsUrl: string | null; followUpCount: number; feedbackAvailable: boolean } | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,6 +54,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const micPermission = useAppStore((s) => s.micPermission);
   const turnStartedAtRef = useRef<number | null>(null);
   const speechStartedAfterMsRef = useRef(0);
+  const recordingStartedAtRef = useRef<number | null>(null);
+  const recordingDurationMsRef = useRef(0);
   const sessionStartedRef = useRef(false);
 
   useEffect(() => {
@@ -80,19 +83,24 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const { startRecording, stopRecording, isNative, requestMicPermission } = useNativeBridge(
     async (base64, mimeType) => {
       if (!session.sessionId) return;
+      setRecordingState('submitting');
       if (process.env.NODE_ENV === 'development') console.log('[Turn] base64 length:', base64?.length, 'sessionId:', session.sessionId, 'speechStartedAfterMs:', speechStartedAfterMsRef.current);
       try {
-        const result = await submitTurn(session.sessionId, base64, speechStartedAfterMsRef.current, mimeType);
+        const result = await submitTurn(session.sessionId, base64, speechStartedAfterMsRef.current, recordingDurationMsRef.current, mimeType);
         if (process.env.NODE_ENV === 'development') console.log('[Turn] result:', result);
         setTranscript(result.transcript);
-        setRecordingState('done');
+        pendingNextRef.current = {
+          babsaeText: result.babsaeText,
+          babsaeTtsUrl: result.babsaeTtsUrl,
+          followUpCount: result.followUpCount,
+          feedbackAvailable: result.feedbackAvailable,
+        };
         setSession((s) => ({
           ...s,
-          currentLine: result.babsaeText,
-          currentTtsUrl: result.babsaeTtsUrl,
           followUpCount: result.followUpCount,
           feedbackAvailable: result.feedbackAvailable,
         }));
+        setRecordingState('done');
       } catch (e) {
         setError((e as Error).message);
         setRecordingState('idle');
@@ -112,12 +120,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }, [session.currentLine]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const bgGradient = CATEGORY_BG[session.categoryId] ?? 'from-gray-900 via-gray-700 to-gray-500';
-  const isLastTurn = session.feedbackAvailable || session.followUpCount >= session.maxFollowUpCount;
+  const isLastTurn = session.feedbackAvailable;
   const canProceed = recordingState === 'done';
+  const isSubmitting = recordingState === 'submitting';
 
   function startRecordingFlow() {
     if (process.env.NODE_ENV === 'development') console.log('[Mic] startRecordingFlow');
     speechStartedAfterMsRef.current = turnStartedAtRef.current ? Date.now() - turnStartedAtRef.current : 0;
+    recordingStartedAtRef.current = Date.now();
     setRecordingState('recording');
     setTranscript('');
     startRecording();
@@ -135,14 +145,25 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       }
       startRecordingFlow();
     } else if (recordingState === 'recording') {
+      recordingDurationMsRef.current = recordingStartedAtRef.current ? Date.now() - recordingStartedAtRef.current : 0;
       stopRecording();
     }
   }
 
-  function handleNext() {
+  async function handleNext() {
     if (isLastTurn) {
+      if (session.sessionId) await exitSession(session.sessionId).catch(() => {});
       router.push(`/feedback/${session.sessionId}`);
     } else {
+      const next = pendingNextRef.current;
+      pendingNextRef.current = null;
+      if (next) {
+        setSession((s) => ({
+          ...s,
+          currentLine: next.babsaeText,
+          currentTtsUrl: next.babsaeTtsUrl,
+        }));
+      }
       turnStartedAtRef.current = Date.now();
       setRecordingState('idle');
       setTranscript('');
@@ -205,6 +226,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               <span className="text-sm text-white/70 italic">듣고 있어요...</span>
             </div>
           )}
+          {isSubmitting && (
+            <div className="flex items-center gap-2">
+              <div className="w-4 h-4 rounded-full border-2 border-white/60 border-t-transparent animate-spin" />
+              <span className="text-sm text-white/70">분석 중...</span>
+            </div>
+          )}
           {recordingState === 'done' && transcript && (
             <div className="rounded-xl bg-black/30 backdrop-blur-sm px-4 py-2 mx-2">
               <p className="text-sm text-white text-center leading-relaxed">{transcript}</p>
@@ -215,10 +242,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         <div className="flex justify-center mb-6">
           <button
             onClick={handleMicPress}
-            disabled={recordingState === 'done'}
+            disabled={recordingState === 'done' || isSubmitting}
             className={`w-20 h-20 rounded-full flex items-center justify-center shadow-lg active:scale-95 transition-all duration-150 ${
               recordingState === 'recording' ? 'bg-red-500 animate-pulse'
-              : recordingState === 'done' ? 'bg-white/30 cursor-not-allowed'
+              : (recordingState === 'done' || isSubmitting) ? 'bg-white/30 cursor-not-allowed'
               : 'bg-primary'
             }`}
           >

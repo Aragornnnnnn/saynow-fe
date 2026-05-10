@@ -42,7 +42,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const json = await res.json();
   if (!json.success) {
     if (process.env.NODE_ENV === 'development') console.error('[API] error response:', json);
-    throw new Error(json.error?.message ?? '서버 오류');
+    const err = new Error(json.error?.message ?? '서버 오류') as Error & { code?: string };
+    err.code = json.error?.code;
+    throw err;
   }
   return json.data as T;
 }
@@ -83,6 +85,7 @@ export interface ApiScenarioSummary {
   categoryId: string;
   title: string;
   difficulty: string;
+  situationDescription: string;
   successGoal: string;
   thumbnailUrl: string | null;
 }
@@ -145,6 +148,7 @@ export function submitTurn(
   sessionId: string,
   audioBase64: string,
   speechStartedAfterMs: number,
+  recordingDurationMs: number,
   mimeType = 'audio/x-m4a',
 ): Promise<ApiTurnResult> {
   const binary = atob(audioBase64);
@@ -155,7 +159,7 @@ export function submitTurn(
 
   const formData = new FormData();
   formData.append('audio', audioBlob, `audio.${ext}`);
-  const requestBlob = new Blob([JSON.stringify({ inputType: 'AUDIO', speechStartedAfterMs })], { type: 'application/json' });
+  const requestBlob = new Blob([JSON.stringify({ inputType: 'AUDIO', speechStartedAfterMs, recordingDurationMs })], { type: 'application/json' });
   formData.append('request', requestBlob, 'request.json');
   return request(`/api/v1/sessions/${sessionId}/turns`, {
     method: 'POST',
