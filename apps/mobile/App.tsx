@@ -11,19 +11,14 @@ import { useRecorder } from './hooks/useRecorder';
 
 SplashScreen.preventAutoHideAsync();
 
-const WEB_URL = __DEV__
-  ? (process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000')
-  : 'https://saynow-fe-web.vercel.app';
+const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? (__DEV__ ? 'http://localhost:3000' : undefined);
 
 export default function App() {
   const webviewRef = useRef<WebView>(null);
   const [hasError, setHasError] = useState(false);
 
   const handleRecorded = useCallback((base64: string) => {
-    if (__DEV__) console.log('[App] handleRecorded base64 length:', base64?.length);
-    if (__DEV__) console.log('[App] webviewRef.current:', !!webviewRef.current);
     webviewRef.current?.postMessage(JSON.stringify({ type: 'RECORDING_DONE', base64 }));
-    if (__DEV__) console.log('[App] RECORDING_DONE posted');
   }, []);
 
   const handlePermissionDenied = useCallback(() => {
@@ -61,9 +56,6 @@ export default function App() {
 
     const type = data?.type ?? raw;
 
-    if (__DEV__) console.log('[App] message received:', type, data ?? raw);
-
-    if (type === '__DEBUG__') { if (__DEV__) console.log('[App] __DEBUG__ from web:', JSON.stringify(data)); return; }
     if (type === 'START_RECORDING') start();
     else if (type === 'STOP_RECORDING') stop();
     else if (type === 'OPEN_SETTINGS') openSettings();
@@ -73,7 +65,6 @@ export default function App() {
     }
     else if (type === 'REQUEST_MIC_PERMISSION') {
       const { granted } = await Audio.requestPermissionsAsync();
-      if (__DEV__) console.log('[App] mic permission result:', granted);
       webviewRef.current?.postMessage(
         JSON.stringify({ type: 'MIC_PERMISSION_STATUS', granted }),
       );
@@ -83,7 +74,13 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={styles.container}>
-        {hasError ? (
+        {!WEB_URL ? (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorEmoji}>!</Text>
+            <Text style={styles.errorTitle}>앱 설정이 필요해요</Text>
+            <Text style={styles.errorMessage}>EXPO_PUBLIC_WEB_URL을 설정해주세요.</Text>
+          </View>
+        ) : hasError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorEmoji}>🐦</Text>
             <Text style={styles.errorTitle}>연결할 수 없어요</Text>

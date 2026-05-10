@@ -8,6 +8,10 @@ import { useAuthStore } from '@/store/authStore';
 import { socialLogin, SocialProvider } from '@/lib/api';
 import { useLoginBridge } from '@/hooks/useLoginBridge';
 
+const DEV_LOGIN_ENABLED =
+  process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true';
+
 export default function LoginPage() {
   const router = useRouter();
   const { accessToken, setAuth } = useAuthStore();
@@ -44,6 +48,25 @@ export default function LoginPage() {
   function handleGoogle() {
     nonce.current = generateNonce();
     requestLogin('GOOGLE', nonce.current);
+  }
+
+  function handleDevLogin() {
+    const accessToken = process.env.NEXT_PUBLIC_DEV_ACCESS_TOKEN;
+    const refreshToken = process.env.NEXT_PUBLIC_DEV_REFRESH_TOKEN;
+
+    if (!accessToken || !refreshToken) {
+      console.warn('개발용 로그인 토큰 환경변수가 설정되지 않았습니다.');
+      return;
+    }
+
+    setAuth(accessToken, refreshToken, {
+      memberId: '0',
+      nickname: '개발자',
+      email: null,
+      provider: 'GOOGLE',
+      newMember: false,
+    });
+    router.replace('/');
   }
 
   return (
@@ -84,15 +107,14 @@ export default function LoginPage() {
           <GoogleIcon />
           구글로 시작하기
         </button>
-        <button
-          onClick={() => {
-            setAuth('dev-token', 'dev-refresh', { memberId: '0', nickname: '개발자', email: null, provider: 'GOOGLE', newMember: false });
-            router.replace('/');
-          }}
-          className="w-full h-10 rounded-xl border border-dashed border-border text-xs text-[var(--color-text-secondary)]"
-        >
-          임시 로그인 (개발용)
-        </button>
+        {DEV_LOGIN_ENABLED && (
+          <button
+            onClick={handleDevLogin}
+            className="w-full h-10 rounded-xl border border-dashed border-border text-xs text-[var(--color-text-secondary)]"
+          >
+            임시 로그인 (개발용)
+          </button>
+        )}
       </div>
     </main>
   );

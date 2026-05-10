@@ -1,6 +1,7 @@
 // 시나리오 카드 클릭 시 표시되는 상세 모달
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useRef, useState } from 'react';
 import { ApiScenarioSummary } from '@/lib/api';
@@ -58,9 +59,16 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
         <div className='mx-auto mb-5 h-1 w-10 rounded-full bg-border cursor-grab active:cursor-grabbing' />
 
         {/* 이미지 영역 */}
-        <div className='mb-5 flex h-36 items-center justify-center rounded-2xl bg-[#FFF4ED]'>
+        <div className='relative mb-5 flex h-36 items-center justify-center overflow-hidden rounded-2xl bg-[#FFF4ED]'>
           {scenario.thumbnailUrl ? (
-            <img src={scenario.thumbnailUrl} alt={scenario.title} className='h-full w-full rounded-2xl object-cover' />
+            <Image
+              src={scenario.thumbnailUrl}
+              alt={scenario.title}
+              fill
+              sizes="(max-width: 768px) 100vw, 448px"
+              className="object-cover"
+              unoptimized
+            />
           ) : (
             <span className='text-7xl'>{SCENARIO_EMOJI[scenario.scenarioId] ?? '🗣️'}</span>
           )}

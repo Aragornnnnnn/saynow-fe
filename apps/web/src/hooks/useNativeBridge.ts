@@ -1,7 +1,7 @@
 // 네이티브 WebView와 postMessage로 통신하는 브릿지 훅 (웹 환경에서는 MediaRecorder fallback 사용)
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useAppStore } from '@/store/appStore';
 
 declare global {
@@ -18,9 +18,9 @@ export function useNativeBridge(
   const onRecordingDoneRef = useRef(onRecordingDone);
   const onPermissionDeniedRef = useRef(onPermissionDenied);
   const onPermissionGrantedRef = useRef(onPermissionGranted);
-  useEffect(() => { onRecordingDoneRef.current = onRecordingDone; });
-  useEffect(() => { onPermissionDeniedRef.current = onPermissionDenied; });
-  useEffect(() => { onPermissionGrantedRef.current = onPermissionGranted; });
+  useEffect(() => { onRecordingDoneRef.current = onRecordingDone; }, [onRecordingDone]);
+  useEffect(() => { onPermissionDeniedRef.current = onPermissionDenied; }, [onPermissionDenied]);
+  useEffect(() => { onPermissionGrantedRef.current = onPermissionGranted; }, [onPermissionGranted]);
   const setMicPermission = useAppStore((s) => s.setMicPermission);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -29,12 +29,11 @@ export function useNativeBridge(
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
-      if (process.env.NODE_ENV === 'development') window.ReactNativeWebView?.postMessage(JSON.stringify({ type: '__DEBUG__', raw: typeof e.data, len: String(e.data)?.length, preview: String(e.data).slice(0, 100) }));
+      if (typeof e.data !== 'string') return;
+
       try {
         const data = JSON.parse(e.data);
-        if (process.env.NODE_ENV === 'development') console.log('[Bridge] received:', data);
         if (data.type === 'RECORDING_DONE') {
-          if (process.env.NODE_ENV === 'development') console.log('[Bridge] RECORDING_DONE base64 length:', data.base64?.length);
           onRecordingDoneRef.current(data.base64);
         }
         if (data.type === 'MIC_PERMISSION_DENIED') onPermissionDeniedRef.current?.();
@@ -43,9 +42,8 @@ export function useNativeBridge(
           if (data.granted) onPermissionGrantedRef.current?.();
           else onPermissionDeniedRef.current?.();
         }
-      } catch (err) {
-        console.error('[Bridge] parse error:', err, 'raw:', e.data);
-        window.ReactNativeWebView?.postMessage(JSON.stringify({ type: '__DEBUG__', parseError: String(err), preview: String(e.data).slice(0, 50) }));
+      } catch {
+        // Ignore unrelated WebView/browser messages.
       }
     };
     // Android WebView는 document, iOS WebView는 window로 메시지가 옴
@@ -55,13 +53,12 @@ export function useNativeBridge(
       window.removeEventListener('message', handler);
       document.removeEventListener('message', handler as EventListener);
     };
-  }, []);
+  }, [setMicPermission]);
 
   const isNative = typeof window !== 'undefined' && !!window.ReactNativeWebView;
 
-  function startRecording() {
+  const startRecording = useCallback(() => {
     if (isNative) {
-      if (process.env.NODE_ENV === 'development') console.log('[Bridge] send: START_RECORDING');
       window.ReactNativeWebView!.postMessage('START_RECORDING');
       return;
     }
@@ -81,11 +78,10 @@ export function useNativeBridge(
         setMicPermission('denied');
         onPermissionDeniedRef.current?.();
       });
-  }
+  }, [isNative, setMicPermission]);
 
-  function stopRecording() {
+  const stopRecording = useCallback(() => {
     if (isNative) {
-      if (process.env.NODE_ENV === 'development') console.log('[Bridge] send: STOP_RECORDING');
       window.ReactNativeWebView!.postMessage('STOP_RECORDING');
       return;
     }
@@ -103,11 +99,10 @@ export function useNativeBridge(
       reader.readAsDataURL(blob);
     };
     mr.stop();
-  }
+  }, [isNative]);
 
-  function requestMicPermission() {
+  const requestMicPermission = useCallback(() => {
     if (isNative) {
-      if (process.env.NODE_ENV === 'development') console.log('[Bridge] send: REQUEST_MIC_PERMISSION');
       window.ReactNativeWebView!.postMessage('REQUEST_MIC_PERMISSION');
       return;
     }
@@ -122,7 +117,7 @@ export function useNativeBridge(
         setMicPermission('denied');
         onPermissionDeniedRef.current?.();
       });
-  }
+  }, [isNative, setMicPermission]);
 
   return { isNative, startRecording, stopRecording, requestMicPermission };
 }

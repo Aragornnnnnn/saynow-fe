@@ -90,24 +90,8 @@ export interface ApiScenarioSummary {
   thumbnailUrl: string | null;
 }
 
-export interface ApiScenarioDetail {
-  scenarioId: string;
-  categoryId: string;
-  title: string;
-  difficulty: string;
-  situationDescription: string;
-  successGoal: string;
-  openingBabsaeText: string;
-  openingTtsUrl: string | null;
-  maxFollowUpCount: number;
-}
-
 export function getScenarios(): Promise<{ scenarios: ApiScenarioSummary[] }> {
   return request('/api/v1/scenarios');
-}
-
-export function getScenarioDetail(scenarioId: string): Promise<ApiScenarioDetail> {
-  return request(`/api/v1/scenarios/${scenarioId}`);
 }
 
 // --- Session ---

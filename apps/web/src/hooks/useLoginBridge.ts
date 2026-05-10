@@ -8,16 +8,23 @@ type LoginResultCallback = (provider: SocialProvider, idToken: string) => Promis
 
 export function useLoginBridge(onLoginResult: LoginResultCallback) {
   const callbackRef = useRef(onLoginResult);
-  callbackRef.current = onLoginResult;
+
+  useEffect(() => {
+    callbackRef.current = onLoginResult;
+  }, [onLoginResult]);
 
   useEffect(() => {
     const handler = (e: MessageEvent) => {
+      if (typeof e.data !== 'string') return;
+
       try {
         const data = JSON.parse(e.data);
         if (data.type === 'SOCIAL_LOGIN_RESULT') {
           callbackRef.current(data.provider as SocialProvider, data.idToken);
         }
-      } catch {}
+      } catch {
+        // Ignore unrelated WebView/browser messages.
+      }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);

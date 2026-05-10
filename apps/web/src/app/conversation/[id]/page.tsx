@@ -84,10 +84,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     async (base64, mimeType) => {
       if (!session.sessionId) return;
       setRecordingState('submitting');
-      if (process.env.NODE_ENV === 'development') console.log('[Turn] base64 length:', base64?.length, 'sessionId:', session.sessionId, 'speechStartedAfterMs:', speechStartedAfterMsRef.current);
       try {
         const result = await submitTurn(session.sessionId, base64, speechStartedAfterMsRef.current, recordingDurationMsRef.current, mimeType);
-        if (process.env.NODE_ENV === 'development') console.log('[Turn] result:', result);
         setTranscript(result.transcript);
         pendingNextRef.current = {
           babsaeText: result.babsaeText,
@@ -112,12 +110,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     if (isNative) requestMicPermission();
-  }, [isNative]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isNative, requestMicPermission]);
 
   // 뱁새 대사 TTS 자동 재생 — ttsUrl 있으면 네이티브, 없으면 Web Speech API
   useEffect(() => {
     if (session.currentLine) speak(session.currentLine, session.currentTtsUrl);
-  }, [session.currentLine]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [session.currentLine, session.currentTtsUrl, speak]);
 
   const bgGradient = CATEGORY_BG[session.categoryId] ?? 'from-gray-900 via-gray-700 to-gray-500';
   const isLastTurn = session.feedbackAvailable;
@@ -125,7 +123,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const isSubmitting = recordingState === 'submitting';
 
   function startRecordingFlow() {
-    if (process.env.NODE_ENV === 'development') console.log('[Mic] startRecordingFlow');
     speechStartedAfterMsRef.current = turnStartedAtRef.current ? Date.now() - turnStartedAtRef.current : 0;
     recordingStartedAtRef.current = Date.now();
     setRecordingState('recording');
@@ -135,7 +132,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   function handleMicPress() {
-    if (process.env.NODE_ENV === 'development') console.log('[Mic] handleMicPress — state:', recordingState, 'permission:', micPermission);
     if (recordingState === 'idle') {
       if (micPermission === 'denied') { setShowMicDeniedModal(true); return; }
       if (micPermission === 'unknown') {

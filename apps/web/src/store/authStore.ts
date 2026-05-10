@@ -16,23 +16,21 @@ interface AuthState {
   member: AuthMember | null;
   _hasHydrated: boolean;
   setAuth: (accessToken: string, refreshToken: string, member: AuthMember) => void;
-  setAccessToken: (accessToken: string) => void;
+  setHasHydrated: (hasHydrated: boolean) => void;
   clearAuth: () => void;
-  isAuthenticated: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       accessToken: null,
       refreshToken: null,
       member: null,
       _hasHydrated: false,
       setAuth: (accessToken, refreshToken, member) =>
         set({ accessToken, refreshToken, member }),
-      setAccessToken: (accessToken) => set({ accessToken }),
+      setHasHydrated: (hasHydrated) => set({ _hasHydrated: hasHydrated }),
       clearAuth: () => set({ accessToken: null, refreshToken: null, member: null }),
-      isAuthenticated: () => !!get().accessToken,
     }),
     {
       name: 'saynow-auth',
@@ -42,7 +40,7 @@ export const useAuthStore = create<AuthState>()(
         member: state.member,
       }),
       onRehydrateStorage: () => (state) => {
-        if (state) state._hasHydrated = true;
+        state?.setHasHydrated(true);
       },
     }
   )
