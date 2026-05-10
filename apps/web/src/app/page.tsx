@@ -7,6 +7,7 @@ import type { ApiScenarioSummary } from '@/lib/api';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ScenarioCard } from '@/components/ScenarioCard';
 import { ScenarioModal } from '@/components/ScenarioModal';
+import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useCategoriesQuery, useScenariosQuery } from '@/queries/scenarios';
 import { useAuthStore } from '@/store/authStore';
 
@@ -26,13 +27,9 @@ export default function Home() {
     }
   }, [_hasHydrated, accessToken, refreshToken, router]);
 
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (e.data === 'BACK_PRESSED' && selectedScenario) setSelectedScenario(null);
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, [selectedScenario]);
+  useBackButtonBridge(() => {
+    if (selectedScenario) setSelectedScenario(null);
+  });
 
   const categories = categoriesQuery.data ?? [];
   const allScenarios = scenariosQuery.data ?? [];

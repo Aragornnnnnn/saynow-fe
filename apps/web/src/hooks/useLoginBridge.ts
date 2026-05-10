@@ -2,6 +2,8 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { requestNativeSocialLogin } from '@/bridge/commands';
+import { useBridgeEvent } from '@/bridge/useBridgeEvent';
 import { SocialProvider } from '@/lib/api';
 
 type LoginResultCallback = (provider: SocialProvider, idToken: string) => Promise<void>;
@@ -13,31 +15,12 @@ export function useLoginBridge(onLoginResult: LoginResultCallback) {
     callbackRef.current = onLoginResult;
   }, [onLoginResult]);
 
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (typeof e.data !== 'string') return;
-
-      try {
-        const data = JSON.parse(e.data);
-        if (data.type === 'SOCIAL_LOGIN_RESULT') {
-          callbackRef.current(data.provider as SocialProvider, data.idToken);
-        }
-      } catch {
-        // Ignore unrelated WebView/browser messages.
-      }
-    };
-    window.addEventListener('message', handler);
-    return () => window.removeEventListener('message', handler);
-  }, []);
+  useBridgeEvent('SOCIAL_LOGIN_RESULT', (message) => {
+    callbackRef.current(message.provider as SocialProvider, message.idToken);
+  });
 
   function requestLogin(provider: SocialProvider, nonce: string) {
-    if (typeof window !== 'undefined' && window.ReactNativeWebView) {
-      // 네이티브 앱에 로그인 요청
-      window.ReactNativeWebView.postMessage(
-        JSON.stringify({ type: 'REQUEST_SOCIAL_LOGIN', provider, nonce })
-      );
-    } else {
-      // 브라우저 개발 환경 — 실제 SDK 없이 흐름만 확인하는 mock
+    if (!requestNativeSocialLogin(provider, nonce)) {
       console.warn(
         `[LoginBridge] 네이티브 앱 환경이 아닙니다. provider=${provider}, nonce=${nonce}`
       );
