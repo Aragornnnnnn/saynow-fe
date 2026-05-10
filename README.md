@@ -50,8 +50,7 @@ saynow-fe/
 **패키지 설치**
 
 ```bash
-npm install -g pnpm
-pnpm install
+npm install
 ```
 
 **환경변수 설정**
@@ -66,10 +65,10 @@ cp apps/web/.env.example apps/web/.env.local
 
 ```bash
 # 웹
-pnpm --filter web dev
+npm run dev -w apps/web
 
 # 모바일 (Expo)
-pnpm --filter mobile start
+npm run start -w apps/mobile
 ```
 
 ## 웹뷰 ↔ 네이티브 통신
