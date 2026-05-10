@@ -1,0 +1,64 @@
+import { useCallback, useEffect, useRef, type RefObject } from 'react';
+import { BackHandler } from 'react-native';
+import type WebView from 'react-native-webview';
+import type { WebViewMessageEvent } from 'react-native-webview';
+import {
+  parseWebMessage,
+  serializeNativeMessage,
+  type NativeToWebMessage,
+  type WebToNativeMessage,
+} from './messages';
+
+export type WebCommandHandlers = {
+  [TType in WebToNativeMessage['type']]?: (
+    message: Extract<WebToNativeMessage, { type: TType }>,
+  ) => void | Promise<void>;
+};
+
+type PostToWeb = (message: NativeToWebMessage) => void;
+
+export function usePostToWeb(webviewRef: RefObject<WebView | null>): PostToWeb {
+  return useCallback((message) => {
+    webviewRef.current?.postMessage(serializeNativeMessage(message));
+  }, [webviewRef]);
+}
+
+export function useWebViewBridge(handlers: WebCommandHandlers, postToWeb: PostToWeb) {
+  const handlersRef = useRef(handlers);
+
+  useEffect(() => {
+    handlersRef.current = handlers;
+  }, [handlers]);
+
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      postToWeb({ type: 'BACK_PRESSED' });
+      return true;
+    });
+    return () => subscription.remove();
+  }, [postToWeb]);
+
+  return useCallback((event: WebViewMessageEvent) => {
+    const message = parseWebMessage(event.nativeEvent.data);
+    if (!message) return;
+
+    void dispatchWebCommand(message, handlersRef.current);
+  }, []);
+}
+
+function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHandlers) {
+  switch (message.type) {
+    case 'START_RECORDING':
+      return handlers.START_RECORDING?.(message);
+    case 'STOP_RECORDING':
+      return handlers.STOP_RECORDING?.(message);
+    case 'REQUEST_MIC_PERMISSION':
+      return handlers.REQUEST_MIC_PERMISSION?.(message);
+    case 'OPEN_SETTINGS':
+      return handlers.OPEN_SETTINGS?.(message);
+    case 'PLAY_TTS':
+      return handlers.PLAY_TTS?.(message);
+    case 'REQUEST_SOCIAL_LOGIN':
+      return handlers.REQUEST_SOCIAL_LOGIN?.(message);
+  }
+}
