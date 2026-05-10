@@ -141,10 +141,20 @@ export function startSession(scenarioId: string): Promise<ApiSessionStarted> {
   });
 }
 
-export function submitTurn(sessionId: string, audioUri: string, speechStartedAfterMs: number): Promise<ApiTurnResult> {
+export function submitTurn(
+  sessionId: string,
+  audioBase64: string,
+  speechStartedAfterMs: number,
+): Promise<ApiTurnResult> {
+  const binary = atob(audioBase64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const audioBlob = new Blob([bytes], { type: 'audio/x-m4a' });
+
   const formData = new FormData();
-  formData.append('audio', { uri: audioUri, name: 'audio.m4a', type: 'audio/m4a' } as unknown as Blob);
-  formData.append('request', JSON.stringify({ inputType: 'AUDIO', speechStartedAfterMs }));
+  formData.append('audio', audioBlob, 'audio.m4a');
+  const requestBlob = new Blob([JSON.stringify({ inputType: 'AUDIO', speechStartedAfterMs })], { type: 'application/json' });
+  formData.append('request', requestBlob, 'request.json');
   return request(`/api/v1/sessions/${sessionId}/turns`, {
     method: 'POST',
     headers: {},
@@ -153,7 +163,7 @@ export function submitTurn(sessionId: string, audioUri: string, speechStartedAft
 }
 
 export function recordMicReady(sessionId: string, latencyMs: number): Promise<void> {
-  return request(`/api/v1/sessions/${sessionId}/metrics/micReady`, {
+  return request(`/api/v1/sessions/${sessionId}/micReady`, {
     method: 'PUT',
     body: JSON.stringify({ latencyMs }),
   });

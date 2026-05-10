@@ -78,11 +78,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   const { speak } = useTts();
   const { startRecording, stopRecording, isNative, requestMicPermission } = useNativeBridge(
-    async (uri) => {
+    async (base64) => {
       if (!session.sessionId) return;
-      if (process.env.NODE_ENV === 'development') console.log('[Turn] uri:', uri, 'sessionId:', session.sessionId, 'speechStartedAfterMs:', speechStartedAfterMsRef.current);
+      if (process.env.NODE_ENV === 'development') console.log('[Turn] base64 length:', base64?.length, 'sessionId:', session.sessionId, 'speechStartedAfterMs:', speechStartedAfterMsRef.current);
       try {
-        const result = await submitTurn(session.sessionId, uri, speechStartedAfterMsRef.current);
+        const result = await submitTurn(session.sessionId, base64, speechStartedAfterMsRef.current);
         if (process.env.NODE_ENV === 'development') console.log('[Turn] result:', result);
         setTranscript(result.transcript);
         setRecordingState('done');
