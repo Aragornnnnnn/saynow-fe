@@ -3,10 +3,12 @@ import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, BackHandler, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import WebView, { WebViewMessageEvent } from 'react-native-webview';
+import WebView from 'react-native-webview';
+import { usePostToWeb, useWebViewBridge } from './bridge/useWebViewBridge';
+import type { WebCommandHandlers } from './bridge/useWebViewBridge';
 import { useRecorder } from './hooks/useRecorder';
 
 SplashScreen.preventAutoHideAsync();
@@ -16,24 +18,28 @@ const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? (__DEV__ ? 'http://localhost:
 export default function App() {
   const webviewRef = useRef<WebView>(null);
   const [hasError, setHasError] = useState(false);
-
-  const handleRecorded = useCallback((base64: string) => {
-    webviewRef.current?.postMessage(JSON.stringify({ type: 'RECORDING_DONE', base64 }));
-  }, []);
-
-  const handlePermissionDenied = useCallback(() => {
-    webviewRef.current?.postMessage(JSON.stringify({ type: 'MIC_PERMISSION_DENIED' }));
-  }, []);
-
-  const { start, stop, openSettings } = useRecorder(handleRecorded, handlePermissionDenied);
-
-  useEffect(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      webviewRef.current?.postMessage('BACK_PRESSED');
-      return true;
-    });
-    return () => subscription.remove();
-  }, []);
+  const postToWeb = usePostToWeb(webviewRef);
+  const { start, stop, openSettings } = useRecorder();
+  const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
+    START_RECORDING: async () => {
+      const started = await start();
+      if (!started) postToWeb({ type: 'MIC_PERMISSION_DENIED' });
+    },
+    STOP_RECORDING: async () => {
+      const base64 = await stop();
+      if (base64) postToWeb({ type: 'RECORDING_DONE', base64 });
+    },
+    OPEN_SETTINGS: openSettings,
+    PLAY_TTS: (message) => {
+      Speech.stop();
+      Speech.speak(message.text, { language: 'en-US', rate: 0.9 });
+    },
+    REQUEST_MIC_PERMISSION: async () => {
+      const { granted } = await Audio.requestPermissionsAsync();
+      postToWeb({ type: 'MIC_PERMISSION_STATUS', granted });
+    },
+  }), [openSettings, postToWeb, start, stop]);
+  const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb);
 
   async function handleLoadEnd() {
     SplashScreen.hideAsync();
@@ -47,28 +53,6 @@ export default function App() {
   function handleRetry() {
     setHasError(false);
     webviewRef.current?.reload();
-  }
-
-  async function handleMessage(e: WebViewMessageEvent) {
-    const raw = e.nativeEvent.data;
-    let data: { type?: string; url?: string; text?: string; provider?: string; nonce?: string } | null = null;
-    try { data = JSON.parse(raw); } catch {}
-
-    const type = data?.type ?? raw;
-
-    if (type === 'START_RECORDING') start();
-    else if (type === 'STOP_RECORDING') stop();
-    else if (type === 'OPEN_SETTINGS') openSettings();
-    else if (type === 'PLAY_TTS' && data?.text) {
-      Speech.stop();
-      Speech.speak(data.text, { language: 'en-US', rate: 0.9 });
-    }
-    else if (type === 'REQUEST_MIC_PERMISSION') {
-      const { granted } = await Audio.requestPermissionsAsync();
-      webviewRef.current?.postMessage(
-        JSON.stringify({ type: 'MIC_PERMISSION_STATUS', granted }),
-      );
-    }
   }
 
   return (
