@@ -19,8 +19,11 @@ export default function App() {
   const webviewRef = useRef<WebView>(null);
   const [hasError, setHasError] = useState(false);
 
-  const handleRecorded = useCallback((uri: string) => {
-    webviewRef.current?.postMessage(JSON.stringify({ type: 'RECORDING_DONE', uri }));
+  const handleRecorded = useCallback((base64: string) => {
+    if (__DEV__) console.log('[App] handleRecorded base64 length:', base64?.length);
+    if (__DEV__) console.log('[App] webviewRef.current:', !!webviewRef.current);
+    webviewRef.current?.postMessage(JSON.stringify({ type: 'RECORDING_DONE', base64 }));
+    if (__DEV__) console.log('[App] RECORDING_DONE posted');
   }, []);
 
   const handlePermissionDenied = useCallback(() => {
@@ -60,6 +63,7 @@ export default function App() {
 
     if (__DEV__) console.log('[App] message received:', type, data ?? raw);
 
+    if (type === '__DEBUG__') { if (__DEV__) console.log('[App] __DEBUG__ from web:', JSON.stringify(data)); return; }
     if (type === 'START_RECORDING') start();
     else if (type === 'STOP_RECORDING') stop();
     else if (type === 'OPEN_SETTINGS') openSettings();

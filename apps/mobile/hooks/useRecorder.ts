@@ -39,7 +39,24 @@ export function useRecorder(
     const uri = recordingRef.current.getURI();
     recordingRef.current = null;
     setState('idle');
-    if (uri) onRecorded(uri);
+    if (__DEV__) console.log('[Recorder] stop — uri:', uri);
+    if (!uri) return;
+    try {
+      const response = await fetch(uri);
+      if (__DEV__) console.log('[Recorder] fetch ok, status:', response.status);
+      const blob = await response.blob();
+      if (__DEV__) console.log('[Recorder] blob size:', blob.size);
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string).split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+      if (__DEV__) console.log('[Recorder] base64 length:', base64?.length);
+      onRecorded(base64);
+    } catch (e) {
+      if (__DEV__) console.error('[Recorder] error:', e);
+    }
   }
 
   return { state, start, stop, openSettings: Linking.openSettings };
