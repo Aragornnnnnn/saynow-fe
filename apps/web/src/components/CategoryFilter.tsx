@@ -18,7 +18,7 @@ export function CategoryFilter({ categories, selectedId, onChange }: CategoryFil
         <button
           key={chip.categoryId ?? 'all'}
           onClick={() => onChange(chip.categoryId)}
-          className={`shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+          className={`tossface shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
             selectedId === chip.categoryId ? 'bg-primary text-white' : 'bg-card text-muted-foreground'
           }`}
         >

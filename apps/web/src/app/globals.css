@@ -91,6 +91,18 @@
 }
 
 @layer utilities {
+  .tossface {
+    font-family:
+      Tossface,
+      "Pretendard",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Apple Color Emoji",
+      "Segoe UI Emoji",
+      "Noto Color Emoji",
+      sans-serif;
+  }
+
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }

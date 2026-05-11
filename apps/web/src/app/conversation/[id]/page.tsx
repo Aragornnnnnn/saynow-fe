@@ -211,7 +211,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       <div className="relative z-10 flex flex-1 items-center justify-center">
-        <span className="text-[120px] opacity-20 select-none">🗣️</span>
+        <span className="tossface text-[120px] opacity-20 select-none">🗣️</span>
       </div>
 
       <div className="relative z-10 px-4 pb-10">

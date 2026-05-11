@@ -27,11 +27,11 @@ export function ScenarioCard({ scenario, onClick }: ScenarioCardProps) {
         {scenario.thumbnailUrl ? (
           <Image src={scenario.thumbnailUrl} alt={scenario.title} width={40} height={40} className="object-cover rounded-xl" />
         ) : (
-          <span className="text-2xl">{SCENARIO_EMOJI[scenario.scenarioId] ?? '🗣️'}</span>
+          <span className="tossface text-2xl">{SCENARIO_EMOJI[scenario.scenarioId] ?? '🗣️'}</span>
         )}
       </div>
       <div className="flex flex-col gap-1 min-h-10 justify-start">
-        <span className="text-sm font-semibold text-foreground leading-snug line-clamp-2">{scenario.title}</span>
+        <span className="tossface text-sm font-semibold text-foreground leading-snug line-clamp-2">{scenario.title}</span>
       </div>
       <DifficultyBadge difficulty={scenario.difficulty} />
     </button>

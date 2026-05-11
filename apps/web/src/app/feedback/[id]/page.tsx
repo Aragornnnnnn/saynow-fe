@@ -43,7 +43,10 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
     <main className="flex flex-col h-full bg-background">
       {/* 상단 헤더 — sticky 고정 */}
       <div className="sticky top-0 z-10 bg-card border-b border-border px-5 pt-4 pb-3 flex items-baseline justify-between">
-        <p className="text-lg font-bold text-foreground">{cleared ? '클리어! 🎉' : '아쉬워요 😅'}</p>
+        <p className="text-lg font-bold text-foreground">
+          {cleared ? '클리어! ' : '아쉬워요 '}
+          <span className="tossface">{cleared ? '🎉' : '😅'}</span>
+        </p>
         <p className="text-sm text-muted-foreground">
           총 이해도{' '}
           <span className={`text-2xl font-bold ${comprehensionStyle(feedback.totalUnderstoodScore).color}`}>

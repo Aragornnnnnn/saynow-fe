@@ -70,13 +70,13 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
               unoptimized
             />
           ) : (
-            <span className='text-7xl'>{SCENARIO_EMOJI[scenario.scenarioId] ?? '🗣️'}</span>
+            <span className='tossface text-7xl'>{SCENARIO_EMOJI[scenario.scenarioId] ?? '🗣️'}</span>
           )}
         </div>
 
         {/* 제목 + 난이도 */}
         <div className='mb-3 flex items-center gap-2'>
-          <h2 className='text-lg font-bold text-foreground'>{scenario.title}</h2>
+          <h2 className='tossface text-lg font-bold text-foreground'>{scenario.title}</h2>
           <span
             className={`rounded-full px-2 py-0.5 text-xs font-medium ${
               scenario.difficulty === 'EASY' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-600'
@@ -87,14 +87,14 @@ export function ScenarioModal({ scenario, onClose }: ScenarioModalProps) {
         </div>
 
         {/* 상황 설명 */}
-        <p className='mb-4 text-sm text-muted-foreground leading-relaxed'>
+        <p className='tossface mb-4 text-sm text-muted-foreground leading-relaxed'>
           {scenario.situationDescription}
         </p>
 
         {/* 달성 목표 */}
         <div className='mb-6 rounded-xl bg-[#FFF4ED] px-4 py-3'>
           <p className='text-xs font-semibold text-primary mb-0.5'>달성 목표</p>
-          <p className='text-sm text-foreground'>{scenario.successGoal}</p>
+          <p className='tossface text-sm text-foreground'>{scenario.successGoal}</p>
         </div>
 
         {/* 시작 버튼 */}
