@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useAuthStore } from '@/store/authStore';
 import type { SocialProvider } from '@/lib/api';
-import { startWebSocialLogin } from '@/lib/webSocialLogin';
+import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
 
 const DEV_LOGIN_ENABLED =
   process.env.NODE_ENV === 'development' &&
@@ -23,6 +23,21 @@ export default function LoginPage() {
   useEffect(() => {
     if (accessToken) router.replace('/');
   }, [accessToken, router]);
+
+  useEffect(() => {
+    function resetCancelledLogin() {
+      nonce.current = '';
+      setPendingProvider(null);
+      clearPendingSocialLogin();
+    }
+
+    resetCancelledLogin();
+    window.addEventListener('pageshow', resetCancelledLogin);
+
+    return () => {
+      window.removeEventListener('pageshow', resetCancelledLogin);
+    };
+  }, []);
 
   function generateNonce(): string {
     const array = new Uint8Array(16);
