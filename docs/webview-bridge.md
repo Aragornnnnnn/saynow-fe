@@ -65,7 +65,8 @@ type WebToNativeMessage =
       accessToken: string;
       refreshToken: string;
       member: BridgeAuthMember;
-    };
+    }
+  | { type: 'AUTH_SESSION_CLEARED' };
 ```
 
 ### Native to Web
@@ -93,5 +94,4 @@ type NativeToWebMessage =
 
 ## 남은 작업
 
-- 로그아웃 동기화를 위한 `AUTH_SESSION_CLEARED` 메시지 추가
 - bridge message 타입을 웹과 앱에서 중복 관리하지 않도록 공유 타입화 검토
