@@ -1,8 +1,7 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
-import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
+import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 import type { LegalDocument } from '@/lib/legalDocuments';
 
 interface LegalDocumentPageProps {
@@ -16,13 +15,7 @@ export function LegalDocumentPage({
   backHref,
   backLabel,
 }: LegalDocumentPageProps) {
-  const router = useRouter();
-
-  function goBack() {
-    router.replace(backHref);
-  }
-
-  useBackButtonBridge(goBack);
+  const goBack = useBackButtonReplace(backHref);
 
   return (
     <main className="min-h-dvh bg-background text-foreground">

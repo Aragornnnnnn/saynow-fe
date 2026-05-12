@@ -14,7 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { clearNativeAuthSession } from '@/bridge/commands';
-import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
+import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 import { logout as requestLogout } from '@/lib/api/auth';
 import { deleteAccount } from '@/lib/api/member';
 import { useAuthStore } from '@/store/authStore';
@@ -26,18 +26,13 @@ export default function MyPage() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const goHome = useBackButtonReplace('/');
 
   useEffect(() => {
     if (_hasHydrated && !accessToken && !refreshToken) {
       router.replace('/login');
     }
   }, [_hasHydrated, accessToken, refreshToken, router]);
-
-  function goHome() {
-    router.replace('/');
-  }
-
-  useBackButtonBridge(goHome);
 
   if (!_hasHydrated || (!accessToken && !refreshToken)) return null;
 

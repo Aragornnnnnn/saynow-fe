@@ -2,25 +2,25 @@
 'use client';
 
 import { use, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { isFeedbackPending, useSessionFeedbackQuery } from '@/queries/feedback';
 
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
   const [summaryExpanded, setSummaryExpanded] = useState(false);
   const feedbackQuery = useSessionFeedbackQuery(id);
   const feedback = feedbackQuery.data;
   const error = feedbackQuery.error;
   const isWaitingForFeedback = feedbackQuery.isPending || isFeedbackPending(error);
+  const goHome = useBackButtonReplace('/');
 
   if (error && !isFeedbackPending(error)) {
     return (
       <main className="flex h-full items-center justify-center bg-background px-6">
         <div className="text-center space-y-4">
           <p className="text-muted-foreground">{error.message}</p>
-          <button onClick={() => router.push('/')} className="text-sm text-primary font-medium">
+          <button onClick={goHome} className="text-sm text-primary font-medium">
             돌아가기
           </button>
         </div>
@@ -80,7 +80,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
       {/* 하단 나가기 버튼 */}
       <div className="px-4 py-3 bg-card border-t border-border">
         <button
-          onClick={() => router.push('/')}
+          onClick={goHome}
           className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
         >
           나가기

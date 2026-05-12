@@ -5,6 +5,7 @@ import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic, Square } from 'lucide-react';
 import { startSession, submitTurn, recordMicReady, exitSession } from '@/lib/api';
+import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useRecordingBridge } from '@/hooks/useRecordingBridge';
 import { useAppStore } from '@/store/appStore';
 import { useTts } from '@/hooks/useTts';
@@ -111,6 +112,18 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     if (isNative) requestMicPermission();
   }, [isNative, requestMicPermission]);
+
+  useBackButtonBridge(() => {
+    if (showMicDeniedModal) {
+      setShowMicDeniedModal(false);
+      return;
+    }
+    if (showExitModal) {
+      setShowExitModal(false);
+      return;
+    }
+    setShowExitModal(true);
+  });
 
   // 뱁새 대사 TTS 자동 재생 — ttsUrl 있으면 네이티브, 없으면 Web Speech API
   useEffect(() => {
