@@ -83,7 +83,7 @@ export default function LoginPage() {
       {/* 상단 로고 + 캐릭터 영역 */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         <Image
-          src="/saynow-character.png"
+          src="/saynow-character.webp"
           alt="SayNow 캐릭터"
           width={180}
           height={180}
