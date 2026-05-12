@@ -1,28 +1,22 @@
 'use client';
 
-import { useEffect, useState, useSyncExternalStore } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { webBridge } from '@/bridge/webBridge';
+import { UserRound } from 'lucide-react';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { ScenarioCard } from '@/components/ScenarioCard';
 import { ScenarioModal } from '@/components/ScenarioModal';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import type { ApiScenarioSummary } from '@/lib/api';
-import { logout as requestLogout } from '@/lib/api/auth';
 import { useCategoriesQuery, useScenariosQuery } from '@/queries/scenarios';
 import { useAuthStore } from '@/store/authStore';
 
 export default function Home() {
   const router = useRouter();
-  const { accessToken, refreshToken, _hasHydrated, clearAuth } = useAuthStore();
+  const { accessToken, refreshToken, _hasHydrated } = useAuthStore();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [selectedScenario, setSelectedScenario] = useState<ApiScenarioSummary | null>(null);
-  const showBrowserLogout = useSyncExternalStore(
-    subscribeBrowserLogoutStore,
-    getBrowserLogoutSnapshot,
-    getServerBrowserLogoutSnapshot,
-  );
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const canFetch = _hasHydrated && (!!accessToken || !!refreshToken);
   const categoriesQuery = useCategoriesQuery(canFetch);
   const scenariosQuery = useScenariosQuery(canFetch);
@@ -53,23 +47,6 @@ export default function Home() {
     scenariosQuery.refetch();
   }
 
-  async function handleLogout() {
-    if (isLoggingOut) return;
-
-    setIsLoggingOut(true);
-    try {
-      if (refreshToken) {
-        await requestLogout(refreshToken);
-      }
-    } catch (error) {
-      console.warn('[Auth] logout failed:', error);
-    } finally {
-      clearAuth();
-      router.replace('/login');
-      setIsLoggingOut(false);
-    }
-  }
-
   if (!_hasHydrated || !canFetch) return null;
 
   if (dataError) {
@@ -90,16 +67,13 @@ export default function Home() {
       <div className="px-4 pb-4 pt-6">
         <div className="mb-4 flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold text-foreground">시나리오 선택</h1>
-          {showBrowserLogout && (
-            <button
-              type="button"
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="shrink-0 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isLoggingOut ? '로그아웃 중' : '로그아웃'}
-            </button>
-          )}
+          <Link
+            href="/me"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
+            내 정보
+          </Link>
         </div>
         <CategoryFilter
           categories={categories}
@@ -133,16 +107,4 @@ export default function Home() {
       )}
     </main>
   );
-}
-
-function subscribeBrowserLogoutStore() {
-  return () => {};
-}
-
-function getBrowserLogoutSnapshot() {
-  return !webBridge.isAvailable();
-}
-
-function getServerBrowserLogoutSnapshot() {
-  return false;
 }

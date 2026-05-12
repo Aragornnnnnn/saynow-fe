@@ -28,3 +28,7 @@ export function updateNativeAuthSession(
 ) {
   return webBridge.send({ type: 'AUTH_SESSION_UPDATED', accessToken, refreshToken, member });
 }
+
+export function clearNativeAuthSession() {
+  return webBridge.send({ type: 'AUTH_SESSION_CLEARED' });
+}
