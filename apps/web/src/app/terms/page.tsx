@@ -1,12 +1,12 @@
 import { LegalDocumentPage } from '@/components/LegalDocumentPage';
 import { termsDocument } from '@/lib/legalDocuments';
 
-export default function TermsPage() {
+export default function PublicTermsPage() {
   return (
     <LegalDocumentPage
       document={termsDocument}
-      backHref="/me"
-      backLabel="내 정보로 돌아가기"
+      backHref="/"
+      backLabel="SayNow 홈으로 돌아가기"
     />
   );
 }
