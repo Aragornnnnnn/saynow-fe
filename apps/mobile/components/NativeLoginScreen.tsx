@@ -65,20 +65,24 @@ export function NativeLoginScreen({
   );
 }
 
-function KakaoIcon() {
-  return (
-    <View style={styles.kakaoIcon}>
-      <View style={styles.kakaoBubble} />
-    </View>
+const KAKAO_ICON_URI =
+  'data:image/svg+xml;base64,' +
+  btoa(
+    '<svg width="22" height="22" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" clip-rule="evenodd" d="M11 2C6.029 2 2 5.186 2 9.125c0 2.537 1.664 4.764 4.18 6.054l-1.065 3.965a.298.298 0 0 0 .453.325l4.794-3.175A11.4 11.4 0 0 0 11 16.25c4.971 0 9-3.186 9-7.125S15.971 2 11 2Z" fill="#191919"/></svg>',
   );
+
+const GOOGLE_ICON_URI =
+  'data:image/svg+xml;base64,' +
+  btoa(
+    '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M19.6 10.227c0-.709-.064-1.39-.182-2.045H10v3.868h5.382a4.6 4.6 0 0 1-1.996 3.018v2.51h3.232c1.891-1.742 2.982-4.305 2.982-7.35Z" fill="#4285F4"/><path d="M10 20c2.7 0 4.964-.895 6.618-2.423l-3.232-2.51c-.895.6-2.04.955-3.386.955-2.605 0-4.81-1.76-5.595-4.123H1.064v2.59A10 10 0 0 0 10 20Z" fill="#34A853"/><path d="M4.405 11.9A6.02 6.02 0 0 1 4.09 10c0-.662.114-1.305.314-1.9V5.51H1.064A10 10 0 0 0 0 10c0 1.614.386 3.14 1.064 4.49l3.34-2.59Z" fill="#FBBC04"/><path d="M10 3.977c1.468 0 2.786.505 3.823 1.496l2.868-2.868C14.959.99 12.695 0 10 0A10 10 0 0 0 1.064 5.51l3.34 2.59C5.19 5.736 7.396 3.977 10 3.977Z" fill="#E94235"/></svg>',
+  );
+
+function KakaoIcon() {
+  return <Image source={{ uri: KAKAO_ICON_URI }} style={styles.kakaoIcon} />;
 }
 
 function GoogleIcon() {
-  return (
-    <View style={styles.googleIcon}>
-      <Text style={styles.googleIconText}>G</Text>
-    </View>
-  );
+  return <Image source={{ uri: GOOGLE_ICON_URI }} style={styles.googleIcon} />;
 }
 
 const styles = StyleSheet.create({
@@ -152,25 +156,10 @@ const styles = StyleSheet.create({
   kakaoIcon: {
     width: 22,
     height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  kakaoBubble: {
-    width: 19,
-    height: 15,
-    borderRadius: 9,
-    backgroundColor: '#191919',
   },
   googleIcon: {
-    width: 22,
-    height: 22,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  googleIconText: {
-    color: '#4285F4',
-    fontSize: 18,
-    fontWeight: '800',
+    width: 20,
+    height: 20,
   },
   errorText: {
     color: '#DC2626',
