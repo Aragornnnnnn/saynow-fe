@@ -60,5 +60,7 @@ function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHan
       return handlers.PLAY_TTS?.(message);
     case 'AUTH_SESSION_UPDATED':
       return handlers.AUTH_SESSION_UPDATED?.(message);
+    case 'AUTH_SESSION_CLEARED':
+      return handlers.AUTH_SESSION_CLEARED?.(message);
   }
 }

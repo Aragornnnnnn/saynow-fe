@@ -17,7 +17,8 @@ export type WebToNativeMessage =
       accessToken: string;
       refreshToken: string;
       member: BridgeAuthMember;
-    };
+    }
+  | { type: 'AUTH_SESSION_CLEARED' };
 
 export type NativeToWebMessage =
   | { type: 'RECORDING_DONE'; base64: string; mimeType?: string }
@@ -77,6 +78,8 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
             member: value.member,
           }
         : null;
+    case 'AUTH_SESSION_CLEARED':
+      return { type: value.type };
     default:
       return null;
   }

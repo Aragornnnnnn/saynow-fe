@@ -92,6 +92,12 @@ export default function App() {
       await saveAuthSession(session);
       setAuthSession(session);
     },
+    AUTH_SESSION_CLEARED: async () => {
+      await clearAuthSession();
+      setAuthSession(null);
+      setHasError(false);
+      setAuthStatus('signedOut');
+    },
   }), [openSettings, postToWeb, start, stop]);
   const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb);
 
