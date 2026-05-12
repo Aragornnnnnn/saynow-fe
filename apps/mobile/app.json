@@ -25,7 +25,7 @@
       "package": "com.saynow.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FAFAF8"
+        "backgroundColor": "#E07A3A"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
