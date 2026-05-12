@@ -3,7 +3,14 @@ import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
 import { generateNonce } from './auth/nonce';
@@ -65,6 +72,26 @@ export default function App() {
     bootstrapSession();
   }, [bootstrapSession]);
 
+  useEffect(() => {
+    if (!__DEV__) return undefined;
+
+    const subscription = Linking.addEventListener('url', (event) => {
+      console.log('[AuthDebug][Linking] url received', describeUrl(event.url));
+    });
+
+    Linking.getInitialURL()
+      .then((url) => {
+        if (url) {
+          console.log('[AuthDebug][Linking] initial url', describeUrl(url));
+        }
+      })
+      .catch((error) => {
+        console.warn('[AuthDebug][Linking] initial url failed', error);
+      });
+
+    return () => subscription.remove();
+  }, []);
+
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
     START_RECORDING: async () => {
       const started = await start();
@@ -108,17 +135,34 @@ export default function App() {
       setLoginError(null);
 
       const nonce = generateNonce();
+      console.log('[AuthDebug][App] native login start', {
+        provider,
+        nonceLength: nonce.length,
+      });
       const idToken = await requestSocialIdToken(provider, nonce);
+      console.log('[AuthDebug][App] provider idToken received', {
+        provider,
+        idToken: describeToken(idToken),
+      });
       const session = await socialLogin(provider, idToken, nonce);
+      console.log('[AuthDebug][App] SayNow session received', {
+        provider: session.member.provider,
+        memberId: session.member.memberId,
+        newMember: session.member.newMember,
+        accessTokenLength: session.accessToken.length,
+        refreshTokenLength: session.refreshToken.length,
+      });
 
       await saveAuthSession(session);
+      console.log('[AuthDebug][App] session saved; opening WebView');
       setAuthSession(session);
       setHasError(false);
       setAuthStatus('signedIn');
     } catch (error) {
-      console.error('[Auth] 로그인 실패:', error);
+      console.error('[AuthDebug][App] native login failed', error);
       setLoginError(error instanceof Error ? error.message : '로그인에 실패했습니다.');
     } finally {
+      console.log('[AuthDebug][App] native login finished', { provider });
       setPendingProvider(null);
     }
   }, []);
@@ -176,6 +220,7 @@ export default function App() {
             ref={webviewRef}
             source={{ uri: WEB_URL }}
             style={styles.webview}
+            webviewDebuggingEnabled={__DEV__}
             injectedJavaScriptBeforeContentLoaded={authInjection}
             injectedJavaScript={authInjection}
             onLoadEnd={handleLoadEnd}
@@ -219,6 +264,35 @@ function createAuthInjection(session: NativeAuthSession) {
     })();
     true;
   `;
+}
+
+function describeToken(token: string) {
+  const parts = token.split('.');
+  return {
+    length: token.length,
+    jwtParts: parts.length,
+    headerLength: parts[0]?.length ?? 0,
+    payloadLength: parts[1]?.length ?? 0,
+  };
+}
+
+function describeUrl(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    return {
+      urlPrefix: `${parsedUrl.protocol}${parsedUrl.host ? `//${parsedUrl.host}` : ''}${parsedUrl.pathname}`,
+      scheme: parsedUrl.protocol.replace(':', ''),
+      host: parsedUrl.host || undefined,
+      path: parsedUrl.pathname,
+      paramKeys: Array.from(parsedUrl.searchParams.keys()),
+    };
+  } catch {
+    const [urlPrefix, query] = url.split('?');
+    return {
+      urlPrefix,
+      paramKeys: query ? Array.from(new URLSearchParams(query).keys()) : [],
+    };
+  }
 }
 
 const styles = StyleSheet.create({

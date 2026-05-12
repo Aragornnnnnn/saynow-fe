@@ -37,10 +37,24 @@ export async function socialLogin(
   idToken: string,
   nonce: string,
 ): Promise<NativeAuthSession> {
-  return request<SocialLoginResponse>('/api/v1/auth/social-login', {
+  if (__DEV__) console.log('[AuthDebug][API] social-login start', {
+    provider,
+    idToken: describeToken(idToken),
+    nonceLength: nonce.length,
+  });
+  const session = await request<SocialLoginResponse>('/api/v1/auth/social-login', {
     method: 'POST',
     body: JSON.stringify({ provider, idToken, nonce }),
   });
+  if (__DEV__) console.log('[AuthDebug][API] social-login success', {
+    provider: session.member.provider,
+    memberId: session.member.memberId,
+    newMember: session.member.newMember,
+    accessTokenLength: session.accessToken.length,
+    refreshTokenLength: session.refreshToken.length,
+  });
+
+  return session;
 }
 
 export async function refreshAuthSession(
@@ -64,7 +78,14 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     throw new Error('앱 API 서버 주소가 설정되지 않았습니다.');
   }
 
-  const response = await fetch(new URL(path, API_BASE_URL).toString(), {
+  const url = new URL(path, API_BASE_URL).toString();
+  if (__DEV__) console.log('[AuthDebug][API] request start', {
+    method: init.method ?? 'GET',
+    path,
+    baseUrl: API_BASE_URL,
+  });
+
+  const response = await fetch(url, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
@@ -72,6 +93,12 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
     },
   });
   const text = await response.text();
+  if (__DEV__) console.log('[AuthDebug][API] response received', {
+    path,
+    status: response.status,
+    ok: response.ok,
+    bodyLength: text.length,
+  });
 
   if (!text) {
     if (response.ok) return undefined as T;
@@ -86,6 +113,12 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
   }
 
   if (!json.success) {
+    if (__DEV__) console.warn('[AuthDebug][API] response error', {
+      path,
+      status: response.status,
+      code: json.error?.code,
+      message: json.error?.message,
+    });
     throw new Error(json.error?.message ?? '서버 오류가 발생했습니다.');
   }
 
@@ -94,4 +127,14 @@ async function request<T>(path: string, init: RequestInit): Promise<T> {
 
 function firstNonEmpty(...values: Array<string | undefined>) {
   return values.map((value) => value?.trim()).find(Boolean);
+}
+
+function describeToken(token: string) {
+  const parts = token.split('.');
+  return {
+    length: token.length,
+    jwtParts: parts.length,
+    headerLength: parts[0]?.length ?? 0,
+    payloadLength: parts[1]?.length ?? 0,
+  };
 }

@@ -75,6 +75,11 @@ function getGoogleClientId() {
 async function requestGoogleIdToken(nonce: string): Promise<string> {
   const clientId = getGoogleClientId();
   const redirectUri = getRedirectUri();
+  if (__DEV__) console.log('[AuthDebug][Google] OAuth start', {
+    clientId: maskClientId(clientId),
+    redirectUri,
+    nonceLength: nonce.length,
+  });
   const request = new AuthSession.AuthRequest({
     clientId,
     redirectUri,
@@ -84,8 +89,27 @@ async function requestGoogleIdToken(nonce: string): Promise<string> {
     extraParams: { nonce },
   });
 
-  const result = await request.promptAsync(GOOGLE_DISCOVERY);
+  const authUrl = await request.makeAuthUrlAsync(GOOGLE_DISCOVERY);
+  if (__DEV__) console.log('[AuthDebug][Google] OAuth auth URL ready', {
+    urlPrefix: authUrl.split('?')[0],
+    paramKeys: getUrlParamKeys(authUrl),
+    hasCodeChallenge: authUrl.includes('code_challenge='),
+    hasState: authUrl.includes('state='),
+  });
+
+  const result = await request.promptAsync(GOOGLE_DISCOVERY, { url: authUrl });
+  if (__DEV__) console.log('[AuthDebug][Google] OAuth prompt result', {
+    type: result.type,
+    urlPrefix: 'url' in result ? result.url.split('?')[0] : undefined,
+    paramKeys: 'params' in result ? Object.keys(result.params) : undefined,
+  });
   const code = assertAuthCode(result, 'GOOGLE_LOGIN_CANCELLED');
+  if (__DEV__) console.log('[AuthDebug][Google] Auth code received', {
+    codeLength: code.length,
+    hasCodeVerifier: !!request.codeVerifier,
+    codeVerifierLength: request.codeVerifier?.length ?? 0,
+  });
+  if (__DEV__) console.log('[AuthDebug][Google] Exchanging code for token');
   const token = await AuthSession.exchangeCodeAsync(
     {
       clientId,
@@ -97,6 +121,7 @@ async function requestGoogleIdToken(nonce: string): Promise<string> {
     },
     GOOGLE_DISCOVERY,
   );
+  if (__DEV__) console.log('[AuthDebug][Google] Token exchange complete', describeToken(token.idToken));
 
   return assertIdToken(token.idToken, 'GOOGLE_ID_TOKEN_MISSING');
 }
@@ -181,4 +206,29 @@ async function ensureKakaoSdkInitialized() {
 
 function firstNonEmpty(...values: Array<string | undefined>) {
   return values.map((value) => value?.trim()).find(Boolean);
+}
+
+function maskClientId(clientId: string) {
+  const [prefix, domain] = clientId.split('.');
+  return `${prefix.slice(0, 12)}...${domain ?? ''}`;
+}
+
+function getUrlParamKeys(url: string) {
+  try {
+    return Array.from(new URL(url).searchParams.keys());
+  } catch {
+    const query = url.split('?')[1];
+    return query ? Array.from(new URLSearchParams(query).keys()) : [];
+  }
+}
+
+function describeToken(token: string | undefined) {
+  const parts = token?.split('.') ?? [];
+  return {
+    present: !!token,
+    length: token?.length ?? 0,
+    jwtParts: parts.length,
+    headerLength: parts[0]?.length ?? 0,
+    payloadLength: parts[1]?.length ?? 0,
+  };
 }
