@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { SocialProvider } from '../auth/mobileApi';
 import { GoogleIcon } from './icons/GoogleIcon';
 import { KakaoIcon } from './icons/KakaoIcon';
