@@ -23,11 +23,7 @@
     },
     "android": {
       "package": "com.saynow.app",
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#E07A3A"
-      },
-      "edgeToEdgeEnabled": true,
+"edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
