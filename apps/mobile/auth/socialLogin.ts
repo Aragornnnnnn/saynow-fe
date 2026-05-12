@@ -16,7 +16,7 @@ const GOOGLE_DISCOVERY = {
 };
 
 const GOOGLE_SCOPES = ['openid', 'email', 'profile'];
-const KAKAO_SCOPES = ['openid', 'account_email', 'profile_nickname'];
+const KAKAO_ADDITIONAL_SCOPES = ['profile_nickname'];
 let kakaoInitializePromise: Promise<void> | null = null;
 
 export class SocialLoginError extends Error {
@@ -103,16 +103,37 @@ async function requestGoogleIdToken(nonce: string): Promise<string> {
 
 async function requestKakaoIdToken(nonce: string): Promise<string> {
   await ensureKakaoSdkInitialized();
-  const token = await kakaoLogin({
+  const redirectUri = getRedirectUri();
+  const baseToken = await kakaoLogin({
     useKakaoAccountLogin: true,
-    scopes: KAKAO_SCOPES,
     web: {
-      redirectUri: getRedirectUri(),
+      redirectUri,
       nonce,
     },
   });
 
-  return assertIdToken(token.idToken, 'KAKAO_ID_TOKEN_MISSING');
+  const missingScopes = KAKAO_ADDITIONAL_SCOPES.filter(
+    (scope) => !baseToken.scopes.includes(scope),
+  );
+  if (missingScopes.length === 0) {
+    return assertIdToken(baseToken.idToken, 'KAKAO_ID_TOKEN_MISSING');
+  }
+
+  try {
+    const scopedToken = await kakaoLogin({
+      useKakaoAccountLogin: true,
+      scopes: missingScopes,
+      web: {
+        redirectUri,
+        nonce,
+      },
+    });
+
+    return assertIdToken(scopedToken.idToken ?? baseToken.idToken, 'KAKAO_ID_TOKEN_MISSING');
+  } catch (error) {
+    console.warn('[Kakao] Failed to request optional scopes:', error);
+    return assertIdToken(baseToken.idToken, 'KAKAO_ID_TOKEN_MISSING');
+  }
 }
 
 function assertAuthCode(result: AuthSession.AuthSessionResult, cancelCode: string) {

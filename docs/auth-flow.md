@@ -64,7 +64,7 @@ flowchart TD
 ### Kakao 웹
 
 - OAuth URL: `https://kauth.kakao.com/oauth/authorize`
-- scope: `openid account_email profile_nickname`
+- scope: `openid,profile_nickname`
 - PKCE 미사용
 - 저장값: `nonce`, `state`
 - token exchange: Next.js route handler가 Kakao Token API 호출
@@ -127,7 +127,7 @@ Kakao Native SDK를 사용한다.
 요청 scope:
 
 ```text
-openid account_email profile_nickname
+profile_nickname
 ```
 
 주의:
@@ -283,7 +283,6 @@ WebView 401
 - OpenID Connect ON
 - 동의항목:
   - 닉네임: `profile_nickname`
-  - 이메일: `account_email`
 - 웹 callback URI 등록:
   - `http://localhost:3000/auth/kakao/callback`
 
