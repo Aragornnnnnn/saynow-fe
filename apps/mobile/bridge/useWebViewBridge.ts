@@ -23,7 +23,11 @@ export function usePostToWeb(webviewRef: RefObject<WebView | null>): PostToWeb {
   }, [webviewRef]);
 }
 
-export function useWebViewBridge(handlers: WebCommandHandlers, postToWeb: PostToWeb) {
+export function useWebViewBridge(
+  handlers: WebCommandHandlers,
+  postToWeb: PostToWeb,
+  backButtonEnabled = true,
+) {
   const handlersRef = useRef(handlers);
 
   useEffect(() => {
@@ -31,12 +35,14 @@ export function useWebViewBridge(handlers: WebCommandHandlers, postToWeb: PostTo
   }, [handlers]);
 
   useEffect(() => {
+    if (!backButtonEnabled) return;
+
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       postToWeb({ type: 'BACK_PRESSED' });
       return true;
     });
     return () => subscription.remove();
-  }, [postToWeb]);
+  }, [backButtonEnabled, postToWeb]);
 
   return useCallback((event: WebViewMessageEvent) => {
     const message = parseWebMessage(event.nativeEvent.data);

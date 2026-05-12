@@ -99,7 +99,8 @@ export default function App() {
       setAuthStatus('signedOut');
     },
   }), [openSettings, postToWeb, start, stop]);
-  const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb);
+  const isWebViewActive = !!WEB_URL && authStatus === 'signedIn' && !hasError;
+  const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb, isWebViewActive);
 
   const handleNativeLogin = useCallback(async (provider: SocialProvider) => {
     try {
