@@ -4,7 +4,10 @@
     "slug": "saynow",
     "entryPoint": "./index.ts",
     "version": "1.0.0",
-    "scheme": "saynow",
+    "scheme": [
+      "saynow",
+      "com.saynow.app"
+    ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
