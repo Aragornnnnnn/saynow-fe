@@ -104,7 +104,8 @@ export const privacyDocument: LegalDocument = {
       id: 'contact',
       title: '7. 문의',
       paragraphs: [
-        '개인정보와 관련한 문의는 앱 스토어에 표시된 개발자 연락처 또는 서비스 운영자가 제공하는 공식 문의 채널을 통해 접수할 수 있습니다.',
+        '개인정보와 관련한 문의는 아래 공식 문의 이메일을 통해 접수할 수 있습니다.',
+        '문의 이메일: saynowkorea@gmail.com',
       ],
     },
   ],
@@ -179,7 +180,7 @@ export const termsDocument: LegalDocument = {
       id: 'liability',
       title: '7. 문의 및 책임 제한',
       paragraphs: [
-        '서비스 이용 중 발생한 문의는 앱 스토어에 표시된 개발자 연락처 또는 공식 문의 채널을 통해 접수할 수 있습니다. SayNow는 관련 법령이 허용하는 범위 안에서 서비스 이용으로 발생한 간접적 손해에 대해 책임을 제한할 수 있습니다.',
+        '서비스 이용 중 발생한 문의는 공식 문의 이메일(saynowkorea@gmail.com)을 통해 접수할 수 있습니다. SayNow는 관련 법령이 허용하는 범위 안에서 서비스 이용으로 발생한 간접적 손해에 대해 책임을 제한할 수 있습니다.',
       ],
     },
   ],
