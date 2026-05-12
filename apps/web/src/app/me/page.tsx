@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { clearNativeAuthSession } from '@/bridge/commands';
+import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { logout as requestLogout } from '@/lib/api/auth';
 import { deleteAccount } from '@/lib/api/member';
 import { useAuthStore } from '@/store/authStore';
@@ -31,6 +32,12 @@ export default function MyPage() {
       router.replace('/login');
     }
   }, [_hasHydrated, accessToken, refreshToken, router]);
+
+  function goHome() {
+    router.replace('/');
+  }
+
+  useBackButtonBridge(goHome);
 
   if (!_hasHydrated || (!accessToken && !refreshToken)) return null;
 
@@ -81,7 +88,7 @@ export default function MyPage() {
       <header className="flex items-center gap-3 px-4 pb-3 pt-6">
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={goHome}
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors active:bg-secondary"
           aria-label="뒤로 가기"
         >

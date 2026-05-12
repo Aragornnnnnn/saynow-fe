@@ -1,5 +1,8 @@
-import Link from 'next/link';
+'use client';
+
+import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import type { LegalDocument } from '@/lib/legalDocuments';
 
 interface LegalDocumentPageProps {
@@ -13,18 +16,26 @@ export function LegalDocumentPage({
   backHref,
   backLabel,
 }: LegalDocumentPageProps) {
+  const router = useRouter();
+
+  function goBack() {
+    router.replace(backHref);
+  }
+
+  useBackButtonBridge(goBack);
+
   return (
     <main className="min-h-dvh bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
         <div className="mx-auto flex w-full max-w-[760px] items-center gap-3 px-4 pb-3 pt-6 sm:px-8">
-          <Link
-            href={backHref}
-            replace
+          <button
+            type="button"
+            onClick={goBack}
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors active:bg-secondary"
             aria-label={backLabel}
           >
             <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          </Link>
+          </button>
           <h1 className="truncate text-xl font-bold text-foreground">{document.title}</h1>
         </div>
       </header>
