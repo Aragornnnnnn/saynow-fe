@@ -8,23 +8,20 @@
       "android": {
         "buildType": "apk",
         "image": "latest"
-      },
-      "prebuildCommand": "npx expo prebuild --clean --platform android && sed -i 's|distributionUrl=.*|distributionUrl=https\\\\://services.gradle.org/distributions/gradle-8.13-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties"
+      }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk",
         "image": "latest"
-      },
-      "prebuildCommand": "npx expo prebuild --clean --platform android && sed -i 's|distributionUrl=.*|distributionUrl=https\\\\://services.gradle.org/distributions/gradle-8.13-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties"
+      }
     },
     "production": {
       "android": {
         "buildType": "app-bundle",
         "image": "latest"
-      },
-      "prebuildCommand": "npx expo prebuild --clean --platform android && sed -i 's|distributionUrl=.*|distributionUrl=https\\\\://services.gradle.org/distributions/gradle-8.13-bin.zip|' android/gradle/wrapper/gradle-wrapper.properties"
+      }
     }
   },
   "submit": {
