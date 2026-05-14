@@ -5,6 +5,16 @@ const root = path.resolve(__dirname, '..');
 
 const patches = [
   {
+    // AGP 7.2.1 하드코딩이 AGP 8.x 환경에서 "No variants exist" 에러를 유발함
+    file: 'node_modules/@react-native-kakao/core/android/build.gradle',
+    replacements: [
+      [
+        'classpath "com.android.tools.build:gradle:7.2.1"',
+        'classpath "com.android.tools.build:gradle:8.3.2"',
+      ],
+    ],
+  },
+  {
     file: 'node_modules/@react-native-kakao/user/src/index.ts',
     replacements: [
       [
