@@ -4,6 +4,7 @@
   "main": "index.ts",
   "scripts": {
     "postinstall": "node scripts/patch-kakao-user-nonce.js",
+    "eas-build-post-install": "node scripts/patch-kakao-user-nonce.js",
     "start": "expo start",
     "android": "expo run:android",
     "android:go": "expo start --android",
