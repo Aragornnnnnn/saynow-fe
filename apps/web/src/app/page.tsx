@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, CheckCircle2, ChevronRight, UserRound } from 'lucide-react';
+import { Lock, ChevronRight, UserRound } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import type { ApiScenario, ApiCategory } from '@/lib/api';
@@ -62,7 +63,7 @@ export default function Home() {
   }
 
   return (
-    <main className="flex h-dvh flex-col bg-background">
+    <main className="flex h-dvh flex-col overflow-x-hidden" style={{ background: 'linear-gradient(to bottom, #FAFAF8 60%, #E0F2F1 100%)' }}>
       {/* 헤더 */}
       <div className="px-4 pb-3 pt-6">
         <div className="mb-4 flex items-center justify-between">
@@ -81,7 +82,7 @@ export default function Home() {
 
       {/* 시나리오 목록 */}
       <div className="relative flex-1 overflow-hidden">
-        <div className="no-scrollbar h-full overflow-y-auto overscroll-y-contain px-4">
+        <div className="no-scrollbar h-full overflow-y-auto overscroll-y-contain">
           {isPending ? (
             <div className="mt-6 space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -121,22 +122,29 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
   const hasMore = scenarios.length > MVP_LIMIT;
 
   return (
-    <div className="relative mt-6 flex flex-col items-center">
+    <div className="relative mt-6 flex flex-col items-center px-4">
       {visible.map((scenario, index) => (
-        <ScenarioBadgeItem
+        <motion.div
           key={scenario.scenarioId}
-          scenario={scenario}
-          index={index}
-          isLast={index === visible.length - 1}
-          isExpanded={expandedId === scenario.scenarioId}
-          onBadgeClick={onBadgeClick}
-          onStart={onStart}
-        />
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: index * 0.1, duration: 0.35, ease: 'easeOut' }}
+          className="flex w-full flex-col items-center"
+        >
+          <ScenarioBadgeItem
+            scenario={scenario}
+            index={index}
+            isLast={index === visible.length - 1}
+            isExpanded={expandedId === scenario.scenarioId}
+            onBadgeClick={onBadgeClick}
+            onStart={onStart}
+          />
+        </motion.div>
       ))}
 
       {/* 더 많은 시나리오 예고 */}
       {hasMore && (
-        <div className="w-screen flex flex-col items-center" style={{ minHeight: '30vh', background: 'linear-gradient(to bottom, transparent 0%, #CBD5E1 60%, #B0BEC5 100%)' }}>
+        <div className="-mx-4 w-[calc(100%+2rem)] flex flex-col items-center" style={{ minHeight: '30vh' }}>
           <div className="flex flex-col items-center gap-1 py-3">
             {Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
@@ -165,7 +173,7 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
   const isComingSoon = scenario.lockReason === 'COMING_SOON' || index >= 3;
 
   return (
-    <div className="flex w-full flex-col items-center">
+    <>
       {/* 뱃지 버튼 */}
       <button
         onClick={() => onBadgeClick(scenario)}
@@ -176,8 +184,8 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
             : isLocked
               ? 'bg-card shadow-md text-muted-foreground cursor-default'
               : isCleared
-                ? `bg-green-50 ${isExpanded ? 'shadow-[0_2px_0_#bbf7d0] translate-y-1' : 'shadow-[0_6px_0_#bbf7d0] active:shadow-[0_2px_0_#bbf7d0] active:translate-y-1'}`
-                : `bg-[#FFF4ED] ${isExpanded ? 'shadow-[0_2px_0_#e8b48e] translate-y-1' : 'shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'}`
+                ? `bg-[#FFF4ED] ring-1 ring-primary/10 ${isExpanded ? 'shadow-[0_2px_0_#e8b48e] translate-y-1' : 'shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'}`
+                : `bg-[#FFF4ED] ring-1 ring-primary/10 ${isExpanded ? 'shadow-[0_2px_0_#e8b48e] translate-y-1' : 'shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'}`
         }`}
       >
         {isComingSoon ? (
@@ -197,8 +205,6 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
               <Lock size={22} className="text-muted-foreground" />
             </div>
           </>
-        ) : isCleared ? (
-          <CheckCircle2 size={32} className="text-green-500" />
         ) : (
           <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
         )}
@@ -208,7 +214,7 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
             isLocked ? 'bg-border text-muted-foreground' : 'bg-primary text-white'
           }`}
         >
-          {index + 1}
+          {isCleared ? '✓' : index + 1}
         </span>
       </button>
 
@@ -218,19 +224,29 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
       </p>
 
       {/* 인라인 확장 패널 */}
-      {isExpanded && !isLocked && (
-        <div className="mt-3 w-full max-w-sm rounded-2xl bg-card px-5 py-4 shadow-sm border border-border">
-          <p className="mb-1 text-xs font-semibold text-primary">달성 목표</p>
-          <p className="mb-4 text-sm text-muted-foreground leading-relaxed">{scenario.scenarioGoal}</p>
-          <button
-            onClick={() => onStart(scenario.scenarioId)}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
+      <AnimatePresence initial={false}>
+        {isExpanded && !isLocked && (
+          <motion.div
+            initial={{ opacity: 0, height: 0, marginTop: 0 }}
+            animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
+            exit={{ opacity: 0, height: 0, marginTop: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="w-full max-w-sm overflow-hidden"
           >
-            <span>주문하러 가기</span>
-            <ChevronRight size={16} />
-          </button>
-        </div>
-      )}
+            <div className="rounded-2xl bg-card px-5 py-4 shadow-sm border border-border">
+              <p className="mb-1 text-xs font-semibold text-primary">달성 목표</p>
+              <p className="mb-4 text-sm text-muted-foreground leading-relaxed">{scenario.scenarioGoal}</p>
+              <button
+                onClick={() => onStart(scenario.scenarioId)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
+              >
+                <span>주문하러 가기</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 점선 커넥터 */}
       {!isLast && (
@@ -240,6 +256,6 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }
