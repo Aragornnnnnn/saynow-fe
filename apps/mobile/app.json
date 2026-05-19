@@ -38,6 +38,10 @@
     "plugins": [
       "expo-web-browser",
       [
+        "./plugins/withGradleVersion",
+        { "version": "8.13" }
+      ],
+      [
         "expo-build-properties",
         {
           "android": {
