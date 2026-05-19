@@ -23,7 +23,7 @@
     },
     "android": {
       "package": "com.saynow.app",
-"edgeToEdgeEnabled": true,
+      "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
@@ -60,7 +60,8 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-speech-recognition"
     ]
   }
 }
