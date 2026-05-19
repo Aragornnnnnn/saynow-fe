@@ -41,7 +41,6 @@
         "expo-build-properties",
         {
           "android": {
-            "gradleVersion": "8.13",
             "extraMavenRepos": [
               "https://devrepo.kakao.com/nexus/content/groups/public/"
             ]
