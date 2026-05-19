@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTypingLoop } from '@/hooks/useTypingLoop';
 
 const HOOK_MESSAGES = [
-  '분명히 말했는데 못 알아들은 척한 걸까요?',
+  '말했는데 돌아온 건 "Sorry?" 였어요',
   '말은 했는데 외국인 표정이 이상했어요',
   '눈치로 때웠는데 맞게 전달됐을까요?',
   '아는 단어만 골라 말했는데 통했을까요?',
