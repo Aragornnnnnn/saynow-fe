@@ -1,11 +1,14 @@
 // 대화 페이지 — 채팅 말풍선 UI로 시나리오 대화 연습
 'use client';
 
-import { use, useEffect, useRef, useState } from 'react';
+import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic, MicOff } from 'lucide-react';
 import { startSession, submitUtterance, exitSession } from '@/lib/api';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
+import { useBridgeEvent } from '@/bridge/useBridgeEvent';
+import { startNativeStt, stopNativeStt } from '@/bridge/commands';
+import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import ExitConfirmModal from './ExitConfirmModal';
 import MicDeniedModal from './MicDeniedModal';
@@ -39,6 +42,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   const { speak } = useTts();
+  const isNative = webBridge.isAvailable();
   const sessionStartedRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -86,7 +90,26 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     setShowExitModal(true);
   });
 
-  async function startSpeechRecognition() {
+  // 앱: 브릿지 STT 이벤트 구독
+  useBridgeEvent('STT_PARTIAL', useCallback((msg) => {
+    setTranscript(msg.transcript);
+  }, []));
+
+  useBridgeEvent('STT_FINAL', useCallback((msg) => {
+    setTranscript(msg.transcript);
+    setPageState('idle');
+    if (msg.transcript.trim() && sessionId) {
+      submitUserUtterance(msg.transcript.trim());
+    }
+  }, [sessionId])); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useBridgeEvent('MIC_PERMISSION_DENIED', useCallback(() => {
+    setShowMicDeniedModal(true);
+    setPageState('idle');
+  }, []));
+
+  // 웹: 브라우저 SpeechRecognition
+  async function startWebStt() {
     try {
       await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
@@ -94,15 +117,16 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       return;
     }
 
-    const SpeechRecognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const SR = (window as any).SpeechRecognition ?? (window as any).webkitSpeechRecognition;
+    if (!SR) return;
 
-    const recognition = new SpeechRecognition();
+    const recognition = new SR();
     recognition.lang = 'en-US';
     recognition.continuous = true;
     recognition.interimResults = true;
 
-    recognition.onresult = (event) => {
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) {
         interim += event.results[i][0].transcript;
@@ -111,9 +135,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (event.error === 'not-allowed') {
-        setShowMicDeniedModal(true);
-      }
+      if (event.error === 'not-allowed') setShowMicDeniedModal(true);
       setPageState('idle');
     };
 
@@ -123,26 +145,35 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     setTranscript('');
   }
 
-  function stopSpeechRecognition() {
+  function stopWebStt() {
     recognitionRef.current?.stop();
     recognitionRef.current = null;
   }
 
   async function handleMicPress() {
     if (isRecording) {
-      stopSpeechRecognition();
-      if (!transcript.trim() || !sessionId) {
-        setPageState('idle');
-        return;
+      if (isNative) {
+        stopNativeStt();
+      } else {
+        stopWebStt();
+        if (!transcript.trim() || !sessionId) {
+          setPageState('idle');
+          return;
+        }
+        await submitUserUtterance(transcript.trim());
       }
-      await submitUserUtterance(transcript.trim());
     } else {
-      // TTS 재생 중이면 먼저 멈추고 STT 시작
       if (speakingId) {
         window.speechSynthesis?.cancel();
         setSpeakingId(null);
       }
-      startSpeechRecognition();
+      if (isNative) {
+        startNativeStt();
+        setPageState('recording');
+        setTranscript('');
+      } else {
+        await startWebStt();
+      }
     }
   }
 
