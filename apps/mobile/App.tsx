@@ -1,4 +1,3 @@
-import { Audio } from 'expo-av';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -25,7 +24,7 @@ import { requestSocialIdToken } from './auth/socialLogin';
 import { usePostToWeb, useWebViewBridge } from './bridge/useWebViewBridge';
 import type { WebCommandHandlers } from './bridge/useWebViewBridge';
 import { NativeLoginScreen } from './components/NativeLoginScreen';
-import { useRecorder } from './hooks/useRecorder';
+import { useStt } from './hooks/useStt';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -41,7 +40,11 @@ export default function App() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const postToWeb = usePostToWeb(webviewRef);
-  const { start, stop, openSettings } = useRecorder();
+  const { start: startStt, stop: stopStt } = useStt({
+    onPartial: (transcript) => postToWeb({ type: 'STT_PARTIAL', transcript }),
+    onFinal: (transcript) => postToWeb({ type: 'STT_FINAL', transcript }),
+    onDenied: () => postToWeb({ type: 'MIC_PERMISSION_DENIED' }),
+  });
 
   const bootstrapSession = useCallback(async () => {
     try {
@@ -93,22 +96,12 @@ export default function App() {
   }, []);
 
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
-    START_RECORDING: async () => {
-      const started = await start();
-      if (!started) postToWeb({ type: 'MIC_PERMISSION_DENIED' });
-    },
-    STOP_RECORDING: async () => {
-      const base64 = await stop();
-      if (base64) postToWeb({ type: 'RECORDING_DONE', base64 });
-    },
-    OPEN_SETTINGS: openSettings,
+    START_STT: () => startStt(),
+    STOP_STT: () => stopStt(),
+    OPEN_SETTINGS: () => Linking.openSettings(),
     PLAY_TTS: (message) => {
       Speech.stop();
       Speech.speak(message.text, { language: 'en-US', rate: 0.9 });
-    },
-    REQUEST_MIC_PERMISSION: async () => {
-      const { granted } = await Audio.requestPermissionsAsync();
-      postToWeb({ type: 'MIC_PERMISSION_STATUS', granted });
     },
     AUTH_SESSION_UPDATED: async (message) => {
       const session = {
@@ -125,7 +118,7 @@ export default function App() {
       setHasError(false);
       setAuthStatus('signedOut');
     },
-  }), [openSettings, postToWeb, start, stop]);
+  }), [postToWeb, startStt, stopStt]);
   const isWebViewActive = !!WEB_URL && authStatus === 'signedIn' && !hasError;
   const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb, isWebViewActive);
 
