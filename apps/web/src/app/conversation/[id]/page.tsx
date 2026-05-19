@@ -8,6 +8,7 @@ import { startSession, submitUtterance, exitSession } from '@/lib/api';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useTts } from '@/hooks/useTts';
 import ExitConfirmModal from './ExitConfirmModal';
+import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { TypingDots } from '@/components/chat/TypingDots';
@@ -33,6 +34,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [transcript, setTranscript] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
@@ -84,7 +86,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     setShowExitModal(true);
   });
 
-  function startSpeechRecognition() {
+  async function startSpeechRecognition() {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setShowMicDeniedModal(true);
+      return;
+    }
+
     const SpeechRecognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
@@ -101,7 +110,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       setTranscript(interim);
     };
 
-    recognition.onerror = () => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (event.error === 'not-allowed') {
+        setShowMicDeniedModal(true);
+      }
       setPageState('idle');
     };
 
@@ -317,6 +329,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
+      {showMicDeniedModal && <MicDeniedModal isNative={!!window.ReactNativeWebView} onClose={() => setShowMicDeniedModal(false)} />}
     </main>
   );
 }

@@ -11,11 +11,27 @@ interface MicDeniedModalProps {
 export default function MicDeniedModal({ isNative, onClose }: MicDeniedModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="mx-6 w-full max-w-sm rounded-2xl bg-card px-6 py-6" onClick={(e) => e.stopPropagation()}>
-        <h2 className="text-base font-bold text-foreground mb-2">마이크 권한이 필요해요</h2>
-        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-          영어 회화 연습을 위해 마이크 접근 권한이 필요해요. 설정에서 권한을 허용해주세요.
-        </p>
+      <div className="mx-6 w-full max-w-sm rounded-3xl bg-card px-6 pb-8 pt-6" onClick={(e) => e.stopPropagation()}>
+        <h2 className="mb-1 text-base font-bold text-foreground">마이크 권한이 필요해요</h2>
+        <p className="mb-5 text-sm text-muted-foreground">영어 말하기 연습엔 꼭 필요해요</p>
+
+        {isNative && (
+          <div className="mb-5 rounded-2xl bg-[#F5F5F3] px-4 py-4 space-y-2">
+            {[
+              { step: '1', text: "아래 버튼을 눌러 설정을 열어요" },
+              { step: '2', text: "권한 → 마이크로 이동해요" },
+              { step: '3', text: "'허용'을 선택해주세요" },
+            ].map(({ step, text }) => (
+              <div key={step} className="flex items-center gap-3">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary text-[11px] font-bold text-white">
+                  {step}
+                </span>
+                <span className="text-sm text-foreground">{text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="flex gap-3">
           <button
             onClick={onClose}
@@ -29,9 +45,9 @@ export default function MicDeniedModal({ isNative, onClose }: MicDeniedModalProp
                 onClose();
                 openNativeSettings();
               }}
-              className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white"
+              className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
             >
-              설정으로 이동
+              설정 열기
             </button>
           )}
         </div>
