@@ -2,6 +2,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useTypingLoop } from '@/hooks/useTypingLoop';
+
+const HOOK_MESSAGES = [
+  'Can I get... uh... iced americano?',
+  'Where is... the gate number?',
+  'This room... air con... broken...',
+  'I have... allergy... to peanut?',
+  'Can you... recommend... something?',
+];
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
@@ -14,6 +23,14 @@ import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLog
 
 const LAST_LOGIN_KEY = 'saynow-last-login';
 
+function haptic() {
+  navigator.vibrate?.(3);
+}
+
+function hapticClear() {
+  navigator.vibrate?.(8);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { accessToken, setAuth } = useAuthStore();
@@ -21,6 +38,7 @@ export default function LoginPage() {
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
+  const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear);
 
   useEffect(() => {
     if (accessToken) router.replace('/');
@@ -94,12 +112,12 @@ export default function LoginPage() {
           priority
           className="object-contain mix-blend-multiply"
         />
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3">
           <h1 className="text-2xl font-bold text-foreground leading-snug">
-            실제 상황으로 연습하고,<br />외국인 관점 피드백까지
+            내가 한 영어,<br />전달이 됐을까요?
           </h1>
-          <p className="text-sm text-muted-foreground">
-            AI와 함께, 진짜 영어 회화를 시작하세요.
+          <p className="text-base text-muted-foreground h-6">
+            {typingText}<span className="animate-pulse">|</span>
           </p>
         </div>
       </div>
