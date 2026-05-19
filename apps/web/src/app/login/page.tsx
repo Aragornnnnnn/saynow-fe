@@ -12,6 +12,7 @@ import { updateNativeAuthSession } from '@/bridge/commands';
 import type { SocialProvider } from '@/lib/api';
 import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
 
+const LAST_LOGIN_KEY = 'saynow-last-login';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -19,13 +20,16 @@ export default function LoginPage() {
   const nonce = useRef<string>('');
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
 
-  // 이미 로그인된 경우 홈으로
   useEffect(() => {
     if (accessToken) router.replace('/');
   }, [accessToken, router]);
 
   useEffect(() => {
+    const saved = localStorage.getItem(LAST_LOGIN_KEY) as SocialProvider | null;
+    if (saved === 'KAKAO' || saved === 'GOOGLE') setLastProvider(saved);
+
     function resetCancelledLogin() {
       nonce.current = '';
       setPendingProvider(null);
@@ -34,10 +38,7 @@ export default function LoginPage() {
 
     resetCancelledLogin();
     window.addEventListener('pageshow', resetCancelledLogin);
-
-    return () => {
-      window.removeEventListener('pageshow', resetCancelledLogin);
-    };
+    return () => window.removeEventListener('pageshow', resetCancelledLogin);
   }, []);
 
   function generateNonce(): string {
@@ -64,10 +65,15 @@ export default function LoginPage() {
     }
   }
 
-  useBridgeEvent('NATIVE_LOGIN_SUCCESS', (msg) => {
-    setAuth(msg.accessToken, msg.refreshToken, msg.member);
-    updateNativeAuthSession(msg.accessToken, msg.refreshToken, msg.member);
+  function onLoginSuccess(accessToken: string, refreshToken: string, member: Parameters<typeof setAuth>[2]) {
+    localStorage.setItem(LAST_LOGIN_KEY, member.provider as SocialProvider);
+    setAuth(accessToken, refreshToken, member);
+    updateNativeAuthSession(accessToken, refreshToken, member);
     router.replace('/');
+  }
+
+  useBridgeEvent('NATIVE_LOGIN_SUCCESS', (msg) => {
+    onLoginSuccess(msg.accessToken, msg.refreshToken, msg.member);
   });
 
   useBridgeEvent('NATIVE_LOGIN_ERROR', (msg) => {
@@ -75,9 +81,10 @@ export default function LoginPage() {
     setErrorMessage(msg.message);
   });
 
+  const isPending = pendingProvider !== null;
+
   return (
     <main className="flex flex-col h-dvh bg-background items-center justify-between px-6 py-10">
-      {/* 상단 로고 + 캐릭터 영역 */}
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         <Image
           src="/saynow-character.webp"
@@ -91,30 +98,33 @@ export default function LoginPage() {
           <h1 className="text-2xl font-bold text-foreground leading-snug">
             실제 상황으로 연습하고,<br />외국인 관점 피드백까지
           </h1>
-          <p className="text-sm text-[var(--color-text-secondary)]">
+          <p className="text-sm text-muted-foreground">
             AI와 함께, 진짜 영어 회화를 시작하세요.
           </p>
         </div>
       </div>
 
-      {/* 하단 버튼 영역 */}
       <div className="w-full flex flex-col gap-3 pb-safe">
-        <button
+        <LoginButton
           onClick={() => startLogin('KAKAO')}
-          disabled={pendingProvider !== null}
-          className="w-full h-14 rounded-xl bg-[#FEE500] flex items-center justify-center gap-3 font-semibold text-[#191919] text-base active:brightness-95 transition-all"
-        >
-          <KakaoIcon />
-          {pendingProvider === 'KAKAO' ? '카카오 로그인 중...' : '카카오로 시작하기'}
-        </button>
-        <button
+          disabled={isPending}
+          pending={pendingProvider === 'KAKAO'}
+          pendingLabel="카카오 로그인 중..."
+          label="카카오로 로그인하기"
+          showBadge={lastProvider === 'KAKAO'}
+          className="bg-[#FEE500] text-[#191919] shadow-sm"
+          icon={<KakaoIcon />}
+        />
+        <LoginButton
           onClick={() => startLogin('GOOGLE')}
-          disabled={pendingProvider !== null}
-          className="w-full h-14 rounded-xl bg-card border border-border flex items-center justify-center gap-3 font-semibold text-foreground text-base active:brightness-95 transition-all"
-        >
-          <GoogleIcon />
-          {pendingProvider === 'GOOGLE' ? '구글 로그인 중...' : '구글로 시작하기'}
-        </button>
+          disabled={isPending}
+          pending={pendingProvider === 'GOOGLE'}
+          pendingLabel="구글 로그인 중..."
+          label="구글로 로그인하기"
+          showBadge={lastProvider === 'GOOGLE'}
+          className="bg-white text-foreground shadow-sm"
+          icon={<GoogleIcon />}
+        />
         {errorMessage && (
           <p className="px-1 text-center text-sm leading-relaxed text-red-600">
             {errorMessage}
@@ -122,6 +132,44 @@ export default function LoginPage() {
         )}
       </div>
     </main>
+  );
+}
+
+function LoginButton({
+  onClick,
+  disabled,
+  pending,
+  pendingLabel,
+  label,
+  showBadge,
+  className,
+  icon,
+}: {
+  onClick: () => void;
+  disabled: boolean;
+  pending: boolean;
+  pendingLabel: string;
+  label: string;
+  showBadge: boolean;
+  className: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="relative">
+      {showBadge && (
+        <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-semibold px-2 py-0.5 rounded-full z-10 whitespace-nowrap">
+          지난번에 사용
+        </span>
+      )}
+      <button
+        onClick={onClick}
+        disabled={disabled}
+        className={`w-full h-14 rounded-xl flex items-center justify-center gap-3 font-semibold text-base active:brightness-95 transition-all disabled:opacity-60 ${className}`}
+      >
+        {icon}
+        {pending ? pendingLabel : label}
+      </button>
+    </div>
   );
 }
 
