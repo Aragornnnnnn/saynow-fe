@@ -8,14 +8,10 @@ import { useAuthStore } from '@/store/authStore';
 import type { SocialProvider } from '@/lib/api';
 import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
 
-const DEV_LOGIN_ENABLED =
-  process.env.NODE_ENV === 'development' &&
-  (process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true' ||
-    process.env.NEXT_PUBLIC_MSW === 'true');
 
 export default function LoginPage() {
   const router = useRouter();
-  const { accessToken, setAuth } = useAuthStore();
+  const { accessToken } = useAuthStore();
   const nonce = useRef<string>('');
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -57,20 +53,6 @@ export default function LoginPage() {
       setPendingProvider(null);
       setErrorMessage(err instanceof Error ? err.message : '로그인에 실패했습니다.');
     }
-  }
-
-  function handleDevLogin() {
-    const accessToken = process.env.NEXT_PUBLIC_DEV_ACCESS_TOKEN ?? 'dev-mock-access-token';
-    const refreshToken = process.env.NEXT_PUBLIC_DEV_REFRESH_TOKEN ?? 'dev-mock-refresh-token';
-
-    setAuth(accessToken, refreshToken, {
-      memberId: '0',
-      nickname: '개발자',
-      email: null,
-      provider: 'GOOGLE',
-      newMember: false,
-    });
-    router.replace('/');
   }
 
   return (
@@ -117,14 +99,6 @@ export default function LoginPage() {
           <p className="px-1 text-center text-sm leading-relaxed text-red-600">
             {errorMessage}
           </p>
-        )}
-        {DEV_LOGIN_ENABLED && (
-          <button
-            onClick={handleDevLogin}
-            className="w-full h-10 rounded-xl border border-dashed border-border text-xs text-[var(--color-text-secondary)]"
-          >
-            임시 로그인 (개발용)
-          </button>
         )}
       </div>
     </main>
