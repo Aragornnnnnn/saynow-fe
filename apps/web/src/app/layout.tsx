@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { MSWProvider } from "@/mocks/MSWProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -35,7 +36,9 @@ export default function RootLayout({
         />
       </head>
       <body className="h-full bg-background text-foreground">
-        <QueryProvider>{children}</QueryProvider>
+        <MSWProvider>
+          <QueryProvider>{children}</QueryProvider>
+        </MSWProvider>
         <Analytics />
       </body>
     </html>
