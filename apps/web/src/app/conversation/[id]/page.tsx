@@ -3,11 +3,14 @@
 
 import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic, MicOff, Volume2, Languages } from 'lucide-react';
+import { ChevronLeft, Mic, MicOff } from 'lucide-react';
 import { startSession, submitUtterance, exitSession } from '@/lib/api';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useTts } from '@/hooks/useTts';
 import ExitConfirmModal from './ExitConfirmModal';
+import { AiBubble } from '@/components/chat/AiBubble';
+import { UserBubble } from '@/components/chat/UserBubble';
+import { TypingDots } from '@/components/chat/TypingDots';
 
 interface ChatMessage {
   id: string;
@@ -122,6 +125,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       }
       await submitUserUtterance(transcript.trim());
     } else {
+      // TTS 재생 중이면 먼저 멈추고 STT 시작
+      if (speakingId) {
+        window.speechSynthesis?.cancel();
+        setSpeakingId(null);
+      }
       startSpeechRecognition();
     }
   }
@@ -218,26 +226,29 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       {/* 채팅 메시지 영역 */}
       <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3">
         {messages.map((msg) => (
-          <ChatBubble
-            key={msg.id}
-            message={msg}
-            showTranslation={translatingId === msg.id}
-            isSpeaking={speakingId === msg.id}
-            onToggleTranslation={() => toggleTranslation(msg.id)}
-            onSpeak={() => {
-              if (speakingId === msg.id) {
-                window.speechSynthesis?.cancel();
-                setSpeakingId(null);
-              } else {
-                window.speechSynthesis?.cancel();
-                const utt = new SpeechSynthesisUtterance(msg.text);
-                utt.lang = 'en-US';
-                utt.onend = () => setSpeakingId(null);
-                window.speechSynthesis?.speak(utt);
-                setSpeakingId(msg.id);
-              }
-            }}
-          />
+          msg.role === 'ai' ? (
+            <AiBubble
+              key={msg.id}
+              text={msg.text}
+              translatedText={msg.translatedText}
+              showTranslation={translatingId === msg.id}
+              isSpeaking={speakingId === msg.id}
+              onToggleTranslation={() => toggleTranslation(msg.id)}
+              onSpeak={() => {
+                if (speakingId === msg.id) {
+                  window.speechSynthesis?.cancel();
+                  setSpeakingId(null);
+                } else {
+                  speak(msg.text, null, {
+                    onStart: () => setSpeakingId(msg.id),
+                    onEnd: () => setSpeakingId(null),
+                  });
+                }
+              }}
+            />
+          ) : (
+            <UserBubble key={msg.id} text={msg.text} />
+          )
         ))}
 
         {/* AI 타이핑 중 */}
@@ -310,82 +321,3 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   );
 }
 
-interface ChatBubbleProps {
-  message: ChatMessage;
-  showTranslation: boolean;
-  isSpeaking: boolean;
-  onToggleTranslation: () => void;
-  onSpeak: () => void;
-}
-
-function ChatBubble({ message, showTranslation, isSpeaking, onToggleTranslation, onSpeak }: ChatBubbleProps) {
-  const isAI = message.role === 'ai';
-  const isDots = message.text === '...';
-
-  if (!isAI) {
-    return (
-      <div className="flex justify-end">
-        <div className="relative max-w-[80%]">
-          <div className="rounded-2xl rounded-br-none bg-primary px-4 py-3">
-            <p className="text-sm text-white leading-relaxed">{message.text}</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col items-start gap-2">
-      <div className="relative max-w-[80%]">
-        <div className="rounded-2xl rounded-bl-none bg-[#EBEBEB] px-4 py-3">
-          {isDots ? (
-            <TypingDots />
-          ) : (
-            <>
-              <p className="text-sm text-foreground leading-relaxed">{message.text}</p>
-              {showTranslation && message.translatedText && (
-                <p className="mt-2 border-t border-black/5 pt-2 text-xs text-muted-foreground leading-relaxed">
-                  {message.translatedText}
-                </p>
-              )}
-              <div className="mt-2.5 flex gap-2">
-                <button
-                  onClick={onSpeak}
-                  className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                    isSpeaking ? 'bg-foreground text-white' : 'bg-black/8 text-foreground'
-                  }`}
-                >
-                  <Volume2 size={14} />
-                </button>
-                {message.translatedText && (
-                  <button
-                    onClick={onToggleTranslation}
-                    className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
-                      showTranslation ? 'bg-foreground text-white' : 'bg-black/8 text-foreground'
-                    }`}
-                  >
-                    <Languages size={14} />
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function TypingDots() {
-  return (
-    <div className="flex items-center gap-1 py-0.5">
-      {[0, 1, 2].map((i) => (
-        <span
-          key={i}
-          className="h-2 w-2 rounded-full bg-muted-foreground/50"
-          style={{ animation: `bounce 1s ease-in-out ${i * 0.15}s infinite` }}
-        />
-      ))}
-    </div>
-  );
-}

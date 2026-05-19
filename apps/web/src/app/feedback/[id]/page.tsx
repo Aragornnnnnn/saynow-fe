@@ -1,10 +1,13 @@
-// 피드백 페이지 — 대화 결과 이해도 및 발화별 상세 피드백
+// 피드백 페이지 — 대화 결과 이해도 및 발화별 말풍선 피드백
 'use client';
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { useFeedbackQuery } from '@/queries/feedback';
+import { AiBubble } from '@/components/chat/AiBubble';
+import { UserBubble } from '@/components/chat/UserBubble';
+import { useTts } from '@/hooks/useTts';
 
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -35,111 +38,133 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  const scoreStyle = comprehensionStyle(feedback.comprehensionScore);
-
   return (
     <main className="flex h-full flex-col bg-background">
-      {/* 상단 결과 헤더 */}
-      <div className="px-5 pt-12 pb-5 text-center">
-        <p className="mb-1 text-3xl">{feedback.cleared ? '🎉' : '😅'}</p>
-        <h1 className="text-xl font-bold text-foreground">
-          {feedback.cleared ? '클리어!' : '아쉬워요'}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          총 이해도{' '}
-          <span className={`text-2xl font-bold ${scoreStyle.color}`}>
-            {feedback.comprehensionScore}%
-          </span>
-        </p>
-      </div>
-
-      {/* 스크롤 영역 */}
-      <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-6 space-y-3">
-        {/* 총평 카드 */}
-        {feedback.feedbackSummary && (
-          <div className="rounded-2xl bg-card border border-border px-4 py-3">
-            <p className="mb-1.5 text-xs font-semibold text-muted-foreground">총평</p>
-            <p className="text-sm text-foreground leading-relaxed">{feedback.feedbackSummary}</p>
+      <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain">
+        {/* 상단 결과 섹션 */}
+        <div className="px-5 pt-12 pb-6 text-center">
+          <p className="mb-1 text-4xl">{feedback.cleared ? '🎉' : '😅'}</p>
+          <h1 className="text-xl font-bold text-foreground">
+            {feedback.cleared ? '클리어!' : '아쉬워요'}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            총 이해도{' '}
+            <span className={`text-2xl font-bold ${comprehensionStyle(feedback.comprehensionScore)}`}>
+              {feedback.comprehensionScore}%
+            </span>
+          </p>
+          <div className="mt-2 flex justify-center gap-0.5">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <span key={i} className={`text-base ${i < feedback.remainingHearts ? 'opacity-100' : 'opacity-20'}`}>
+                ❤️
+              </span>
+            ))}
           </div>
-        )}
+          {feedback.feedbackSummary && (
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              {feedback.feedbackSummary}
+            </p>
+          )}
+        </div>
 
-        {/* 발화별 카드 */}
-        {feedback.turnFeedbacks.map((turn, i) => (
-          <TurnCard key={turn.turnId} turn={turn} index={i} />
-        ))}
+        {/* 채팅 피드백 섹션 */}
+        <div className="px-4 pb-6 space-y-6">
+          <TurnList turns={feedback.turnFeedbacks} />
+        </div>
       </div>
 
-      {/* 하단 나가기 */}
-      <div className="border-t border-border bg-card px-4 py-3">
+      <div className="px-4 pb-10 pt-3 border-t border-border">
         <button
           onClick={() => router.replace('/')}
-          className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
+          className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white active:opacity-80 transition-opacity"
         >
-          나가기
+          홈으로 가기
         </button>
       </div>
     </main>
   );
 }
 
-function TurnCard({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
+function TurnList({ turns }: { turns: ApiTurnFeedback[] }) {
+  const firstFeedbackIdx = turns.findIndex((t) => t.feedbackRequired);
+  return (
+    <>
+      {turns.map((turn, i) => (
+        <TurnBubblePair key={turn.turnId} turn={turn} showHint={i === firstFeedbackIdx} />
+      ))}
+    </>
+  );
+}
+
+function TurnBubblePair({ turn, showHint }: { turn: ApiTurnFeedback; showHint: boolean }) {
   const [expanded, setExpanded] = useState(false);
+  const [hintDismissed, setHintDismissed] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const isGood = !turn.feedbackRequired;
+  const { speak } = useTts();
+
+  function handleUserBubblePress() {
+    if (isGood) return;
+    setExpanded((v) => !v);
+    setHintDismissed(true);
+  }
+
+  function handleSpeak() {
+    if (isSpeaking) {
+      window.speechSynthesis?.cancel();
+      setIsSpeaking(false);
+      return;
+    }
+    speak(turn.originalQuestion, null, {
+      onStart: () => setIsSpeaking(true),
+      onEnd: () => setIsSpeaking(false),
+    });
+  }
 
   return (
-    <div className="rounded-2xl bg-card border border-border overflow-hidden">
-      <div className="px-4 pt-4 pb-3 space-y-3">
-        {/* Q */}
-        <div>
-          <p className="mb-1 text-xs font-semibold text-muted-foreground">Q{index + 1}. 외국인 질문</p>
-          <p className="text-sm text-foreground leading-relaxed">{turn.originalQuestion}</p>
-        </div>
+    <div className="space-y-2">
+      <AiBubble
+        text={turn.originalQuestion}
+        translatedText={turn.translatedQuestion}
+        showTranslation={showTranslation}
+        isSpeaking={isSpeaking}
+        onSpeak={handleSpeak}
+        onToggleTranslation={() => setShowTranslation((v) => !v)}
+      />
 
-        {/* A */}
-        <div>
-          <p className="mb-1 text-xs font-semibold text-muted-foreground">내 답변</p>
-          <p className={`text-sm text-foreground leading-relaxed ${!expanded ? 'line-clamp-2' : ''}`}>
-            {turn.userUtterance}
-          </p>
-          {turn.userUtterance.length > 60 && (
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="mt-1.5 py-1 pr-2 text-sm font-medium text-primary"
-            >
-              {expanded ? '접기' : '더보기'}
-            </button>
+      <UserBubble text={turn.userUtterance} onPress={isGood ? undefined : handleUserBubblePress}>
+        {isGood && (
+          <p className="text-xs font-semibold text-green-600">✓ 잘했어요</p>
+        )}
+        {!isGood && !hintDismissed && showHint && (
+          <p className="text-xs text-muted-foreground">탭해서 피드백 보기</p>
+        )}
+      </UserBubble>
+
+      {/* 피드백 카드 */}
+      {!isGood && expanded && (
+        <div className="space-y-2 animate-in slide-in-from-top-2 duration-200">
+          {turn.nativeLanguageInterpretation && (
+            <div className="mx-1 rounded-2xl bg-zinc-100 px-5 py-4">
+              <p className="mb-2 text-xs font-semibold text-muted-foreground tracking-wide">🎧 외국인 귀에는 이렇게 들렸어요</p>
+              <p className="text-lg font-bold text-foreground leading-snug">&ldquo;{turn.nativeLanguageInterpretation}&rdquo;</p>
+            </div>
+          )}
+          {turn.betterExpression && (
+            <div className="mx-1 rounded-2xl bg-green-50 border border-green-200 px-5 py-4">
+              <p className="mb-2 text-xs font-semibold text-green-600 tracking-wide">✨ 이렇게 말했다면</p>
+              <p className="text-xl font-bold text-green-700 leading-snug">{turn.betterExpression}</p>
+            </div>
           )}
         </div>
-
-        {/* 피드백 섹션 — feedbackRequired인 경우에만 */}
-        {turn.feedbackRequired && (
-          <>
-            {/* 외국인 귀에 이렇게 들렸어요 */}
-            {turn.nativeLanguageInterpretation && (
-              <div className="rounded-xl bg-muted/40 px-3 py-3">
-                <p className="mb-1 text-xs font-semibold text-muted-foreground">외국인 귀에 이렇게 들렸어요</p>
-                <p className="text-sm text-foreground leading-relaxed">{turn.nativeLanguageInterpretation}</p>
-              </div>
-            )}
-
-            {/* 더 나은 표현 */}
-            {turn.betterExpression && (
-              <div className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-3">
-                <p className="mb-1.5 text-xs font-bold text-primary">더 나은 표현</p>
-                <p className="text-sm font-semibold text-foreground">{turn.betterExpression}</p>
-                {turn.nativeUnderstanding && (
-                  <p className="mt-1.5 text-xs text-muted-foreground">{turn.nativeUnderstanding}</p>
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
+      )}
     </div>
   );
 }
 
-function comprehensionStyle(score: number) {
-  if (score >= 70) return { color: 'text-green-600' };
-  if (score >= 40) return { color: 'text-orange-500' };
-  return { color: 'text-red-500' };
+function comprehensionStyle(score: number): string {
+  if (score >= 70) return 'text-green-600';
+  if (score >= 40) return 'text-orange-500';
+  return 'text-red-500';
 }
