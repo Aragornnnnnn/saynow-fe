@@ -130,7 +130,6 @@ async function requestKakaoIdToken(nonce: string): Promise<string> {
   await ensureKakaoSdkInitialized();
   const redirectUri = getRedirectUri();
   const baseToken = await kakaoLogin({
-    useKakaoAccountLogin: true,
     web: {
       redirectUri,
       nonce,
@@ -146,7 +145,6 @@ async function requestKakaoIdToken(nonce: string): Promise<string> {
 
   try {
     const scopedToken = await kakaoLogin({
-      useKakaoAccountLogin: true,
       scopes: missingScopes,
       web: {
         redirectUri,

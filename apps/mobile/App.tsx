@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
+  NativeModules,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -125,46 +126,27 @@ export default function App() {
       setAuthStatus('signedOut');
     },
   }), [postToWeb, startStt, stopStt]);
-  const isWebViewActive = !!WEB_URL && authStatus === 'signedIn' && !hasError;
-  const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb, isWebViewActive);
 
   const handleNativeLogin = useCallback(async (provider: SocialProvider) => {
     try {
       setPendingProvider(provider);
       setLoginError(null);
-
       const nonce = generateNonce();
-      console.log('[AuthDebug][App] native login start', {
-        provider,
-        nonceLength: nonce.length,
-      });
       const idToken = await requestSocialIdToken(provider, nonce);
-      console.log('[AuthDebug][App] provider idToken received', {
-        provider,
-        idToken: describeToken(idToken),
-      });
       const session = await socialLogin(provider, idToken, nonce);
-      console.log('[AuthDebug][App] SayNow session received', {
-        provider: session.member.provider,
-        memberId: session.member.memberId,
-        newMember: session.member.newMember,
-        accessTokenLength: session.accessToken.length,
-        refreshTokenLength: session.refreshToken.length,
-      });
-
       await saveAuthSession(session);
-      console.log('[AuthDebug][App] session saved; opening WebView');
       setAuthSession(session);
       setHasError(false);
       setAuthStatus('signedIn');
     } catch (error) {
-      console.error('[AuthDebug][App] native login failed', error);
       setLoginError(error instanceof Error ? error.message : '로그인에 실패했습니다.');
     } finally {
-      console.log('[AuthDebug][App] native login finished', { provider });
       setPendingProvider(null);
     }
   }, []);
+
+  const isWebViewActive = !!WEB_URL && authStatus === 'signedIn' && !hasError;
+  const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb, isWebViewActive);
 
   async function handleLoadEnd() {
     SplashScreen.hideAsync();
@@ -222,10 +204,46 @@ export default function App() {
             webviewDebuggingEnabled={__DEV__}
             injectedJavaScriptBeforeContentLoaded={authInjection}
             injectedJavaScript={authInjection}
+            javaScriptCanOpenWindowsAutomatically
+            setSupportMultipleWindows
             onLoadEnd={handleLoadEnd}
             onMessage={handleMessage}
             onError={handleError}
             onHttpError={handleError}
+            onShouldStartLoadWithRequest={(request) => {
+              const { url } = request;
+              if (__DEV__) console.log('[WebView] loadRequest:', url);
+              if (
+                url.startsWith('kakaokompassauth://') ||
+                url.startsWith('kakaolink://') ||
+                url.startsWith('kakaotalk://')
+              ) {
+                Linking.openURL(url).catch(() => {});
+                return false;
+              }
+              if (url.startsWith('intent:')) {
+                NativeModules.IntentModule?.openIntentUri(url);
+                return false;
+              }
+              return true;
+            }}
+            onOpenWindow={(event) => {
+              const { targetUrl } = event.nativeEvent;
+              console.log('[WebView] onOpenWindow:', targetUrl.slice(0, 80));
+              if (
+                targetUrl.startsWith('kakaokompassauth://') ||
+                targetUrl.startsWith('kakaotalk://')
+              ) {
+                Linking.openURL(targetUrl).catch(() => {});
+              } else if (targetUrl.startsWith('intent:')) {
+                console.log('[WebView] intent → IntentModule');
+                NativeModules.IntentModule?.openIntentUri(targetUrl);
+              } else {
+                webviewRef.current?.injectJavaScript(
+                  `window.location.href = ${JSON.stringify(targetUrl)};`
+                );
+              }
+            }}
             renderLoading={() => (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#E07A3A" />
@@ -263,16 +281,6 @@ function createAuthInjection(session: NativeAuthSession) {
     })();
     true;
   `;
-}
-
-function describeToken(token: string) {
-  const parts = token.split('.');
-  return {
-    length: token.length,
-    jwtParts: parts.length,
-    headerLength: parts[0]?.length ?? 0,
-    payloadLength: parts[1]?.length ?? 0,
-  };
 }
 
 function describeUrl(url: string) {
