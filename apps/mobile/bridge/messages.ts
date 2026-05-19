@@ -7,9 +7,8 @@ export type BridgeAuthMember = {
 };
 
 export type WebToNativeMessage =
-  | { type: 'START_RECORDING' }
-  | { type: 'STOP_RECORDING' }
-  | { type: 'REQUEST_MIC_PERMISSION' }
+  | { type: 'START_STT' }
+  | { type: 'STOP_STT' }
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
   | {
@@ -21,9 +20,9 @@ export type WebToNativeMessage =
   | { type: 'AUTH_SESSION_CLEARED' };
 
 export type NativeToWebMessage =
-  | { type: 'RECORDING_DONE'; base64: string; mimeType?: string }
+  | { type: 'STT_PARTIAL'; transcript: string }
+  | { type: 'STT_FINAL'; transcript: string }
   | { type: 'MIC_PERMISSION_DENIED' }
-  | { type: 'MIC_PERMISSION_STATUS'; granted: boolean }
   | { type: 'BACK_PRESSED' };
 
 export function serializeNativeMessage(message: NativeToWebMessage): string {
@@ -32,8 +31,6 @@ export function serializeNativeMessage(message: NativeToWebMessage): string {
 
 export function parseWebMessage(raw: unknown): WebToNativeMessage | null {
   if (typeof raw !== 'string') return null;
-  const legacyMessage = parseLegacyWebMessage(raw);
-  if (legacyMessage) return legacyMessage;
 
   try {
     return normalizeWebMessage(JSON.parse(raw));
@@ -42,25 +39,12 @@ export function parseWebMessage(raw: unknown): WebToNativeMessage | null {
   }
 }
 
-function parseLegacyWebMessage(raw: string): WebToNativeMessage | null {
-  switch (raw) {
-    case 'START_RECORDING':
-    case 'STOP_RECORDING':
-    case 'REQUEST_MIC_PERMISSION':
-    case 'OPEN_SETTINGS':
-      return { type: raw };
-    default:
-      return null;
-  }
-}
-
 function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
   if (!isRecord(value) || typeof value.type !== 'string') return null;
 
   switch (value.type) {
-    case 'START_RECORDING':
-    case 'STOP_RECORDING':
-    case 'REQUEST_MIC_PERMISSION':
+    case 'START_STT':
+    case 'STOP_STT':
     case 'OPEN_SETTINGS':
       return { type: value.type };
     case 'PLAY_TTS':

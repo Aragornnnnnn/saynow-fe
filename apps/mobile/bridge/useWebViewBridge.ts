@@ -54,12 +54,10 @@ export function useWebViewBridge(
 
 function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHandlers) {
   switch (message.type) {
-    case 'START_RECORDING':
-      return handlers.START_RECORDING?.(message);
-    case 'STOP_RECORDING':
-      return handlers.STOP_RECORDING?.(message);
-    case 'REQUEST_MIC_PERMISSION':
-      return handlers.REQUEST_MIC_PERMISSION?.(message);
+    case 'START_STT':
+      return handlers.START_STT?.(message);
+    case 'STOP_STT':
+      return handlers.STOP_STT?.(message);
     case 'OPEN_SETTINGS':
       return handlers.OPEN_SETTINGS?.(message);
     case 'PLAY_TTS':

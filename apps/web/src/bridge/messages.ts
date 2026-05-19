@@ -7,9 +7,8 @@ export type BridgeAuthMember = {
 };
 
 export type WebToNativeMessage =
-  | { type: 'START_RECORDING' }
-  | { type: 'STOP_RECORDING' }
-  | { type: 'REQUEST_MIC_PERMISSION' }
+  | { type: 'START_STT' }
+  | { type: 'STOP_STT' }
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
   | {
@@ -21,9 +20,9 @@ export type WebToNativeMessage =
   | { type: 'AUTH_SESSION_CLEARED' };
 
 export type NativeToWebMessage =
-  | { type: 'RECORDING_DONE'; base64: string; mimeType?: string }
+  | { type: 'STT_PARTIAL'; transcript: string }
+  | { type: 'STT_FINAL'; transcript: string }
   | { type: 'MIC_PERMISSION_DENIED' }
-  | { type: 'MIC_PERMISSION_STATUS'; granted: boolean }
   | { type: 'BACK_PRESSED' };
 
 export function serializeWebMessage(message: WebToNativeMessage): string {
@@ -45,14 +44,13 @@ function normalizeNativeMessage(value: unknown): NativeToWebMessage | null {
   if (!isRecord(value) || typeof value.type !== 'string') return null;
 
   switch (value.type) {
-    case 'RECORDING_DONE':
-      return typeof value.base64 === 'string'
-        ? { type: value.type, base64: value.base64, mimeType: optionalString(value.mimeType) }
+    case 'STT_PARTIAL':
+    case 'STT_FINAL':
+      return typeof value.transcript === 'string'
+        ? { type: value.type, transcript: value.transcript }
         : null;
     case 'MIC_PERMISSION_DENIED':
       return { type: value.type };
-    case 'MIC_PERMISSION_STATUS':
-      return typeof value.granted === 'boolean' ? { type: value.type, granted: value.granted } : null;
     case 'BACK_PRESSED':
       return { type: value.type };
     default:
@@ -62,8 +60,4 @@ function normalizeNativeMessage(value: unknown): NativeToWebMessage | null {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
-}
-
-function optionalString(value: unknown): string | undefined {
-  return typeof value === 'string' ? value : undefined;
 }
