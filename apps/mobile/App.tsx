@@ -101,7 +101,13 @@ export default function App() {
     OPEN_SETTINGS: () => Linking.openSettings(),
     PLAY_TTS: (message) => {
       Speech.stop();
-      Speech.speak(message.text, { language: 'en-US', rate: 0.9 });
+      Speech.speak(message.text, {
+        language: 'en-US',
+        rate: 0.9,
+        onDone: () => postToWeb({ type: 'TTS_END' }),
+        onStopped: () => postToWeb({ type: 'TTS_END' }),
+        onError: () => postToWeb({ type: 'TTS_END' }),
+      });
     },
     AUTH_SESSION_UPDATED: async (message) => {
       const session = {

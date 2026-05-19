@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { playNativeTts } from '@/bridge/commands';
+import { webBridge } from '@/bridge/webBridge';
 
 interface SpeakOptions {
   onStart?: () => void;
@@ -9,8 +10,20 @@ interface SpeakOptions {
 }
 
 export function useTts() {
+  const onEndRef = useRef<(() => void) | undefined>(undefined);
+
+  useEffect(() => {
+    return webBridge.subscribe((message) => {
+      if (message.type === 'TTS_END') {
+        onEndRef.current?.();
+        onEndRef.current = undefined;
+      }
+    });
+  }, []);
+
   const speak = useCallback((text: string, ttsUrl: string | null, options?: SpeakOptions) => {
     if (playNativeTts(text, ttsUrl ?? null)) {
+      onEndRef.current = options?.onEnd;
       options?.onStart?.();
       return;
     }
