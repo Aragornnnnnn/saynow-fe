@@ -122,7 +122,7 @@ export default function LoginPage() {
           pendingLabel="구글 로그인 중..."
           label="구글로 로그인하기"
           showBadge={lastProvider === 'GOOGLE'}
-          className="bg-white text-foreground shadow-sm"
+          className="bg-white text-foreground shadow-sm ring-1 ring-border"
           icon={<GoogleIcon />}
         />
         {errorMessage && (
@@ -157,9 +157,11 @@ function LoginButton({
   return (
     <div className="relative">
       {showBadge && (
-        <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-primary text-white text-[10px] font-semibold px-2 py-0.5 rounded-full z-10 whitespace-nowrap">
-          지난번에 사용
-        </span>
+        <div className="absolute -top-5 left-1/2 -translate-x-1/2 z-10">
+          <span className="relative block bg-primary text-white text-[11px] font-semibold px-3 py-1 rounded-full whitespace-nowrap after:content-[''] after:absolute after:top-full after:left-1/2 after:-translate-x-1/2 after:border-4 after:border-transparent after:border-t-primary">
+            최근 로그인
+          </span>
+        </div>
       )}
       <button
         onClick={onClick}
