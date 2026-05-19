@@ -178,7 +178,8 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
       <button
         onClick={() => onBadgeClick(scenario)}
         disabled={isLocked}
-        className={`relative flex h-20 w-20 items-center justify-center rounded-full transition-all duration-150 ${
+        style={{ width: 88, height: 88 }}
+        className={`relative flex items-center justify-center rounded-full transition-all duration-150 ${
           isComingSoon
             ? 'bg-card shadow-md cursor-default overflow-hidden'
             : isLocked
