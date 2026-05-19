@@ -5,14 +5,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useTypingLoop } from '@/hooks/useTypingLoop';
 
 const HOOK_MESSAGES = [
-  'Can I get... uh... iced americano?',
-  'Where is... the gate number?',
-  'This room... air con... broken...',
-  'I have... allergy... to peanut?',
-  'Can you... recommend... something?',
+  '분명히 말했는데 못 알아들은 척한 걸까요?',
+  '말은 했는데 외국인 표정이 이상했어요',
+  '눈치로 때웠는데 맞게 전달됐을까요?',
+  '아는 단어만 골라 말했는데 통했을까요?',
+  '영어로 말했는데 한번에 알아들었을까요?',
 ];
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
 import { requestNativeLogin } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
@@ -24,11 +23,11 @@ import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLog
 const LAST_LOGIN_KEY = 'saynow-last-login';
 
 function haptic() {
-  navigator.vibrate?.(3);
+  navigator.vibrate?.(6);
 }
 
 function hapticClear() {
-  navigator.vibrate?.(8);
+  navigator.vibrate?.(15);
 }
 
 export default function LoginPage() {
@@ -103,20 +102,15 @@ export default function LoginPage() {
 
   return (
     <main className="flex flex-col h-dvh bg-background items-center justify-between px-6 py-10">
+      <div className="w-full">
+        <span className="text-lg font-bold text-primary tracking-tight">SayNow</span>
+      </div>
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
-        <Image
-          src="/saynow-character.webp"
-          alt="SayNow 캐릭터"
-          width={180}
-          height={180}
-          priority
-          className="object-contain mix-blend-multiply"
-        />
         <div className="text-center space-y-3">
           <h1 className="text-2xl font-bold text-foreground leading-snug">
-            내가 한 영어,<br />전달이 됐을까요?
+            외국인한테<br />내 영어가 통할지 알려드려요
           </h1>
-          <p className="text-base text-muted-foreground h-6">
+          <p className="text-lg text-muted-foreground h-7">
             {typingText}<span className="animate-pulse">|</span>
           </p>
         </div>

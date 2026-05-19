@@ -1,9 +1,10 @@
 // 여러 문자열을 순서대로 타이핑 → 대기 → 삭제 루프하는 훅
 import { useEffect, useRef, useState } from 'react';
 
-const TYPING_MS = 60;
+const TYPING_MS = 70;
+const DELETE_MS = 12;
 const DELETE_DELAY_MS = 1200;
-const NEXT_DELAY_MS = 300;
+const NEXT_DELAY_MS = 400;
 
 export function useTypingLoop(messages: string[], onType?: () => void, onClear?: () => void) {
   const [displayed, setDisplayed] = useState('');
@@ -35,16 +36,19 @@ export function useTypingLoop(messages: string[], onType?: () => void, onClear?:
           return;
         }
       } else {
-        onClearRef.current?.();
-        setDisplayed('');
-        isDeleting = false;
-        index = (index + 1) % messages.length;
-        charPos = 0;
-        timeoutId = setTimeout(tick, NEXT_DELAY_MS);
-        return;
+        charPos -= 1;
+        if (charPos < 0) {
+          onClearRef.current?.();
+          isDeleting = false;
+          index = (index + 1) % messages.length;
+          charPos = 0;
+          timeoutId = setTimeout(tick, NEXT_DELAY_MS);
+          return;
+        }
+        setDisplayed(current.slice(0, charPos));
       }
 
-      timeoutId = setTimeout(tick, TYPING_MS);
+      timeoutId = setTimeout(tick, isDeleting ? DELETE_MS : TYPING_MS);
     }
 
     timeoutId = setTimeout(tick, NEXT_DELAY_MS);
