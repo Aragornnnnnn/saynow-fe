@@ -3,9 +3,10 @@
 
 import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic, MicOff, Languages } from 'lucide-react';
+import { ChevronLeft, Mic, MicOff, Volume2, Languages } from 'lucide-react';
 import { startSession, submitUtterance, exitSession } from '@/lib/api';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
+import { useTts } from '@/hooks/useTts';
 import ExitConfirmModal from './ExitConfirmModal';
 
 interface ChatMessage {
@@ -30,7 +31,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [transcript, setTranscript] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
   const [translatingId, setTranslatingId] = useState<string | null>(null);
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
 
+  const { speak } = useTts();
   const sessionStartedRef = useRef(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -61,10 +64,17 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       });
   }, [id]);
 
-  // 새 메시지 추가되면 스크롤 하단으로
+  // AI 메시지 추가될 때마다 TTS 자동 재생 + 스크롤
   useEffect(() => {
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg?.role === 'ai' && lastMsg.text !== '...') {
+      speak(lastMsg.text, null, {
+        onStart: () => setSpeakingId(lastMsg.id),
+        onEnd: () => setSpeakingId(null),
+      });
+    }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, speak]);
 
   useBackButtonBridge(() => {
     if (showExitModal) { setShowExitModal(false); return; }
@@ -212,7 +222,21 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             key={msg.id}
             message={msg}
             showTranslation={translatingId === msg.id}
+            isSpeaking={speakingId === msg.id}
             onToggleTranslation={() => toggleTranslation(msg.id)}
+            onSpeak={() => {
+              if (speakingId === msg.id) {
+                window.speechSynthesis?.cancel();
+                setSpeakingId(null);
+              } else {
+                window.speechSynthesis?.cancel();
+                const utt = new SpeechSynthesisUtterance(msg.text);
+                utt.lang = 'en-US';
+                utt.onend = () => setSpeakingId(null);
+                window.speechSynthesis?.speak(utt);
+                setSpeakingId(msg.id);
+              }
+            }}
           />
         ))}
 
@@ -289,47 +313,65 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 interface ChatBubbleProps {
   message: ChatMessage;
   showTranslation: boolean;
+  isSpeaking: boolean;
   onToggleTranslation: () => void;
+  onSpeak: () => void;
 }
 
-function ChatBubble({ message, showTranslation, onToggleTranslation }: ChatBubbleProps) {
+function ChatBubble({ message, showTranslation, isSpeaking, onToggleTranslation, onSpeak }: ChatBubbleProps) {
   const isAI = message.role === 'ai';
   const isDots = message.text === '...';
 
   if (!isAI) {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[72%] rounded-2xl rounded-br-sm bg-primary px-4 py-3">
-          <p className="text-sm text-white leading-relaxed">{message.text}</p>
+        <div className="relative max-w-[80%]">
+          <div className="rounded-2xl rounded-br-none bg-primary px-4 py-3">
+            <p className="text-sm text-white leading-relaxed">{message.text}</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col items-start gap-1.5">
-      <div className="max-w-[72%] rounded-2xl rounded-bl-sm bg-[#EFEFEF] px-4 py-3">
-        {isDots ? (
-          <TypingDots />
-        ) : (
-          <p className="text-sm text-foreground leading-relaxed">{message.text}</p>
-        )}
-      </div>
-      {/* 번역 토글 */}
-      {!isDots && message.translatedText && (
-        <div className="flex flex-col gap-1">
-          <button
-            onClick={onToggleTranslation}
-            className="flex items-center gap-1 text-muted-foreground active:text-foreground"
-          >
-            <Languages size={14} />
-            <span className="text-xs">{showTranslation ? '번역 숨기기' : '번역 보기'}</span>
-          </button>
-          {showTranslation && (
-            <p className="text-xs text-muted-foreground leading-relaxed pl-1">{message.translatedText}</p>
+    <div className="flex flex-col items-start gap-2">
+      <div className="relative max-w-[80%]">
+        <div className="rounded-2xl rounded-bl-none bg-[#EBEBEB] px-4 py-3">
+          {isDots ? (
+            <TypingDots />
+          ) : (
+            <>
+              <p className="text-sm text-foreground leading-relaxed">{message.text}</p>
+              {showTranslation && message.translatedText && (
+                <p className="mt-2 border-t border-black/5 pt-2 text-xs text-muted-foreground leading-relaxed">
+                  {message.translatedText}
+                </p>
+              )}
+              <div className="mt-2.5 flex gap-2">
+                <button
+                  onClick={onSpeak}
+                  className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                    isSpeaking ? 'bg-foreground text-white' : 'bg-black/8 text-foreground'
+                  }`}
+                >
+                  <Volume2 size={14} />
+                </button>
+                {message.translatedText && (
+                  <button
+                    onClick={onToggleTranslation}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${
+                      showTranslation ? 'bg-foreground text-white' : 'bg-black/8 text-foreground'
+                    }`}
+                  >
+                    <Languages size={14} />
+                  </button>
+                )}
+              </div>
+            </>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
