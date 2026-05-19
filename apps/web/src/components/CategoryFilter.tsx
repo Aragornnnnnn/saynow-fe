@@ -3,28 +3,47 @@
 
 import { ApiCategory } from '@/lib/api';
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  Cafe: '☕',
+  Airport: '✈️',
+  Hotel: '🏨',
+  Restaurant: '🍽️',
+  Taxi: '🚕',
+};
+
 interface CategoryFilterProps {
   categories: ApiCategory[];
-  selectedId: string | null;
-  onChange: (categoryId: string | null) => void;
+  selectedId: number | null;
+  onChange: (categoryId: number | null) => void;
 }
 
 export function CategoryFilter({ categories, selectedId, onChange }: CategoryFilterProps) {
-  const chips = [{ categoryId: null, name: '전체' }, ...categories.map((c) => ({ categoryId: c.categoryId as string | null, name: c.name }))];
-
   return (
     <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-      {chips.map((chip) => (
-        <button
-          key={chip.categoryId ?? 'all'}
-          onClick={() => onChange(chip.categoryId)}
-          className={`tossface shrink-0 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
-            selectedId === chip.categoryId ? 'bg-primary text-white' : 'bg-card text-muted-foreground'
-          }`}
-        >
-          {chip.name}
-        </button>
-      ))}
+      {categories.map((cat) => {
+        const isActive = selectedId === cat.categoryId;
+        const isLocked = cat.categoryLocked;
+        const emoji = CATEGORY_EMOJI[cat.categoryName] ?? '🗣️';
+
+        return (
+          <button
+            key={cat.categoryId}
+            disabled={isLocked}
+            onClick={() => !isLocked && onChange(isActive ? null : cat.categoryId)}
+            className={`shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              isLocked
+                ? 'bg-card text-muted-foreground opacity-40 cursor-default'
+                : isActive
+                  ? 'bg-primary text-white'
+                  : 'bg-card text-muted-foreground'
+            }`}
+          >
+            <span>{emoji}</span>
+            <span>{cat.categoryName}</span>
+            {isLocked && <span className="text-xs">🔒</span>}
+          </button>
+        );
+      })}
     </div>
   );
 }
