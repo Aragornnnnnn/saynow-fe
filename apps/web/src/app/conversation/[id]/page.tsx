@@ -4,6 +4,7 @@
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic, MicOff } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { startSession, submitUtterance, exitSession } from '@/lib/api';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
@@ -44,9 +45,32 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const { speak } = useTts();
   const isNative = webBridge.isAvailable();
   const sessionStartedRef = useRef(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const isRecording = pageState === 'recording';
+  const prevHeartsRef = useRef(3);
+  const [heartShake, setHeartShake] = useState(false);
+  const [heartToast, setHeartToast] = useState<string | null>(null);
+  const [showHeartGuide, setShowHeartGuide] = useState(false);
+
+
+  // 첫 대화에서만 하트 안내 표시
+  useEffect(() => {
+    const seen = localStorage.getItem('saynow-heart-guide-seen');
+    if (!seen) setShowHeartGuide(true);
+  }, []);
+
+  // 하트 깎일 때 감지
+  useEffect(() => {
+    if (prevHeartsRef.current > remainingHearts) {
+      setHeartShake(true);
+      setHeartToast(remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '질문을 잘 읽고 대답해보세요 ❤️');
+      setTimeout(() => setHeartShake(false), 600);
+      setTimeout(() => setHeartToast(null), 2500);
+    }
+    prevHeartsRef.current = remainingHearts;
+  }, [remainingHearts]);
 
   // 세션 시작
   useEffect(() => {
@@ -207,11 +231,13 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   async function handleNext() {
     if (!isFeedbackAvailable) return;
+    localStorage.setItem('saynow-heart-guide-seen', '1');
     if (sessionId) await exitSession(sessionId).catch(() => {});
     router.push(`/feedback/${sessionId}`);
   }
 
   async function handleExit() {
+    localStorage.setItem('saynow-heart-guide-seen', '1');
     if (sessionId) await exitSession(sessionId).catch(() => {});
     router.push('/');
   }
@@ -242,29 +268,53 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <main className="flex h-full flex-col bg-background">
+    <main className="relative flex h-full flex-col bg-background">
       {/* 상단 헤더 */}
-      <div className="flex items-center justify-between px-4 pb-2 pt-12">
+      <div className="flex items-center justify-between px-4 pb-2 pt-6">
         <button
           onClick={() => setShowExitModal(true)}
           className="flex items-center gap-1 text-muted-foreground active:text-foreground transition-colors"
         >
           <ChevronLeft size={20} />
         </button>
-
-        {/* 질문에 적절하지 않은 대답을 하면 하트가 깎여요 */}
-        <p className="flex-1 text-center text-xs text-muted-foreground px-2">
-          질문에 적절하지 않은 대답을 하면 하트가 깎여요
-        </p>
-
-        <div className="flex gap-0.5">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <span key={i} className={`text-base ${i < remainingHearts ? 'opacity-100' : 'opacity-20'}`}>
-              ❤️
-            </span>
-          ))}
+        <div className="relative flex flex-col items-end">
+          <motion.div
+            animate={heartShake ? { x: [0, -6, 6, -4, 4, 0] } : {}}
+            transition={{ duration: 0.4 }}
+            className="flex gap-0.5"
+          >
+            {Array.from({ length: 3 }).map((_, i) => (
+              <span key={i} className={`text-base transition-opacity duration-300 ${i < remainingHearts ? 'opacity-100' : 'opacity-20'}`}>
+                ❤️
+              </span>
+            ))}
+          </motion.div>
         </div>
       </div>
+
+      {/* 하트 안내 — 첫 대화에서만 표시 */}
+      <div className="h-5 px-4">
+        {showHeartGuide && (
+          <p className="text-center text-xs text-muted-foreground">
+            질문에 맞는 대답을 해야 하트가 유지돼요
+          </p>
+        )}
+      </div>
+
+      {/* 하트 깎임 토스트 */}
+      <AnimatePresence>
+        {heartToast && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.2 }}
+            className="absolute top-24 left-1/2 z-20 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg"
+          >
+            {heartToast}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 채팅 메시지 영역 */}
       <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3">

@@ -22,16 +22,16 @@ export default function ExitConfirmModal({ onConfirm, onCancel }: ExitConfirmMod
         </p>
         <div className="flex gap-3">
           <button
-            onClick={onCancel}
+            onClick={onConfirm}
             className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-foreground active:bg-muted transition-colors"
           >
-            계속하기
+            나가기
           </button>
           <button
-            onClick={onConfirm}
+            onClick={onCancel}
             className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
           >
-            나가기
+            계속하기
           </button>
         </div>
       </div>

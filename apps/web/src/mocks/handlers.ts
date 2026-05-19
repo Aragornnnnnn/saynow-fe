@@ -148,7 +148,7 @@ export const submitUtteranceHandler = http.post(
         sessionId: 42,
         originalQuestion: 'What size would you like?',
         translatedQuestion: '사이즈는요?',
-        remainingHearts: 3,
+        remainingHearts: 2,
         isFeedbackAvailable: false,
       },
     });

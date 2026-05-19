@@ -2,6 +2,7 @@
 'use client';
 
 import { ReactNode } from 'react';
+import { motion } from 'framer-motion';
 
 interface UserBubbleProps {
   text: string;
@@ -11,7 +12,12 @@ interface UserBubbleProps {
 
 export function UserBubble({ text, onPress, children }: UserBubbleProps) {
   return (
-    <div className="flex flex-col items-end gap-1">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+      className="flex flex-col items-end gap-1"
+    >
       <button
         onClick={onPress}
         disabled={!onPress}
@@ -22,6 +28,6 @@ export function UserBubble({ text, onPress, children }: UserBubbleProps) {
         </div>
       </button>
       {children}
-    </div>
+    </motion.div>
   );
 }
