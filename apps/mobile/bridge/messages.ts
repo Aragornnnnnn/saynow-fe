@@ -11,6 +11,7 @@ export type WebToNativeMessage =
   | { type: 'STOP_STT' }
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
+  | { type: 'NATIVE_LOGIN'; provider: 'KAKAO' | 'GOOGLE' }
   | {
       type: 'AUTH_SESSION_UPDATED';
       accessToken: string;
@@ -24,7 +25,9 @@ export type NativeToWebMessage =
   | { type: 'STT_FINAL'; transcript: string }
   | { type: 'MIC_PERMISSION_DENIED' }
   | { type: 'TTS_END' }
-  | { type: 'BACK_PRESSED' };
+  | { type: 'BACK_PRESSED' }
+  | { type: 'NATIVE_LOGIN_SUCCESS'; accessToken: string; refreshToken: string; member: BridgeAuthMember }
+  | { type: 'NATIVE_LOGIN_ERROR'; message: string };
 
 export function serializeNativeMessage(message: NativeToWebMessage): string {
   return JSON.stringify(message);
@@ -62,6 +65,10 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
             refreshToken: value.refreshToken,
             member: value.member,
           }
+        : null;
+    case 'NATIVE_LOGIN':
+      return value.provider === 'KAKAO' || value.provider === 'GOOGLE'
+        ? { type: value.type, provider: value.provider }
         : null;
     case 'AUTH_SESSION_CLEARED':
       return { type: value.type };

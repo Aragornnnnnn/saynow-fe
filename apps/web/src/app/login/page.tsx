@@ -4,14 +4,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useBridgeEvent } from '@/bridge/useBridgeEvent';
+import { requestNativeLogin } from '@/bridge/commands';
+import { webBridge } from '@/bridge/webBridge';
 import { useAuthStore } from '@/store/authStore';
+import { updateNativeAuthSession } from '@/bridge/commands';
 import type { SocialProvider } from '@/lib/api';
 import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
 
 
 export default function LoginPage() {
   const router = useRouter();
-  const { accessToken } = useAuthStore();
+  const { accessToken, setAuth } = useAuthStore();
   const nonce = useRef<string>('');
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -43,10 +47,15 @@ export default function LoginPage() {
   }
 
   async function startLogin(provider: SocialProvider) {
-    nonce.current = generateNonce();
-    setPendingProvider(provider);
     setErrorMessage(null);
+    setPendingProvider(provider);
 
+    if (webBridge.isAvailable()) {
+      requestNativeLogin(provider);
+      return;
+    }
+
+    nonce.current = generateNonce();
     try {
       await startWebSocialLogin(provider, nonce.current);
     } catch (err) {
@@ -54,6 +63,17 @@ export default function LoginPage() {
       setErrorMessage(err instanceof Error ? err.message : '로그인에 실패했습니다.');
     }
   }
+
+  useBridgeEvent('NATIVE_LOGIN_SUCCESS', (msg) => {
+    setAuth(msg.accessToken, msg.refreshToken, msg.member);
+    updateNativeAuthSession(msg.accessToken, msg.refreshToken, msg.member);
+    router.replace('/');
+  });
+
+  useBridgeEvent('NATIVE_LOGIN_ERROR', (msg) => {
+    setPendingProvider(null);
+    setErrorMessage(msg.message);
+  });
 
   return (
     <main className="flex flex-col h-dvh bg-background items-center justify-between px-6 py-10">

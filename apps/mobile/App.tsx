@@ -18,13 +18,11 @@ import {
   refreshAuthSession,
   socialLogin,
   type NativeAuthSession,
-  type SocialProvider,
 } from './auth/mobileApi';
 import { clearAuthSession, loadAuthSession, saveAuthSession } from './auth/sessionStorage';
 import { requestSocialIdToken } from './auth/socialLogin';
 import { usePostToWeb, useWebViewBridge } from './bridge/useWebViewBridge';
 import type { WebCommandHandlers } from './bridge/useWebViewBridge';
-import { NativeLoginScreen } from './components/NativeLoginScreen';
 import { useStt } from './hooks/useStt';
 
 SplashScreen.preventAutoHideAsync();
@@ -37,8 +35,6 @@ export default function App() {
   const webviewRef = useRef<WebView>(null);
   const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
   const [authSession, setAuthSession] = useState<NativeAuthSession | null>(null);
-  const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
-  const [loginError, setLoginError] = useState<string | null>(null);
   const [hasError, setHasError] = useState(false);
   const postToWeb = usePostToWeb(webviewRef);
   const { start: startStt, stop: stopStt } = useStt({
@@ -119,33 +115,34 @@ export default function App() {
       await saveAuthSession(session);
       setAuthSession(session);
     },
+    NATIVE_LOGIN: async (message) => {
+      try {
+        const nonce = generateNonce();
+        const idToken = await requestSocialIdToken(message.provider, nonce);
+        const session = await socialLogin(message.provider, idToken, nonce);
+        await saveAuthSession(session);
+        setAuthSession(session);
+        postToWeb({
+          type: 'NATIVE_LOGIN_SUCCESS',
+          accessToken: session.accessToken,
+          refreshToken: session.refreshToken,
+          member: session.member,
+        });
+      } catch (error) {
+        postToWeb({
+          type: 'NATIVE_LOGIN_ERROR',
+          message: error instanceof Error ? error.message : '로그인에 실패했습니다.',
+        });
+      }
+    },
     AUTH_SESSION_CLEARED: async () => {
       await clearAuthSession();
       setAuthSession(null);
       setHasError(false);
-      setAuthStatus('signedOut');
     },
   }), [postToWeb, startStt, stopStt]);
 
-  const handleNativeLogin = useCallback(async (provider: SocialProvider) => {
-    try {
-      setPendingProvider(provider);
-      setLoginError(null);
-      const nonce = generateNonce();
-      const idToken = await requestSocialIdToken(provider, nonce);
-      const session = await socialLogin(provider, idToken, nonce);
-      await saveAuthSession(session);
-      setAuthSession(session);
-      setHasError(false);
-      setAuthStatus('signedIn');
-    } catch (error) {
-      setLoginError(error instanceof Error ? error.message : '로그인에 실패했습니다.');
-    } finally {
-      setPendingProvider(null);
-    }
-  }, []);
-
-  const isWebViewActive = !!WEB_URL && authStatus === 'signedIn' && !hasError;
+  const isWebViewActive = !!WEB_URL && (authStatus === 'signedIn' || authStatus === 'signedOut') && !hasError;
   const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb, isWebViewActive);
 
   async function handleLoadEnd() {
@@ -180,12 +177,6 @@ export default function App() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#E07A3A" />
           </View>
-        ) : authStatus === 'signedOut' ? (
-          <NativeLoginScreen
-            errorMessage={loginError}
-            pendingProvider={pendingProvider}
-            onLogin={handleNativeLogin}
-          />
         ) : hasError ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorEmoji}>!</Text>
