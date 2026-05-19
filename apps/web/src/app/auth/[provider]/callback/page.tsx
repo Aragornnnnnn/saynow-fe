@@ -8,6 +8,7 @@ import {
   readPendingSocialLogin,
 } from '@/lib/webSocialLogin';
 import { useAuthStore } from '@/store/authStore';
+import { updateNativeAuthSession } from '@/bridge/commands';
 
 export default function SocialCallbackPage({
   params,
@@ -76,6 +77,7 @@ function SocialCallbackContent({ provider }: { provider: string }) {
 
         clearPendingSocialLogin();
         setAuth(data.accessToken, data.refreshToken, data.member);
+        updateNativeAuthSession(data.accessToken, data.refreshToken, data.member);
         router.replace('/');
       } catch (error) {
         clearPendingSocialLogin();

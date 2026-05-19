@@ -11,8 +11,6 @@ type PendingSocialLogin = {
 export const SOCIAL_LOGIN_STORAGE_KEY = 'saynow-social-login';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
-const KAKAO_AUTH_URL = 'https://kauth.kakao.com/oauth/authorize';
-const KAKAO_SCOPES = ['openid', 'profile_nickname'];
 
 export async function startWebSocialLogin(provider: SocialProvider, nonce: string) {
   const state = generateRandomHex(16);
@@ -29,7 +27,12 @@ export async function startWebSocialLogin(provider: SocialProvider, nonce: strin
   };
   sessionStorage.setItem(SOCIAL_LOGIN_STORAGE_KEY, JSON.stringify(pending));
 
-  window.location.assign(createAuthorizationUrl(provider, pending, codeChallenge));
+  if (provider === 'KAKAO') {
+    await startKakaoSdkLogin(pending);
+    return;
+  }
+
+  window.location.assign(createGoogleAuthorizationUrl(pending, codeChallenge));
 }
 
 export function readPendingSocialLogin(): PendingSocialLogin | null {
@@ -47,17 +50,50 @@ export function clearPendingSocialLogin() {
   sessionStorage.removeItem(SOCIAL_LOGIN_STORAGE_KEY);
 }
 
-function createAuthorizationUrl(
-  provider: SocialProvider,
-  pending: PendingSocialLogin,
-  codeChallenge?: string,
-) {
-  switch (provider) {
-    case 'GOOGLE':
-      return createGoogleAuthorizationUrl(pending, codeChallenge);
-    case 'KAKAO':
-      return createKakaoAuthorizationUrl(pending);
+async function startKakaoSdkLogin(pending: PendingSocialLogin) {
+  const kakaoJsKey = process.env.NEXT_PUBLIC_KAKAO_JS_KEY;
+  if (!kakaoJsKey) {
+    throw new Error('Kakao JS SDK 앱 키가 설정되지 않았습니다.');
   }
+
+  const Kakao = await loadKakaoSdk();
+  if (!Kakao.isInitialized()) {
+    Kakao.init(kakaoJsKey);
+  }
+  Kakao.Auth.authorize({
+    redirectUri: pending.redirectUri,
+    state: pending.state,
+    nonce: pending.nonce,
+    scope: 'openid,profile_nickname',
+  });
+}
+
+function loadKakaoSdk(): Promise<KakaoSdk> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const win = window as any;
+  if (win.Kakao) return Promise.resolve(win.Kakao as KakaoSdk);
+
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js';
+    script.crossOrigin = 'anonymous';
+    script.onload = () => resolve(win.Kakao as KakaoSdk);
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
+interface KakaoSdk {
+  isInitialized(): boolean;
+  init(key: string): void;
+  Auth: {
+    authorize(options: {
+      redirectUri: string;
+      state?: string;
+      nonce?: string;
+      scope?: string;
+    }): void;
+  };
 }
 
 function createGoogleAuthorizationUrl(
@@ -89,24 +125,6 @@ function createGoogleAuthorizationUrl(
   });
 
   return `${GOOGLE_AUTH_URL}?${params.toString()}`;
-}
-
-function createKakaoAuthorizationUrl(pending: PendingSocialLogin) {
-  const clientId = firstNonEmpty(process.env.NEXT_PUBLIC_KAKAO_REST_API_KEY);
-  if (!clientId) {
-    throw new Error('Kakao REST API 키가 설정되지 않았습니다.');
-  }
-
-  const params = new URLSearchParams({
-    response_type: 'code',
-    client_id: clientId,
-    redirect_uri: pending.redirectUri,
-    scope: KAKAO_SCOPES.join(','),
-    nonce: pending.nonce,
-    state: pending.state,
-  });
-
-  return `${KAKAO_AUTH_URL}?${params.toString()}`;
 }
 
 function getRedirectUri(provider: SocialProvider) {
