@@ -151,11 +151,16 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     recognition.interimResults = true;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      let final = '';
       let interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        interim += event.results[i][0].transcript;
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          final += event.results[i][0].transcript;
+        } else {
+          interim += event.results[i][0].transcript;
+        }
       }
-      setTranscript(interim);
+      setTranscript(final + interim);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
