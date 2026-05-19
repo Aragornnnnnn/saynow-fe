@@ -1,24 +1,29 @@
+// 시나리오 목록 조회 API — 카테고리/잠금/클리어 상태 포함
 import { request } from './client';
 
+export interface ApiScenario {
+  scenarioId: number;
+  displayOrder: number;
+  scenarioTitle: string;
+  scenarioGoal: string;
+  scenarioEmoji: string | null;
+  cleared: boolean;
+  locked: boolean;
+  lockReason: 'PREVIOUS_SCENARIO_NOT_CLEARED' | 'COMING_SOON' | null;
+}
+
 export interface ApiCategory {
-  categoryId: string;
-  name: string;
+  categoryId: number;
+  categoryName: string;
+  categoryLocked: boolean;
+  categoryLockReason: 'COMING_SOON' | null;
+  scenarios: ApiScenario[];
 }
 
-export interface ApiScenarioSummary {
-  scenarioId: string;
-  categoryId: string;
-  title: string;
-  difficulty: string;
-  situationDescription: string;
-  successGoal: string;
-  thumbnailUrl: string | null;
+export interface ApiScenariosResponse {
+  categories: ApiCategory[];
 }
 
-export function getCategories(): Promise<{ categories: ApiCategory[] }> {
-  return request('/api/v1/categories');
-}
-
-export function getScenarios(): Promise<{ scenarios: ApiScenarioSummary[] }> {
+export function getScenarios(): Promise<ApiScenariosResponse> {
   return request('/api/v1/scenarios');
 }

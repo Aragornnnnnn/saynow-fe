@@ -1,25 +1,18 @@
+// 피드백 생성 및 조회 쿼리 훅
 'use client';
 
 import { useQuery } from '@tanstack/react-query';
-import { getSessionFeedback } from '@/lib/api';
-
-const FEEDBACK_PENDING_CODES = new Set(['SESSION_IN_PROGRESS', 'FEEDBACK_NOT_READY']);
-const FEEDBACK_POLL_INTERVAL_MS = 2_000;
+import { createFeedback } from '@/lib/api';
 
 export const feedbackQueryKeys = {
-  detail: (sessionId: string) => ['feedback', sessionId] as const,
+  detail: (sessionId: number) => ['feedback', sessionId] as const,
 };
 
-export function isFeedbackPending(error: unknown) {
-  return error instanceof Error && FEEDBACK_PENDING_CODES.has((error as Error & { code?: string }).code ?? '');
-}
-
-export function useSessionFeedbackQuery(sessionId: string) {
+export function useFeedbackQuery(sessionId: number, enabled = true) {
   return useQuery({
     queryKey: feedbackQueryKeys.detail(sessionId),
-    queryFn: () => getSessionFeedback(sessionId),
-    refetchInterval: (query) => (isFeedbackPending(query.state.error) ? FEEDBACK_POLL_INTERVAL_MS : false),
+    queryFn: () => createFeedback(sessionId),
+    enabled,
     retry: false,
-    throwOnError: false,
   });
 }
