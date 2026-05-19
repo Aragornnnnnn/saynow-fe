@@ -35,10 +35,12 @@ export default function RootLayout({
           href="https://cdn.jsdelivr.net/gh/toss/tossface/dist/tossface.css"
         />
       </head>
-      <body className="h-full bg-background text-foreground">
-        <MSWProvider>
-          <QueryProvider>{children}</QueryProvider>
-        </MSWProvider>
+      <body className="h-full bg-zinc-200 text-foreground">
+        <div className="mx-auto h-full w-full max-w-[430px] bg-background shadow-xl">
+          <MSWProvider>
+            <QueryProvider>{children}</QueryProvider>
+          </MSWProvider>
+        </div>
         <Analytics />
       </body>
     </html>

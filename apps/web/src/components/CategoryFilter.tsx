@@ -3,14 +3,6 @@
 
 import { ApiCategory } from '@/lib/api';
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Cafe: '☕',
-  Airport: '✈️',
-  Hotel: '🏨',
-  Restaurant: '🍽️',
-  Taxi: '🚕',
-};
-
 interface CategoryFilterProps {
   categories: ApiCategory[];
   selectedId: number | null;
@@ -19,11 +11,10 @@ interface CategoryFilterProps {
 
 export function CategoryFilter({ categories, selectedId, onChange }: CategoryFilterProps) {
   return (
-    <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+    <div className='flex gap-2 overflow-x-auto pb-1 no-scrollbar'>
       {categories.map((cat) => {
         const isActive = selectedId === cat.categoryId;
         const isLocked = cat.categoryLocked;
-        const emoji = CATEGORY_EMOJI[cat.categoryName] ?? '🗣️';
 
         return (
           <button
@@ -38,9 +29,8 @@ export function CategoryFilter({ categories, selectedId, onChange }: CategoryFil
                   : 'bg-[#EFEFED] text-muted-foreground'
             }`}
           >
-            <span>{emoji}</span>
             <span>{cat.categoryName}</span>
-            {isLocked && <span className="text-xs">🔒</span>}
+            {isLocked && <span className='text-xs'>🔒</span>}
           </button>
         );
       })}
