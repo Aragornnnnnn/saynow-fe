@@ -10,7 +10,8 @@ import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLog
 
 const DEV_LOGIN_ENABLED =
   process.env.NODE_ENV === 'development' &&
-  process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true';
+  (process.env.NEXT_PUBLIC_ENABLE_DEV_LOGIN === 'true' ||
+    process.env.NEXT_PUBLIC_MSW === 'true');
 
 export default function LoginPage() {
   const router = useRouter();
@@ -59,14 +60,8 @@ export default function LoginPage() {
   }
 
   function handleDevLogin() {
-    const accessToken = process.env.NEXT_PUBLIC_DEV_ACCESS_TOKEN;
-    const refreshToken = process.env.NEXT_PUBLIC_DEV_REFRESH_TOKEN;
-
-    if (!accessToken || !refreshToken) {
-      console.warn('개발용 로그인 토큰 환경변수가 설정되지 않았습니다.');
-      setErrorMessage('개발용 로그인 토큰 환경변수가 설정되지 않았습니다.');
-      return;
-    }
+    const accessToken = process.env.NEXT_PUBLIC_DEV_ACCESS_TOKEN ?? 'dev-mock-access-token';
+    const refreshToken = process.env.NEXT_PUBLIC_DEV_REFRESH_TOKEN ?? 'dev-mock-refresh-token';
 
     setAuth(accessToken, refreshToken, {
       memberId: '0',
