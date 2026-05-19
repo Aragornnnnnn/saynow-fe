@@ -1,7 +1,7 @@
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Linking,
@@ -14,11 +14,7 @@ import {
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
 import { generateNonce } from './auth/nonce';
-import {
-  refreshAuthSession,
-  socialLogin,
-  type NativeAuthSession,
-} from './auth/mobileApi';
+import { refreshAuthSession, socialLogin } from './auth/mobileApi';
 import { clearAuthSession, loadAuthSession, saveAuthSession } from './auth/sessionStorage';
 import { requestSocialIdToken } from './auth/socialLogin';
 import { usePostToWeb, useWebViewBridge } from './bridge/useWebViewBridge';
@@ -29,12 +25,9 @@ SplashScreen.preventAutoHideAsync();
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? (__DEV__ ? 'http://localhost:3000' : undefined);
 
-type AuthStatus = 'checking' | 'signedOut' | 'signedIn';
-
 export default function App() {
   const webviewRef = useRef<WebView>(null);
-  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking');
-  const [authSession, setAuthSession] = useState<NativeAuthSession | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
   const postToWeb = usePostToWeb(webviewRef);
   const { start: startStt, stop: stopStt } = useStt({
@@ -43,53 +36,23 @@ export default function App() {
     onDenied: () => postToWeb({ type: 'MIC_PERMISSION_DENIED' }),
   });
 
-  const bootstrapSession = useCallback(async () => {
-    try {
-      const storedSession = await loadAuthSession();
-      if (!storedSession?.refreshToken || !storedSession.member) {
-        setAuthStatus('signedOut');
-        return;
-      }
-
-      const refreshedSession = await refreshAuthSession(
-        storedSession.refreshToken,
-        storedSession.member,
-      );
-      await saveAuthSession(refreshedSession);
-      setAuthSession(refreshedSession);
-      setAuthStatus('signedIn');
-    } catch (error) {
-      console.warn('[Auth] 저장된 세션 복구 실패:', error);
-      await clearAuthSession();
-      setAuthSession(null);
-      setAuthStatus('signedOut');
-    } finally {
-      SplashScreen.hideAsync();
-    }
-  }, []);
-
   useEffect(() => {
-    bootstrapSession();
-  }, [bootstrapSession]);
-
-  useEffect(() => {
-    if (!__DEV__) return undefined;
-
-    const subscription = Linking.addEventListener('url', (event) => {
-      console.log('[AuthDebug][Linking] url received', describeUrl(event.url));
-    });
-
-    Linking.getInitialURL()
-      .then((url) => {
-        if (url) {
-          console.log('[AuthDebug][Linking] initial url', describeUrl(url));
+    async function bootstrap() {
+      try {
+        const stored = await loadAuthSession();
+        if (stored?.refreshToken && stored.member) {
+          const refreshed = await refreshAuthSession(stored.refreshToken, stored.member);
+          await saveAuthSession(refreshed);
+          webviewRef.current?.injectJavaScript(createAuthScript(refreshed));
         }
-      })
-      .catch((error) => {
-        console.warn('[AuthDebug][Linking] initial url failed', error);
-      });
-
-    return () => subscription.remove();
+      } catch {
+        await clearAuthSession();
+      } finally {
+        setIsReady(true);
+        SplashScreen.hideAsync();
+      }
+    }
+    bootstrap();
   }, []);
 
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
@@ -106,22 +69,12 @@ export default function App() {
         onError: () => postToWeb({ type: 'TTS_END' }),
       });
     },
-    AUTH_SESSION_UPDATED: async (message) => {
-      const session = {
-        accessToken: message.accessToken,
-        refreshToken: message.refreshToken,
-        member: message.member,
-      };
-      await saveAuthSession(session);
-      setAuthSession(session);
-    },
     NATIVE_LOGIN: async (message) => {
       try {
         const nonce = generateNonce();
         const idToken = await requestSocialIdToken(message.provider, nonce);
         const session = await socialLogin(message.provider, idToken, nonce);
         await saveAuthSession(session);
-        setAuthSession(session);
         postToWeb({
           type: 'NATIVE_LOGIN_SUCCESS',
           accessToken: session.accessToken,
@@ -135,34 +88,26 @@ export default function App() {
         });
       }
     },
+    AUTH_SESSION_UPDATED: async (message) => {
+      await saveAuthSession({
+        accessToken: message.accessToken,
+        refreshToken: message.refreshToken,
+        member: message.member,
+      });
+    },
     AUTH_SESSION_CLEARED: async () => {
       await clearAuthSession();
-      setAuthSession(null);
       setHasError(false);
     },
   }), [postToWeb, startStt, stopStt]);
 
-  const isWebViewActive = !!WEB_URL && (authStatus === 'signedIn' || authStatus === 'signedOut') && !hasError;
+  const isWebViewActive = !!WEB_URL && isReady && !hasError;
   const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb, isWebViewActive);
-
-  async function handleLoadEnd() {
-    SplashScreen.hideAsync();
-  }
 
   function handleError() {
     SplashScreen.hideAsync();
     setHasError(true);
   }
-
-  function handleRetry() {
-    setHasError(false);
-    webviewRef.current?.reload();
-  }
-
-  const authInjection = useMemo(
-    () => (authSession ? createAuthInjection(authSession) : ''),
-    [authSession],
-  );
 
   return (
     <SafeAreaProvider>
@@ -173,7 +118,7 @@ export default function App() {
             <Text style={styles.errorTitle}>앱 설정이 필요해요</Text>
             <Text style={styles.errorMessage}>EXPO_PUBLIC_WEB_URL을 설정해주세요.</Text>
           </View>
-        ) : authStatus === 'checking' ? (
+        ) : !isReady ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#E07A3A" />
           </View>
@@ -182,28 +127,23 @@ export default function App() {
             <Text style={styles.errorEmoji}>!</Text>
             <Text style={styles.errorTitle}>연결할 수 없어요</Text>
             <Text style={styles.errorMessage}>인터넷 연결을 확인하고{'\n'}다시 시도해주세요.</Text>
-            <TouchableOpacity style={styles.retryButton} onPress={handleRetry}>
+            <TouchableOpacity style={styles.retryButton} onPress={() => { setHasError(false); webviewRef.current?.reload(); }}>
               <Text style={styles.retryText}>다시 시도</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <WebView
-            key={authSession?.refreshToken}
             ref={webviewRef}
             source={{ uri: WEB_URL }}
             style={styles.webview}
             webviewDebuggingEnabled={__DEV__}
-            injectedJavaScriptBeforeContentLoaded={authInjection}
-            injectedJavaScript={authInjection}
             javaScriptCanOpenWindowsAutomatically
             setSupportMultipleWindows
-            onLoadEnd={handleLoadEnd}
+            onLoadEnd={() => SplashScreen.hideAsync()}
             onMessage={handleMessage}
             onError={handleError}
             onHttpError={handleError}
-            onShouldStartLoadWithRequest={(request) => {
-              const { url } = request;
-              if (__DEV__) console.log('[WebView] loadRequest:', url);
+            onShouldStartLoadWithRequest={({ url }) => {
               if (
                 url.startsWith('kakaokompassauth://') ||
                 url.startsWith('kakaolink://') ||
@@ -220,14 +160,12 @@ export default function App() {
             }}
             onOpenWindow={(event) => {
               const { targetUrl } = event.nativeEvent;
-              console.log('[WebView] onOpenWindow:', targetUrl.slice(0, 80));
               if (
                 targetUrl.startsWith('kakaokompassauth://') ||
                 targetUrl.startsWith('kakaotalk://')
               ) {
                 Linking.openURL(targetUrl).catch(() => {});
               } else if (targetUrl.startsWith('intent:')) {
-                console.log('[WebView] intent → IntentModule');
                 NativeModules.IntentModule?.openIntentUri(targetUrl);
               } else {
                 webviewRef.current?.injectJavaScript(
@@ -249,48 +187,24 @@ export default function App() {
   );
 }
 
-function createAuthInjection(session: NativeAuthSession) {
-  const persistedAuth = {
+function createAuthScript(session: { accessToken: string; refreshToken: string; member: object }) {
+  const persisted = JSON.stringify({
     state: {
       accessToken: session.accessToken,
       refreshToken: session.refreshToken,
       member: session.member,
     },
     version: 0,
-  };
-
+  });
   return `
     (function () {
       try {
-        localStorage.setItem('saynow-auth', ${JSON.stringify(JSON.stringify(persistedAuth))});
-        if (window.location.pathname === '/login') {
-          window.location.replace('/');
-        }
-      } catch (error) {
-        console.error('[SayNow Native Auth]', error);
-      }
+        localStorage.setItem('saynow-auth', ${JSON.stringify(persisted)});
+        if (window.location.pathname === '/login') window.location.replace('/');
+      } catch (e) {}
     })();
     true;
   `;
-}
-
-function describeUrl(url: string) {
-  try {
-    const parsedUrl = new URL(url);
-    return {
-      urlPrefix: `${parsedUrl.protocol}${parsedUrl.host ? `//${parsedUrl.host}` : ''}${parsedUrl.pathname}`,
-      scheme: parsedUrl.protocol.replace(':', ''),
-      host: parsedUrl.host || undefined,
-      path: parsedUrl.pathname,
-      paramKeys: Array.from(parsedUrl.searchParams.keys()),
-    };
-  } catch {
-    const [urlPrefix, query] = url.split('?');
-    return {
-      urlPrefix,
-      paramKeys: query ? Array.from(new URLSearchParams(query).keys()) : [],
-    };
-  }
 }
 
 const styles = StyleSheet.create({
