@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Lock, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Lock, CheckCircle2, ChevronRight, UserRound } from 'lucide-react';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import type { ApiScenario, ApiCategory } from '@/lib/api';
@@ -64,7 +65,13 @@ export default function Home() {
     <main className="flex h-dvh flex-col bg-background">
       {/* 헤더 */}
       <div className="px-4 pb-3 pt-6">
-        <h1 className="mb-4 text-2xl font-bold text-foreground">SayNow</h1>
+        <div className="mb-4 flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-foreground">SayNow</h1>
+          <Link href="/me" className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
+            <UserRound className="h-3.5 w-3.5" />
+            내 정보
+          </Link>
+        </div>
         <CategoryFilter
           categories={categories}
           selectedId={selectedCategoryId ?? activeCategory?.categoryId ?? null}
@@ -153,7 +160,7 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
         ) : isCleared ? (
           <CheckCircle2 size={32} className="text-green-500" />
         ) : (
-          <span className="text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
+          <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
         )}
         {/* 순서 뱃지 */}
         <span

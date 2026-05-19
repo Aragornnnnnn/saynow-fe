@@ -32,10 +32,10 @@ export function CategoryFilter({ categories, selectedId, onChange }: CategoryFil
             onClick={() => !isLocked && onChange(isActive ? null : cat.categoryId)}
             className={`shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ${
               isLocked
-                ? 'bg-card text-muted-foreground opacity-40 cursor-default'
+                ? 'bg-[#EFEFED] text-muted-foreground opacity-40 cursor-default'
                 : isActive
                   ? 'bg-primary text-white'
-                  : 'bg-card text-muted-foreground'
+                  : 'bg-[#EFEFED] text-muted-foreground'
             }`}
           >
             <span>{emoji}</span>
