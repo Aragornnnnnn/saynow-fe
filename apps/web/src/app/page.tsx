@@ -80,24 +80,28 @@ export default function Home() {
       </div>
 
       {/* 시나리오 목록 */}
-      <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-10">
-        {isPending ? (
-          <div className="mt-6 space-y-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="flex flex-col items-center gap-2">
-                <div className="h-20 w-20 animate-pulse rounded-full bg-card" />
-                <div className="h-4 w-32 animate-pulse rounded bg-card" />
-              </div>
-            ))}
-          </div>
-        ) : activeCategory ? (
-          <ScenarioBadgeList
-            scenarios={activeCategory.scenarios}
-            expandedId={expandedScenarioId}
-            onBadgeClick={handleBadgeClick}
-            onStart={(scenarioId) => router.push(`/conversation/${scenarioId}`)}
-          />
-        ) : null}
+      <div className="relative flex-1 overflow-hidden">
+        <div className="no-scrollbar h-full overflow-y-auto overscroll-y-contain px-4">
+          {isPending ? (
+            <div className="mt-6 space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-2">
+                  <div className="h-20 w-20 animate-pulse rounded-full bg-card" />
+                  <div className="h-4 w-32 animate-pulse rounded bg-card" />
+                </div>
+              ))}
+            </div>
+          ) : activeCategory ? (
+            <ScenarioBadgeList
+              scenarios={activeCategory.scenarios}
+              expandedId={expandedScenarioId}
+              onBadgeClick={handleBadgeClick}
+              onStart={(scenarioId) => router.push(`/conversation/${scenarioId}`)}
+            />
+          ) : null}
+        </div>
+        {/* 하단 그라데이션 — 더 있어 보이는 효과 */}
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-background to-transparent" />
       </div>
     </main>
   );
@@ -110,20 +114,38 @@ interface ScenarioBadgeListProps {
   onStart: (scenarioId: number) => void;
 }
 
+const MVP_LIMIT = 3;
+
 function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: ScenarioBadgeListProps) {
+  const visible = scenarios.slice(0, MVP_LIMIT);
+  const hasMore = scenarios.length > MVP_LIMIT;
+
   return (
-    <div className="mt-6 flex flex-col items-center">
-      {scenarios.map((scenario, index) => (
+    <div className="relative mt-6 flex flex-col items-center">
+      {visible.map((scenario, index) => (
         <ScenarioBadgeItem
           key={scenario.scenarioId}
           scenario={scenario}
           index={index}
-          isLast={index === scenarios.length - 1}
+          isLast={index === visible.length - 1}
           isExpanded={expandedId === scenario.scenarioId}
           onBadgeClick={onBadgeClick}
           onStart={onStart}
         />
       ))}
+
+      {/* 더 많은 시나리오 예고 */}
+      {hasMore && (
+        <div className="w-screen flex flex-col items-center" style={{ minHeight: '30vh', background: 'linear-gradient(to bottom, transparent 0%, #CBD5E1 60%, #B0BEC5 100%)' }}>
+          <div className="flex flex-col items-center gap-1 py-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
+            ))}
+          </div>
+          <span className="text-4xl">☁️</span>
+          <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -140,6 +162,7 @@ interface ScenarioBadgeItemProps {
 function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, onStart }: ScenarioBadgeItemProps) {
   const isLocked = scenario.locked;
   const isCleared = scenario.cleared;
+  const isComingSoon = scenario.lockReason === 'COMING_SOON' || index >= 3;
 
   return (
     <div className="flex w-full flex-col items-center">
@@ -147,16 +170,33 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
       <button
         onClick={() => onBadgeClick(scenario)}
         disabled={isLocked}
-        className={`relative flex h-20 w-20 items-center justify-center rounded-full border-4 transition-all duration-150 active:scale-95 ${
-          isLocked
-            ? 'border-border bg-card text-muted-foreground opacity-50 cursor-default'
-            : isCleared
-              ? 'border-green-400 bg-green-50'
-              : 'border-primary bg-[#FFF4ED] shadow-md shadow-primary/20'
+        className={`relative flex h-20 w-20 items-center justify-center rounded-full transition-all duration-150 ${
+          isComingSoon
+            ? 'bg-card shadow-md cursor-default overflow-hidden'
+            : isLocked
+              ? 'bg-card shadow-md text-muted-foreground cursor-default'
+              : isCleared
+                ? `bg-green-50 ${isExpanded ? 'shadow-[0_2px_0_#bbf7d0] translate-y-1' : 'shadow-[0_6px_0_#bbf7d0] active:shadow-[0_2px_0_#bbf7d0] active:translate-y-1'}`
+                : `bg-[#FFF4ED] ${isExpanded ? 'shadow-[0_2px_0_#e8b48e] translate-y-1' : 'shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'}`
         }`}
       >
-        {isLocked ? (
-          <Lock size={28} className="text-muted-foreground" />
+        {isComingSoon ? (
+          <>
+            {/* 이모지를 흐릿하게 배경으로 */}
+            <span className="tossface text-3xl opacity-20 blur-[2px]">{scenario.scenarioEmoji ?? '🗣️'}</span>
+            {/* 구름 오버레이 */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-card/60">
+              <span className="text-xl leading-none">☁️</span>
+              <span className="text-[9px] font-bold text-muted-foreground/70">준비 중</span>
+            </div>
+          </>
+        ) : isLocked ? (
+          <>
+            <span className="tossface text-3xl opacity-40">{scenario.scenarioEmoji ?? '🗣️'}</span>
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-card/60">
+              <Lock size={22} className="text-muted-foreground" />
+            </div>
+          </>
         ) : isCleared ? (
           <CheckCircle2 size={32} className="text-green-500" />
         ) : (
@@ -173,8 +213,8 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
       </button>
 
       {/* 제목 */}
-      <p className={`mt-2 text-sm font-semibold ${isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
-        {scenario.scenarioTitle}
+      <p className={`mt-2 text-sm font-semibold ${isComingSoon ? 'text-muted-foreground/50' : isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
+        {isComingSoon ? '???' : scenario.scenarioTitle}
       </p>
 
       {/* 인라인 확장 패널 */}
