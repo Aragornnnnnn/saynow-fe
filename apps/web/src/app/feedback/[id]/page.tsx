@@ -1,12 +1,13 @@
 // 피드백 페이지 — 대화 결과 이해도 및 발화별 말풍선 피드백
 'use client';
 
-import { use, useEffect, useState } from 'react';
+import { use, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { useFeedbackQuery } from '@/queries/feedback';
+import { triggerHaptic } from '@/bridge/commands';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { useTts } from '@/hooks/useTts';
@@ -81,6 +82,7 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
   // 입장 시 컨페티 + 카운트업
   useEffect(() => {
     if (cleared) {
+      triggerHaptic('heavy');
       confetti({
         particleCount: 120,
         spread: 80,
@@ -194,11 +196,18 @@ function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
   const [showTranslation, setShowTranslation] = useState(false);
   const isGood = !turn.feedbackRequired;
   const { speak } = useTts();
+  const feedbackRef = useRef<HTMLDivElement>(null);
 
   function handleUserBubblePress() {
     if (isGood) return;
-    setExpanded((v) => !v);
+    const opening = !expanded;
+    setExpanded(opening);
     setHintDismissed(true);
+    if (opening) {
+      setTimeout(() => {
+        feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 50);
+    }
   }
 
   function handleSpeak() {
@@ -234,6 +243,7 @@ function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
       <AnimatePresence initial={false}>
         {!isGood && expanded && (
           <motion.div
+            ref={feedbackRef}
             key='feedback'
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}

@@ -152,7 +152,7 @@ export default function Home() {
                     />
                     <div className="rounded-2xl px-5 py-4 shadow-lg" style={{ background: cardBg }}>
                       <p className="mb-1 text-xs font-semibold text-white/70">달성 목표</p>
-                      <p className="mb-4 text-sm text-white leading-relaxed">{scenario.scenarioGoal}</p>
+                      <p className="mb-4 text-sm text-white leading-relaxed line-clamp-2">{scenario.scenarioGoal}</p>
                       {scenario.locked ? (
                         <button disabled className="w-full rounded-xl bg-white/20 py-3 text-sm font-semibold text-white/60 cursor-default">
                           {isComingSoon ? '준비 중' : '잠금'}

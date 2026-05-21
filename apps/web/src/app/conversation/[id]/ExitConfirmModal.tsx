@@ -17,7 +17,7 @@ export default function ExitConfirmModal({ onConfirm, onCancel }: ExitConfirmMod
         onClick={(e) => e.stopPropagation()}
       >
         <h2 className="text-base font-bold text-foreground mb-2">대화를 종료할까요?</h2>
-        <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+        <p className="text-sm text-muted-foreground mb-6 whitespace-nowrap">
           지금 나가면 진행 중인 대화가 저장되지 않아요.
         </p>
         <div className="flex gap-3">
