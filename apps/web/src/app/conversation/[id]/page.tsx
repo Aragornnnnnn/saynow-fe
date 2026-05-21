@@ -143,15 +143,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       if (heartsLost) await new Promise((r) => setTimeout(r, 1000));
 
       if (result.originalQuestion) {
-        const aiMsgId = `ai-${Date.now()}`;
         const feedbackText = heartsLost
           ? (result.remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '조금 더 질문에 맞게 답해보세요 😊')
           : undefined;
-        setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...', translatedText: result.translatedQuestion, feedback: feedbackText }]);
-        await new Promise((r) => setTimeout(r, 600));
-        setMessages((prev) =>
-          prev.map((m) => (m.id === aiMsgId ? { ...m, text: result.originalQuestion } : m))
-        );
+        setMessages((prev) => [...prev, { id: `ai-${Date.now()}`, role: 'ai', text: result.originalQuestion, translatedText: result.translatedQuestion, feedback: feedbackText }]);
       }
       setPageState('idle');
     } catch (e) {
