@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { startSession, submitUtterance, exitSession } from '@/lib/api';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
-import { startNativeStt, stopNativeStt } from '@/bridge/commands';
+import { startNativeStt, stopNativeStt, triggerHaptic } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import ExitConfirmModal from './ExitConfirmModal';
@@ -22,6 +22,7 @@ interface ChatMessage {
   role: 'ai' | 'user';
   text: string;
   translatedText?: string;
+  feedback?: string;
 }
 
 type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'error';
@@ -53,16 +54,17 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const isRecording = pageState === 'recording';
   const prevHeartsRef = useRef(3);
   const [heartShake, setHeartShake] = useState(false);
-  const [heartToast, setHeartToast] = useState<string | null>(null);
   const [emptyToast, setEmptyToast] = useState(false);
+  const [redFlash, setRedFlash] = useState(false);
 
   // 하트 깎일 때 감지
   useEffect(() => {
     if (prevHeartsRef.current > remainingHearts) {
       setHeartShake(true);
-      setHeartToast(remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '조금 더 자세히 대답해보세요 💪');
-      setTimeout(() => setHeartShake(false), 600);
-      setTimeout(() => setHeartToast(null), 2500);
+      setRedFlash(true);
+      triggerHaptic('medium');
+      setTimeout(() => setHeartShake(false), 1000);
+      setTimeout(() => setRedFlash(false), 400);
     }
     prevHeartsRef.current = remainingHearts;
   }, [remainingHearts]);
@@ -118,12 +120,21 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
     try {
       const result = await submitUtterance(sessionId, text);
+
+      // 하트 깎임 효과 먼저
       setRemainingHearts(result.remainingHearts);
       setFeedbackAvailable(result.feedbackAvailable);
 
+      // 하트 깎임 시 1000ms 대기 후 다음 질문
+      const heartsLost = prevHeartsRef.current > result.remainingHearts;
+      if (heartsLost) await new Promise((r) => setTimeout(r, 1000));
+
       if (!result.feedbackAvailable && result.originalQuestion) {
         const aiMsgId = `ai-${Date.now()}`;
-        setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...', translatedText: result.translatedQuestion }]);
+        const feedbackText = heartsLost
+          ? (result.remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '조금 더 질문에 맞게 답해보세요 😊')
+          : undefined;
+        setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...', translatedText: result.translatedQuestion, feedback: feedbackText }]);
         await new Promise((r) => setTimeout(r, 600));
         setMessages((prev) =>
           prev.map((m) => (m.id === aiMsgId ? { ...m, text: result.originalQuestion } : m))
@@ -339,7 +350,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <main className="relative flex h-full flex-col bg-background">
+    <main className="relative flex h-full flex-col bg-background overflow-hidden">
       {/* 상단 헤더 */}
       <div className="flex items-center justify-between px-4 pb-2 pt-6">
         <button
@@ -355,7 +366,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             className="flex gap-0.5"
           >
             {Array.from({ length: 3 }).map((_, i) => (
-              <span key={i} className={`text-base transition-opacity duration-300 ${i < remainingHearts ? 'opacity-100' : 'opacity-20'}`}>
+              <span key={i} className={`text-base transition-opacity duration-300 ${i < (3 - remainingHearts) ? 'opacity-20' : 'opacity-100'}`}>
                 ❤️
               </span>
             ))}
@@ -372,45 +383,56 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         )}
       </div>
 
-      {/* 하트 깎임 토스트 */}
+      {/* 그라데이션 테두리 플래시 */}
       <AnimatePresence>
-        {heartToast && (
+        {redFlash && (
           <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.2 }}
-            className="absolute top-24 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-medium text-white shadow-lg"
-          >
-            {heartToast}
-          </motion.div>
+            initial={{ opacity: 0.9 }}
+            animate={{ opacity: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            className="pointer-events-none absolute inset-0 z-30"
+            style={{ boxShadow: 'inset 0 0 40px 8px rgba(239,68,68,0.5), inset 0 0 80px 20px rgba(251,146,60,0.3)' }}
+          />
         )}
       </AnimatePresence>
-
 
       {/* 채팅 메시지 영역 */}
       <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3">
         {messages.map((msg) => (
           msg.role === 'ai' ? (
-            <AiBubble
-              key={msg.id}
-              text={msg.text}
-              translatedText={msg.translatedText}
-              showTranslation={translatingId === msg.id}
-              isSpeaking={speakingId === msg.id}
-              onToggleTranslation={() => toggleTranslation(msg.id)}
-              onSpeak={() => {
-                if (speakingId === msg.id) {
-                  window.speechSynthesis?.cancel();
-                  setSpeakingId(null);
-                } else {
-                  speak(msg.text, null, {
-                    onStart: () => setSpeakingId(msg.id),
-                    onEnd: () => setSpeakingId(null),
-                  });
-                }
-              }}
-            />
+            <div key={msg.id}>
+              <AiBubble
+                text={msg.text}
+                translatedText={msg.translatedText}
+                showTranslation={translatingId === msg.id}
+                isSpeaking={speakingId === msg.id}
+                onToggleTranslation={() => toggleTranslation(msg.id)}
+                onSpeak={() => {
+                  if (speakingId === msg.id) {
+                    window.speechSynthesis?.cancel();
+                    setSpeakingId(null);
+                  } else {
+                    speak(msg.text, null, {
+                      onStart: () => setSpeakingId(msg.id),
+                      onEnd: () => setSpeakingId(null),
+                    });
+                  }
+                }}
+              />
+              {msg.feedback && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="mt-1.5 flex items-start gap-2"
+                >
+                  <div className="rounded-2xl rounded-tl-sm bg-red-50 px-3 py-2 text-xs font-medium text-red-400">
+                    {msg.feedback}
+                  </div>
+                </motion.div>
+              )}
+            </div>
           ) : (
             <UserBubble key={msg.id} text={msg.text} />
           )
