@@ -241,7 +241,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     clearStoppingTimeout();
     setShowMicDeniedModal(true);
     setPageState('idle');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []));
 
   // 웹: 브라우저 SpeechRecognition
@@ -508,14 +507,19 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           )}
         </AnimatePresence>
 
+        <AnimatePresence mode="wait">
         {feedbackAvailable ? (
-          /* 결과 보기 버튼 */
-          <button
+          <motion.button
+            key="feedback-btn"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 12 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
             onClick={handleNext}
             className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white active:opacity-80 transition-opacity"
           >
             결과 보기
-          </button>
+          </motion.button>
         ) : (
           /* 마이크 버튼 — 가로로 아이콘 + 텍스트 */
           <button
@@ -556,6 +560,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             )}
           </button>
         )}
+        </AnimatePresence>
       </div>
 
       {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
