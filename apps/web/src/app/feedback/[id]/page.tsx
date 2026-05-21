@@ -21,9 +21,30 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
 
   if (feedbackQuery.isPending) {
     return (
-      <main className='flex h-full flex-col items-center justify-center bg-background gap-4'>
-        <div className='h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent' />
-        <p className='text-sm text-muted-foreground'>피드백 생성 중...</p>
+      <main className='flex h-full flex-col bg-background'>
+        <div className='no-scrollbar flex-1 overflow-y-auto'>
+          {/* 헤더 스켈레톤 */}
+          <div className='px-5 pt-12 pb-6 flex flex-col items-center gap-3'>
+            <div className='h-12 w-12 rounded-full bg-card animate-pulse' />
+            <div className='h-6 w-24 rounded-lg bg-card animate-pulse' />
+            <div className='h-10 w-20 rounded-lg bg-card animate-pulse' />
+            <div className='flex gap-0.5'>
+              {[0,1,2].map(i => <div key={i} className='h-5 w-5 rounded-full bg-card animate-pulse' />)}
+            </div>
+            <div className='h-4 w-64 rounded bg-card animate-pulse' />
+            <div className='h-4 w-48 rounded bg-card animate-pulse' />
+          </div>
+          {/* 카드 스켈레톤 */}
+          <div className='px-4 pb-6 space-y-6'>
+            {[0,1,2].map(i => (
+              <div key={i} className='rounded-2xl bg-card p-4 space-y-3'>
+                <div className='h-4 w-3/4 rounded bg-muted animate-pulse' />
+                <div className='h-4 w-1/2 rounded bg-muted animate-pulse' />
+                <div className='h-16 w-full rounded-xl bg-muted animate-pulse' />
+              </div>
+            ))}
+          </div>
+        </div>
       </main>
     );
   }
