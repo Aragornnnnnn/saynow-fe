@@ -67,29 +67,30 @@ loading ──→ idle ──→ recording ──→ stopping ──→ submitti
 
 ---
 
-## 정상 플로우 (앱 기준)
+## 사용자가 말하고 버튼을 누르는 정상 플로우 (앱 기준)
 
 ```
 1. 사용자: 마이크 버튼 클릭
    웹: transcriptRef 초기화 → START_STT 전송 → pageState = 'recording'
 
-2. 네이티브: ExpoSpeechRecognitionModule.start() 호출
-   - isRunningRef = true (중복 start 방어)
+2. 네이티브: isRunningRef = true → ExpoSpeechRecognitionModule.start()
+   (이미 running이면 start 무시 — 연타 방어)
 
-3. 네이티브: 음성 인식 중
-   → STT_PARTIAL 이벤트 → 웹에 transcript 실시간 표시
+3. 사용자: 말하는 중
+   네이티브: STT_PARTIAL 이벤트 계속 발생
+   웹: pageState === 'recording'일 때만 transcript 화면에 실시간 반영
 
-4. 사용자: 마이크 버튼 다시 클릭
+4. 사용자: 마이크 버튼 다시 클릭 (말 끝)
    웹: pageState = 'stopping' → STOP_STT 전송 → 3초 타임아웃 시작
 
-5. 네이티브: ExpoSpeechRecognitionModule.stop() 호출
-   - isRunningRef = false
-   - 남은 오디오 처리 후 STT_FINAL 이벤트 발생
+5. 네이티브: isRunningRef = false → ExpoSpeechRecognitionModule.stop()
+   남은 오디오 마저 처리 후 STT_FINAL 이벤트 발생 (보통 0.5초 이내)
 
 6. 웹: STT_FINAL 수신 (pageState === 'stopping')
    → 타임아웃 클리어 → transcript 제출 → pageState = 'submitting'
+   (transcript 비어있으면 emptyToast + idle 복구)
 
-7. 웹: API 응답 → pageState = 'idle'
+7. 웹: API 응답 → pageState = 'idle' → 다음 AI 메시지 표시 + TTS 재생
 ```
 
 ---
