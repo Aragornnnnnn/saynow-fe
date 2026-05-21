@@ -36,3 +36,7 @@ export function clearNativeAuthSession() {
 export function triggerHaptic(style: 'light' | 'medium' | 'heavy' = 'light') {
   return webBridge.send({ type: 'HAPTIC', style });
 }
+
+export function exitApp() {
+  return webBridge.send({ type: 'EXIT_APP' });
+}

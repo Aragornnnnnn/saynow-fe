@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Linking,
   NativeModules,
   StyleSheet,
@@ -100,6 +101,9 @@ export default function App() {
     AUTH_SESSION_CLEARED: async () => {
       await clearAuthSession();
       setHasError(false);
+    },
+    EXIT_APP: () => {
+      BackHandler.exitApp();
     },
     HAPTIC: (message) => {
       const style = {

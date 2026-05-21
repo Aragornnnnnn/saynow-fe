@@ -19,7 +19,8 @@ export type WebToNativeMessage =
       member: BridgeAuthMember;
     }
   | { type: 'AUTH_SESSION_CLEARED' }
-  | { type: 'HAPTIC'; style: 'light' | 'medium' | 'heavy' };
+  | { type: 'HAPTIC'; style: 'light' | 'medium' | 'heavy' }
+  | { type: 'EXIT_APP' };
 
 export type NativeToWebMessage =
   | { type: 'STT_PARTIAL'; transcript: string }
@@ -73,6 +74,7 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
         ? { type: value.type, provider: value.provider }
         : null;
     case 'AUTH_SESSION_CLEARED':
+    case 'EXIT_APP':
       return { type: value.type };
     case 'HAPTIC':
       return value.style === 'light' || value.style === 'medium' || value.style === 'heavy'
