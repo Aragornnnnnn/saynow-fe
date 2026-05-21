@@ -3,6 +3,7 @@
 
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion } from 'framer-motion';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { useFeedbackQuery } from '@/queries/feedback';
 import { AiBubble } from '@/components/chat/AiBubble';
@@ -82,17 +83,16 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
 }
 
 function TurnList({ turns }: { turns: ApiTurnFeedback[] }) {
-  const firstFeedbackIdx = turns.findIndex((t) => t.feedbackRequired);
   return (
     <>
-      {turns.map((turn, i) => (
-        <TurnBubblePair key={turn.turnId} turn={turn} showHint={i === firstFeedbackIdx} />
+      {turns.map((turn) => (
+        <TurnBubblePair key={turn.turnId} turn={turn} />
       ))}
     </>
   );
 }
 
-function TurnBubblePair({ turn, showHint }: { turn: ApiTurnFeedback; showHint: boolean }) {
+function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
   const [expanded, setExpanded] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -131,26 +131,43 @@ function TurnBubblePair({ turn, showHint }: { turn: ApiTurnFeedback; showHint: b
 
       <UserBubble text={turn.userUtterance} onPress={isGood ? undefined : handleUserBubblePress}>
         {isGood && <p className='text-xs font-semibold text-green-600'>✓ 잘했어요</p>}
-        {!isGood && !hintDismissed && showHint && <p className='text-xs text-muted-foreground'>탭해서 피드백 보기</p>}
+        {!isGood && !hintDismissed && (
+          <p className='text-xs text-muted-foreground'>탭해서 피드백 보기</p>
+        )}
       </UserBubble>
 
-      {/* 피드백 카드 */}
-      {!isGood && expanded && (
-        <div className='space-y-2 animate-in slide-in-from-top-2 duration-200'>
-          {turn.nativeLanguageInterpretation && (
-            <div className='mx-1 rounded-2xl bg-zinc-100 px-5 py-4'>
-              <p className='mb-2 text-xs font-semibold text-muted-foreground tracking-wide'>🎧 외국인 귀에는 이렇게 들렸어요</p>
-              <p className='text-lg font-bold text-foreground leading-snug'>&ldquo;{turn.nativeLanguageInterpretation}&rdquo;</p>
-            </div>
-          )}
-          {turn.betterExpression && (
-            <div className='mx-1 rounded-2xl bg-green-50 border border-green-200 px-5 py-4'>
-              <p className='mb-2 text-xs font-semibold text-green-600 tracking-wide'>✨ 이렇게 말했다면</p>
-              <p className='text-xl font-bold text-green-700 leading-snug'>{turn.betterExpression}</p>
-            </div>
-          )}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {!isGood && expanded && (
+          <motion.div
+            key='feedback'
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className='flex flex-col items-end gap-2'
+          >
+            {/* 외국인 귀에 들린 방식 — 두 필드를 한 블록으로 */}
+            {(turn.nativeLanguageInterpretation || turn.nativeUnderstanding) && (
+              <div className='rounded-2xl rounded-tr-none bg-zinc-100 px-4 py-3 max-w-[85%] space-y-1'>
+                <p className='text-[11px] font-semibold text-muted-foreground tracking-wide'>🎧 외국인 귀에는</p>
+                {turn.nativeLanguageInterpretation && (
+                  <p className='text-sm font-semibold text-foreground leading-snug'>&ldquo;{turn.nativeLanguageInterpretation}&rdquo;</p>
+                )}
+                {turn.nativeUnderstanding && (
+                  <p className='text-xs text-muted-foreground leading-relaxed'>{turn.nativeUnderstanding}</p>
+                )}
+              </div>
+            )}
+            {/* 더 나은 표현 */}
+            {turn.betterExpression && (
+              <div className='rounded-2xl rounded-tr-none bg-green-50 border border-green-200 px-4 py-3 max-w-[85%] space-y-1'>
+                <p className='text-[11px] font-semibold text-green-600 tracking-wide'>✨ 이렇게 말하면 더 자연스러워요</p>
+                <p className='text-sm font-bold text-green-700 leading-snug'>{turn.betterExpression}</p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
