@@ -1,7 +1,8 @@
 // 소셜 로그인 진입 페이지 — 카카오/구글 로그인 버튼 제공
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTypingLoop } from '@/hooks/useTypingLoop';
 
 const HOOK_MESSAGES = [
@@ -11,7 +12,6 @@ const HOOK_MESSAGES = [
   '아는 단어만 골라 말했는데 통했을까요?',
   '영어로 말했는데 한번에 알아들었을까요?',
 ];
-import { useRouter } from 'next/navigation';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
 import { requestNativeLogin } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
@@ -31,11 +31,20 @@ function hapticClear() {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accessToken, setAuth } = useAuthStore();
   const nonce = useRef<string>('');
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(() => searchParams.get('error'));
   const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
   const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear);
 
@@ -138,9 +147,9 @@ export default function LoginPage() {
           icon={<GoogleIcon />}
         />
         {errorMessage && (
-          <p className="px-1 text-center text-sm leading-relaxed text-red-600">
-            {errorMessage}
-          </p>
+          <div className="rounded-xl bg-zinc-100 px-4 py-3 text-center">
+            <p className="text-sm text-muted-foreground leading-relaxed">{errorMessage}</p>
+          </div>
         )}
       </div>
     </main>
