@@ -3,7 +3,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic, MicOff } from 'lucide-react';
+import { ChevronLeft, Mic } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { startSession, submitUtterance, exitSession } from '@/lib/api';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
@@ -363,13 +363,22 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {/* 하단 컨트롤 */}
       <div className="px-4 pb-10 pt-2">
-        {/* STT 텍스트 힌트 */}
+        {/* STT transcript */}
         <div className="mb-3 min-h-6 text-center">
-          {isRecording && (
-            <p className="text-sm text-muted-foreground italic">
-              {transcript || '듣고 있어요...'}
-            </p>
-          )}
+          <AnimatePresence mode="wait">
+            {isRecording && (
+              <motion.p
+                key="transcript"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="text-sm text-muted-foreground italic"
+              >
+                {transcript || '듣고 있어요...'}
+              </motion.p>
+            )}
+          </AnimatePresence>
         </div>
 
         {feedbackAvailable ? (
@@ -381,36 +390,44 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             결과 보기
           </button>
         ) : (
-          /* 마이크 버튼 */
-          <div className="flex flex-col items-center gap-2">
-            {pageState === 'submitting' && (
-              <p className="text-xs text-muted-foreground">분석 중...</p>
+          /* 마이크 버튼 — 가로로 아이콘 + 텍스트 */
+          <button
+            onClick={handleMicPress}
+            disabled={pageState === 'submitting'}
+            className={`relative flex w-full items-center justify-center gap-3 rounded-2xl py-4 shadow-md transition-all duration-150 active:scale-[0.98] ${
+              isRecording
+                ? 'bg-[#F0F0EE]'
+                : pageState === 'submitting'
+                  ? 'bg-primary/60 cursor-not-allowed'
+                  : 'bg-primary'
+            }`}
+          >
+            {pageState === 'submitting' ? (
+              <>
+                <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                <span className="text-sm font-semibold text-white">분석 중...</span>
+              </>
+            ) : isRecording ? (
+              <>
+                {/* 음파 바 */}
+                <div className="flex items-center gap-0.75">
+                  {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
+                    <span
+                      key={i}
+                      className="w-0.75 rounded-full bg-primary animate-[wave_0.6s_ease-in-out_infinite_alternate]"
+                      style={{ height: `${h * 20}px`, animationDelay: `${i * 0.1}s` }}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm font-semibold text-muted-foreground">말하기가 끝나면 눌러주세요</span>
+              </>
+            ) : (
+              <>
+                <Mic size={20} className="text-white" />
+                <span className="text-sm font-semibold text-white">탭하여 말하기</span>
+              </>
             )}
-            <button
-              onClick={handleMicPress}
-              disabled={pageState === 'submitting'}
-              className={`relative flex h-20 w-20 items-center justify-center rounded-full shadow-lg transition-all duration-150 active:scale-95 ${
-                isRecording
-                  ? 'bg-[#F0F0EE]'
-                  : pageState === 'submitting'
-                    ? 'bg-[#F0F0EE] opacity-50 cursor-not-allowed'
-                    : 'bg-primary'
-              }`}
-            >
-              {isRecording ? (
-                <MicOff size={28} className="text-muted-foreground" />
-              ) : (
-                <Mic size={32} className="text-white" />
-              )}
-              {/* glow ring */}
-              {isRecording && (
-                <span className="absolute inset-0 animate-ping rounded-full bg-primary/20" />
-              )}
-            </button>
-            {isRecording && (
-              <p className="text-xs text-muted-foreground">🎙 마이크 켜서 다시 발화하기</p>
-            )}
-          </div>
+          </button>
         )}
       </div>
 
