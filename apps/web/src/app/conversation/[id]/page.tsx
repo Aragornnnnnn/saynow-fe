@@ -463,7 +463,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   transition={{ duration: 0.2 }}
                   className="mt-1.5 flex items-start gap-2"
                 >
-                  <div className="rounded-2xl rounded-tl-sm bg-red-50 px-3 py-2 text-xs font-medium text-red-400">
+                  <div className="rounded-2xl rounded-tl-sm bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">
                     {msg.feedback}
                   </div>
                 </motion.div>
