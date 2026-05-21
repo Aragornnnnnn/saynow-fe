@@ -143,7 +143,7 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
       >
         <p className='mt-2 text-sm text-muted-foreground'>
           총 이해도{' '}
-          <span className={`text-3xl font-bold tabular-nums ${comprehensionStyle(score)}`}>
+          <span className={`text-3xl font-bold tabular-nums ${cleared ? 'text-green-600' : comprehensionStyle(score)}`}>
             {displayScore}%
           </span>
         </p>
