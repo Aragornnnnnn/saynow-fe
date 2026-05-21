@@ -25,11 +25,11 @@ type AuthTokenResponse = {
 
 type SocialLoginResponse = AuthTokenResponse & {
   member: {
-    memberId: string;
+    userId: string;
     nickname: string | null;
     email: string | null;
     provider: string;
-    newMember: boolean;
+    newUser: boolean;
   };
 };
 
@@ -56,11 +56,11 @@ export async function socialLogin(
     accessToken: raw.accessToken,
     refreshToken: raw.refreshToken,
     member: {
-      userId: raw.member.memberId,
+      userId: raw.member.userId,
       nickname: raw.member.nickname,
       email: raw.member.email,
       provider: raw.member.provider,
-      newUser: raw.member.newMember,
+      newUser: raw.member.newUser,
     },
   };
   if (__DEV__) console.log('[AuthDebug][API] social-login success', {
