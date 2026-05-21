@@ -12,6 +12,7 @@ import { webBridge } from '@/bridge/webBridge';
 import type { ApiScenario, ApiCategory } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
 import { useAuthStore } from '@/store/authStore';
+import { prefetchSession } from '@/lib/api';
 
 export default function Home() {
   const router = useRouter();
@@ -116,7 +117,7 @@ export default function Home() {
               scenarios={activeCategory.scenarios}
               expandedId={expandedScenarioId}
               onBadgeClick={(scenario, el) => handleBadgeClick(scenario, el.getBoundingClientRect())}
-              onStart={(id) => router.push(`/conversation/${id}`)}
+              onStart={(id) => { prefetchSession(id); router.push(`/conversation/${id}`); }}
             />
           ) : null}
         </div>
@@ -163,7 +164,7 @@ export default function Home() {
                         </button>
                       ) : (
                         <button
-                          onClick={() => router.push(`/conversation/${scenario.scenarioId}`)}
+                          onClick={() => { prefetchSession(scenario.scenarioId); router.push(`/conversation/${scenario.scenarioId}`); }}
                           className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white py-3 text-sm font-semibold text-primary active:opacity-80 transition-opacity"
                         >
                           <span>시작하기</span>

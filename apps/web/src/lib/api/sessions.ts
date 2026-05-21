@@ -17,10 +17,22 @@ export interface ApiUtteranceResult {
   feedbackAvailable: boolean;
 }
 
+let _pendingSession: Promise<ApiSessionStarted> | null = null;
+let _pendingScenarioId: number | null = null;
+
+export function prefetchSession(scenarioId: number) {
+  _pendingScenarioId = scenarioId;
+  _pendingSession = request(`/api/v1/scenarios/${scenarioId}/sessions`, { method: 'POST' });
+}
+
 export function startSession(scenarioId: number): Promise<ApiSessionStarted> {
-  return request(`/api/v1/scenarios/${scenarioId}/sessions`, {
-    method: 'POST',
-  });
+  if (_pendingSession && _pendingScenarioId === scenarioId) {
+    const cached = _pendingSession;
+    _pendingSession = null;
+    _pendingScenarioId = null;
+    return cached;
+  }
+  return request(`/api/v1/scenarios/${scenarioId}/sessions`, { method: 'POST' });
 }
 
 export function submitUtterance(
