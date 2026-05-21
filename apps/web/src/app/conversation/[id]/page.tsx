@@ -536,8 +536,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
+            whileTap={{ scale: 0.95 }}
             onClick={handleNext}
-            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white active:opacity-80 transition-opacity"
+            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white transition-opacity"
           >
             결과 보기
           </motion.button>

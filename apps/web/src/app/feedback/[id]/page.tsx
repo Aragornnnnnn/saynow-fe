@@ -183,9 +183,9 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
         </div>
         {summary && (
           <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7, duration: 0.4 }}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.7, duration: 0.35 }}
             className='mt-3 text-sm text-muted-foreground leading-relaxed'
           >
             {summary}
@@ -201,8 +201,8 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
 function TurnList({ turns }: { turns: ApiTurnFeedback[] }) {
   return (
     <>
-      {turns.map((turn) => (
-        <TurnBubblePair key={turn.turnId} turn={turn} />
+      {turns.map((turn, index) => (
+        <TurnBubblePair key={turn.turnId} turn={turn} index={index} />
       ))}
     </>
   );
@@ -210,7 +210,7 @@ function TurnList({ turns }: { turns: ApiTurnFeedback[] }) {
 
 // ─── TurnBubblePair ───────────────────────────────────────────────────────────
 
-function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
+function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
   const [expanded, setExpanded] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -244,7 +244,12 @@ function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
   }
 
   return (
-    <div className='space-y-2'>
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.6 + index * 0.12, duration: 0.35, ease: 'easeOut' }}
+      className='space-y-2'
+    >
       <AiBubble
         text={turn.originalQuestion}
         translatedText={turn.translatedQuestion}
@@ -292,7 +297,7 @@ function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 
