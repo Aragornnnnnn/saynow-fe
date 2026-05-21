@@ -18,7 +18,8 @@ export type WebToNativeMessage =
       refreshToken: string;
       member: BridgeAuthMember;
     }
-  | { type: 'AUTH_SESSION_CLEARED' };
+  | { type: 'AUTH_SESSION_CLEARED' }
+  | { type: 'HAPTIC'; style: 'light' | 'medium' | 'heavy' };
 
 export type NativeToWebMessage =
   | { type: 'STT_PARTIAL'; transcript: string }

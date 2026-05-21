@@ -1,9 +1,9 @@
 export type BridgeAuthMember = {
-  memberId: string;
+  userId: string;
   nickname: string | null;
   email: string | null;
   provider: string;
-  newMember: boolean;
+  newUser: boolean;
 };
 
 export type WebToNativeMessage =
@@ -18,7 +18,8 @@ export type WebToNativeMessage =
       refreshToken: string;
       member: BridgeAuthMember;
     }
-  | { type: 'AUTH_SESSION_CLEARED' };
+  | { type: 'AUTH_SESSION_CLEARED' }
+  | { type: 'HAPTIC'; style: 'light' | 'medium' | 'heavy' };
 
 export type NativeToWebMessage =
   | { type: 'STT_PARTIAL'; transcript: string }
@@ -72,6 +73,10 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
         : null;
     case 'AUTH_SESSION_CLEARED':
       return { type: value.type };
+    case 'HAPTIC':
+      return value.style === 'light' || value.style === 'medium' || value.style === 'heavy'
+        ? { type: value.type, style: value.style }
+        : null;
     default:
       return null;
   }
@@ -88,10 +93,10 @@ function optionalString(value: unknown): string | undefined {
 function isBridgeAuthMember(value: unknown): value is BridgeAuthMember {
   return (
     isRecord(value) &&
-    typeof value.memberId === 'string' &&
+    typeof value.userId === 'string' &&
     (typeof value.nickname === 'string' || value.nickname === null) &&
     (typeof value.email === 'string' || value.email === null) &&
     typeof value.provider === 'string' &&
-    typeof value.newMember === 'boolean'
+    typeof value.newUser === 'boolean'
   );
 }

@@ -13,21 +13,22 @@ const HOOK_MESSAGES = [
   '영어로 말했는데 한번에 알아들었을까요?',
 ];
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
-import { requestNativeLogin } from '@/bridge/commands';
+import { requestNativeLogin, triggerHaptic, updateNativeAuthSession } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useAuthStore } from '@/store/authStore';
-import { updateNativeAuthSession } from '@/bridge/commands';
 import type { SocialProvider } from '@/lib/api';
 import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
 
 const LAST_LOGIN_KEY = 'saynow-last-login';
 
 function haptic() {
-  navigator.vibrate?.(6);
+  if (webBridge.isAvailable()) triggerHaptic('light');
+  else navigator.vibrate?.(6);
 }
 
 function hapticClear() {
-  navigator.vibrate?.(15);
+  if (webBridge.isAvailable()) triggerHaptic('medium');
+  else navigator.vibrate?.(15);
 }
 
 export default function LoginPage() {

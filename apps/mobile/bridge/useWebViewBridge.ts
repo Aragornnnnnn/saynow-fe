@@ -68,5 +68,7 @@ function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHan
       return handlers.AUTH_SESSION_UPDATED?.(message);
     case 'AUTH_SESSION_CLEARED':
       return handlers.AUTH_SESSION_CLEARED?.(message);
+    case 'HAPTIC':
+      return handlers.HAPTIC?.(message);
   }
 }

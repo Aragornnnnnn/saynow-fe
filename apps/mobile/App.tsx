@@ -1,3 +1,4 @@
+import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
@@ -98,6 +99,14 @@ export default function App() {
     AUTH_SESSION_CLEARED: async () => {
       await clearAuthSession();
       setHasError(false);
+    },
+    HAPTIC: (message) => {
+      const style = {
+        light: Haptics.ImpactFeedbackStyle.Light,
+        medium: Haptics.ImpactFeedbackStyle.Medium,
+        heavy: Haptics.ImpactFeedbackStyle.Heavy,
+      }[message.style];
+      Haptics.impactAsync(style);
     },
   }), [postToWeb, startStt, stopStt]);
 
