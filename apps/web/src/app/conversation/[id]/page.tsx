@@ -5,7 +5,9 @@ import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { startSession, submitUtterance, exitSession } from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { startSession, submitUtterance, exitSession, createFeedback } from '@/lib/api';
+import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
 import { startNativeStt, stopNativeStt, triggerHaptic } from '@/bridge/commands';
@@ -44,6 +46,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   const { speak } = useTts();
+  const queryClient = useQueryClient();
   const isNative = webBridge.isAvailable();
   const sessionStartedRef = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -125,11 +128,21 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       setRemainingHearts(result.remainingHearts);
       setFeedbackAvailable(result.feedbackAvailable);
 
+      // 피드백 가능하면 백그라운드에서 미리 요청
+      if (result.feedbackAvailable) {
+        queryClient.prefetchQuery({
+          queryKey: feedbackQueryKeys.detail(sessionId),
+          queryFn: () => createFeedback(sessionId),
+        });
+        setPageState('idle');
+        return;
+      }
+
       // 하트 깎임 시 1000ms 대기 후 다음 질문
       const heartsLost = prevHeartsRef.current > result.remainingHearts;
       if (heartsLost) await new Promise((r) => setTimeout(r, 1000));
 
-      if (!result.feedbackAvailable && result.originalQuestion) {
+      if (result.originalQuestion) {
         const aiMsgId = `ai-${Date.now()}`;
         const feedbackText = heartsLost
           ? (result.remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '조금 더 질문에 맞게 답해보세요 😊')
