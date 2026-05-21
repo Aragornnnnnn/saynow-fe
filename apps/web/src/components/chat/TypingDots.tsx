@@ -6,9 +6,15 @@ export function TypingDots() {
         <span
           key={i}
           className="h-2 w-2 rounded-full bg-muted-foreground/50"
-          style={{ animation: `bounce 1s ease-in-out ${i * 0.15}s infinite` }}
+          style={{ animation: `typingBounce 0.9s ease-in-out ${i * 0.18}s infinite` }}
         />
       ))}
+      <style>{`
+        @keyframes typingBounce {
+          0%, 60%, 100% { transform: translateY(0); }
+          30% { transform: translateY(-6px); }
+        }
+      `}</style>
     </div>
   );
 }
