@@ -3,11 +3,11 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 export interface AuthMember {
-  memberId: string;
+  userId: string;
   nickname: string | null;
   email: string | null;
   provider: string;
-  newMember: boolean;
+  newUser: boolean;
 }
 
 interface AuthState {

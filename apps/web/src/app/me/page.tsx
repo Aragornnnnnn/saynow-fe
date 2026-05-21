@@ -111,7 +111,7 @@ export default function MyPage() {
             <div className="rounded-lg bg-secondary px-3 py-2">
               <dt className="text-xs text-muted-foreground">회원 ID</dt>
               <dd className="mt-0.5 truncate font-medium text-foreground">
-                {member?.memberId ?? '-'}
+                {member?.userId ?? '-'}
               </dd>
             </div>
           </dl>

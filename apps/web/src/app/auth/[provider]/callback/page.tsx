@@ -76,8 +76,8 @@ function SocialCallbackContent({ provider }: { provider: string }) {
         if (cancelled) return;
 
         clearPendingSocialLogin();
-        setAuth(data.accessToken, data.refreshToken, data.member);
-        updateNativeAuthSession(data.accessToken, data.refreshToken, data.member);
+        setAuth(data.accessToken, data.refreshToken, data.user);
+        updateNativeAuthSession(data.accessToken, data.refreshToken, data.user);
         router.replace('/');
       } catch (error) {
         clearPendingSocialLogin();

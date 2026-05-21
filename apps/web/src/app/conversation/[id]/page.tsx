@@ -34,7 +34,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [remainingHearts, setRemainingHearts] = useState(3);
-  const [isFeedbackAvailable, setIsFeedbackAvailable] = useState(false);
+  const [feedbackAvailable, setFeedbackAvailable] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [transcript, setTranscript] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
@@ -80,7 +80,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       .then((data) => {
         setSessionId(data.sessionId);
         setRemainingHearts(data.remainingHearts);
-        setIsFeedbackAvailable(data.isFeedbackAvailable);
+        setFeedbackAvailable(data.feedbackAvailable);
         setMessages([
           {
             id: `ai-0`,
@@ -216,9 +216,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     try {
       const result = await submitUtterance(sessionId, text);
       setRemainingHearts(result.remainingHearts);
-      setIsFeedbackAvailable(result.isFeedbackAvailable);
+      setFeedbackAvailable(result.feedbackAvailable);
 
-      if (!result.isFeedbackAvailable && result.originalQuestion) {
+      if (!result.feedbackAvailable && result.originalQuestion) {
         // AI 타이핑 애니메이션용 placeholder 추가 후 교체
         const aiMsgId = `ai-${Date.now()}`;
         setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...', translatedText: result.translatedQuestion }]);
@@ -235,7 +235,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   async function handleNext() {
-    if (!isFeedbackAvailable) return;
+    if (!feedbackAvailable) return;
     localStorage.setItem('saynow-heart-guide-seen', '1');
     if (sessionId) await exitSession(sessionId).catch(() => {});
     router.push(`/feedback/${sessionId}`);
@@ -372,7 +372,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           )}
         </div>
 
-        {isFeedbackAvailable ? (
+        {feedbackAvailable ? (
           /* 결과 보기 버튼 */
           <button
             onClick={handleNext}

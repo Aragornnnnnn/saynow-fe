@@ -1,9 +1,9 @@
 export type BridgeAuthMember = {
-  memberId: string;
+  userId: string;
   nickname: string | null;
   email: string | null;
   provider: string;
-  newMember: boolean;
+  newUser: boolean;
 };
 
 export type WebToNativeMessage =
@@ -79,10 +79,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isBridgeAuthMember(value: unknown): value is BridgeAuthMember {
   return (
     isRecord(value) &&
-    typeof value.memberId === 'string' &&
+    typeof value.userId === 'string' &&
     (typeof value.nickname === 'string' || value.nickname === null) &&
     (typeof value.email === 'string' || value.email === null) &&
     typeof value.provider === 'string' &&
-    typeof value.newMember === 'boolean'
+    typeof value.newUser === 'boolean'
   );
 }

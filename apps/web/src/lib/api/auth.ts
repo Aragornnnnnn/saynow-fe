@@ -11,12 +11,12 @@ export interface AuthTokenResponse {
 }
 
 export interface SocialLoginResponse extends AuthTokenResponse {
-  member: {
-    memberId: string;
+  user: {
+    userId: string;
     nickname: string | null;
     email: string | null;
     provider: string;
-    newMember: boolean;
+    newUser: boolean;
   };
 }
 

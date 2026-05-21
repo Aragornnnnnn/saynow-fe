@@ -6,7 +6,7 @@ export interface ApiSessionStarted {
   originalQuestion: string;
   translatedQuestion: string;
   remainingHearts: number;
-  isFeedbackAvailable: boolean;
+  feedbackAvailable: boolean;
 }
 
 export interface ApiUtteranceResult {
@@ -14,7 +14,7 @@ export interface ApiUtteranceResult {
   originalQuestion: string;
   translatedQuestion: string;
   remainingHearts: number;
-  isFeedbackAvailable: boolean;
+  feedbackAvailable: boolean;
 }
 
 export function startSession(scenarioId: number): Promise<ApiSessionStarted> {
