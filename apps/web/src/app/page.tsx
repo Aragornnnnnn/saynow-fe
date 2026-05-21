@@ -199,15 +199,10 @@ interface ScenarioBadgeListProps {
   onStart: (scenarioId: number) => void;
 }
 
-const MVP_LIMIT = 3;
-
 function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: ScenarioBadgeListProps) {
-  const visible = scenarios.slice(0, MVP_LIMIT);
-  const hasMore = scenarios.length > MVP_LIMIT;
-
   return (
     <div className="relative mt-6 flex flex-col items-center px-4">
-      {visible.map((scenario, index) => (
+      {scenarios.map((scenario, index) => (
         <motion.div
           key={scenario.scenarioId}
           initial={{ opacity: 0, y: 20 }}
@@ -218,26 +213,13 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
           <ScenarioBadgeItem
             scenario={scenario}
             index={index}
-            isLast={index === visible.length - 1}
+            isLast={index === scenarios.length - 1}
             isExpanded={expandedId === scenario.scenarioId}
             onBadgeClick={onBadgeClick}
             onStart={onStart}
           />
         </motion.div>
       ))}
-
-      {/* 더 많은 시나리오 예고 */}
-      {hasMore && (
-        <div className="-mx-4 w-[calc(100%+2rem)] flex flex-col items-center" style={{ minHeight: '30vh' }}>
-          <div className="flex flex-col items-center gap-1 py-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
-            ))}
-          </div>
-          <span className="text-4xl">☁️</span>
-          <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
-        </div>
-      )}
     </div>
   );
 }
@@ -255,7 +237,7 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick }
   const ref = useRef<HTMLButtonElement>(null);
   const isLocked = scenario.locked;
   const isCleared = scenario.cleared;
-  const isComingSoon = scenario.lockReason === 'COMING_SOON' || index >= 3;
+  const isComingSoon = scenario.lockReason === 'COMING_SOON';
 
   return (
     <>
