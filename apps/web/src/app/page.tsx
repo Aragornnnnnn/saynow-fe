@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Lock, ChevronRight, UserRound } from 'lucide-react';
@@ -16,6 +16,8 @@ export default function Home() {
   const { accessToken, refreshToken, _hasHydrated } = useAuthStore();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canFetch = _hasHydrated && (!!accessToken || !!refreshToken);
   const { data, isPending, error, refetch } = useScenariosQuery(canFetch);
 
@@ -44,9 +46,9 @@ export default function Home() {
     setExpandedScenarioId(null);
   }
 
-  function handleBadgeClick(scenario: ApiScenario) {
-    if (scenario.locked) return;
+  function handleBadgeClick(scenario: ApiScenario, el: HTMLElement) {
     setExpandedScenarioId((prev) => (prev === scenario.scenarioId ? null : scenario.scenarioId));
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
   if (error) {
@@ -82,7 +84,16 @@ export default function Home() {
 
       {/* 시나리오 목록 */}
       <div className="relative flex-1 overflow-hidden">
-        <div className="no-scrollbar h-full overflow-y-auto overscroll-y-contain">
+        <div
+          ref={scrollRef}
+          className="no-scrollbar h-full overflow-y-auto overscroll-y-contain"
+          style={{ scrollBehavior: 'smooth' }}
+          onScroll={() => {
+            if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+            scrollTimerRef.current = setTimeout(() => setExpandedScenarioId(null), 150);
+          }}
+          onClick={(e) => { if (e.target === scrollRef.current) setExpandedScenarioId(null); }}
+        >
           {isPending ? (
             <div className="mt-6 space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -97,13 +108,53 @@ export default function Home() {
               scenarios={activeCategory.scenarios}
               expandedId={expandedScenarioId}
               onBadgeClick={handleBadgeClick}
-              onStart={(scenarioId) => router.push(`/conversation/${scenarioId}`)}
             />
           ) : null}
         </div>
-        {/* 하단 그라데이션 — 더 있어 보이는 효과 */}
+        {/* 하단 그라데이션 */}
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-background to-transparent" />
+
+        {/* 시나리오 카드 — 그라데이션 위에 떠있음 */}
+        <AnimatePresence initial={false}>
+          {expandedScenarioId !== null && activeCategory && (() => {
+            const scenario = activeCategory.scenarios.find((s) => s.scenarioId === expandedScenarioId);
+            if (!scenario) return null;
+            const isComingSoon = scenario.lockReason === 'COMING_SOON';
+            return (
+              <motion.div
+                key="scenario-card"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 12 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="absolute bottom-4 left-4 right-4 z-10"
+              >
+                <div className="rounded-2xl bg-card shadow-lg border border-border px-5 py-4">
+                  <p className="mb-1 text-base font-bold text-foreground">{scenario.scenarioTitle}</p>
+                  <p className="mb-4 text-sm text-muted-foreground leading-relaxed">{scenario.scenarioGoal}</p>
+                  {scenario.locked ? (
+                    <button
+                      disabled
+                      className="w-full rounded-xl bg-muted py-3 text-sm font-semibold text-muted-foreground cursor-default"
+                    >
+                      {isComingSoon ? '준비 중' : '잠금'}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => router.push(`/conversation/${scenario.scenarioId}`)}
+                      className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
+                    >
+                      <span>{scenario.scenarioTitle} 하러 가기</span>
+                      <ChevronRight size={16} />
+                    </button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
       </div>
+
     </main>
   );
 }
@@ -111,13 +162,12 @@ export default function Home() {
 interface ScenarioBadgeListProps {
   scenarios: ApiScenario[];
   expandedId: number | null;
-  onBadgeClick: (scenario: ApiScenario) => void;
-  onStart: (scenarioId: number) => void;
+  onBadgeClick: (scenario: ApiScenario, el: HTMLElement) => void;
 }
 
 const MVP_LIMIT = 3;
 
-function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: ScenarioBadgeListProps) {
+function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick }: ScenarioBadgeListProps) {
   const visible = scenarios.slice(0, MVP_LIMIT);
   const hasMore = scenarios.length > MVP_LIMIT;
 
@@ -137,7 +187,6 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
             isLast={index === visible.length - 1}
             isExpanded={expandedId === scenario.scenarioId}
             onBadgeClick={onBadgeClick}
-            onStart={onStart}
           />
         </motion.div>
       ))}
@@ -163,11 +212,11 @@ interface ScenarioBadgeItemProps {
   index: number;
   isLast: boolean;
   isExpanded: boolean;
-  onBadgeClick: (scenario: ApiScenario) => void;
-  onStart: (scenarioId: number) => void;
+  onBadgeClick: (scenario: ApiScenario, el: HTMLElement) => void;
 }
 
-function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, onStart }: ScenarioBadgeItemProps) {
+function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick }: ScenarioBadgeItemProps) {
+  const ref = useRef<HTMLButtonElement>(null);
   const isLocked = scenario.locked;
   const isCleared = scenario.cleared;
   const isComingSoon = scenario.lockReason === 'COMING_SOON' || index >= 3;
@@ -176,8 +225,8 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
     <>
       {/* 뱃지 버튼 */}
       <button
-        onClick={() => onBadgeClick(scenario)}
-        disabled={isLocked}
+        ref={ref}
+        onClick={() => onBadgeClick(scenario, ref.current!)}
         style={{ width: 88, height: 88 }}
         className={`relative flex items-center justify-center rounded-full transition-all duration-150 ${
           isComingSoon
@@ -224,30 +273,6 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick, 
         {isComingSoon ? '???' : scenario.scenarioTitle}
       </p>
 
-      {/* 인라인 확장 패널 */}
-      <AnimatePresence initial={false}>
-        {isExpanded && !isLocked && (
-          <motion.div
-            initial={{ opacity: 0, height: 0, marginTop: 0 }}
-            animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
-            exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="w-full max-w-sm overflow-hidden"
-          >
-            <div className="rounded-2xl bg-card px-5 py-4 shadow-sm border border-border">
-              <p className="mb-1 text-xs font-semibold text-primary">달성 목표</p>
-              <p className="mb-4 text-sm text-muted-foreground leading-relaxed">{scenario.scenarioGoal}</p>
-              <button
-                onClick={() => onStart(scenario.scenarioId)}
-                className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
-              >
-                <span>주문하러 가기</span>
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* 점선 커넥터 */}
       {!isLast && (
