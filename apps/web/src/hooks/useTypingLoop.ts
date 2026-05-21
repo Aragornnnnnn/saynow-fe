@@ -6,7 +6,7 @@ const DELETE_MS = 12;
 const DELETE_DELAY_MS = 1200;
 const NEXT_DELAY_MS = 400;
 
-export function useTypingLoop(messages: string[], onType?: () => void, onClear?: () => void) {
+export function useTypingLoop(messages: string[], onType?: () => void, onClear?: () => void, enabled = true) {
   const [displayed, setDisplayed] = useState('');
   const onTypeRef = useRef(onType);
   const onClearRef = useRef(onClear);
@@ -15,7 +15,7 @@ export function useTypingLoop(messages: string[], onType?: () => void, onClear?:
   useEffect(() => { onClearRef.current = onClear; }, [onClear]);
 
   useEffect(() => {
-    if (messages.length === 0) return;
+    if (messages.length === 0 || !enabled) return;
 
     let index = 0;
     let charPos = 0;

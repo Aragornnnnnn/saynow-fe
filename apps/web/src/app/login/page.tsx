@@ -47,7 +47,8 @@ function LoginPageContent() {
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(() => searchParams.get('error'));
   const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
-  const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear);
+  const isPending = pendingProvider !== null;
+  const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear, !isPending);
 
   useEffect(() => {
     if (accessToken) router.replace('/');
@@ -107,8 +108,6 @@ function LoginPageContent() {
     setPendingProvider(null);
     setErrorMessage(msg.message);
   });
-
-  const isPending = pendingProvider !== null;
 
   return (
     <main className="flex flex-col h-dvh bg-background items-center justify-between px-6 py-10">
