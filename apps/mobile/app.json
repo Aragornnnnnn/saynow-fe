@@ -15,7 +15,7 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#FFFFFF"
+      "backgroundColor": "#FAFAF8"
     },
     "ios": {
       "supportsTablet": false,
@@ -54,7 +54,7 @@
       [
         "@react-native-kakao/core",
         {
-          "nativeAppKey": "09462cccdbd1a0723c5f87929a94a528",
+          "nativeAppKey": "4c3c9bf8664c02644d66ccd2ecce5552",
           "android": {
             "authCodeHandlerActivity": true
           },
