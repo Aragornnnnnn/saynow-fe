@@ -24,6 +24,7 @@ export type WebToNativeMessage =
 export type NativeToWebMessage =
   | { type: 'STT_PARTIAL'; transcript: string }
   | { type: 'STT_FINAL'; transcript: string }
+  | { type: 'STT_ERROR' }
   | { type: 'MIC_PERMISSION_DENIED' }
   | { type: 'TTS_END' }
   | { type: 'BACK_PRESSED' }
@@ -54,6 +55,7 @@ function normalizeNativeMessage(value: unknown): NativeToWebMessage | null {
       return typeof value.transcript === 'string'
         ? { type: value.type, transcript: value.transcript }
         : null;
+    case 'STT_ERROR':
     case 'MIC_PERMISSION_DENIED':
     case 'TTS_END':
     case 'BACK_PRESSED':

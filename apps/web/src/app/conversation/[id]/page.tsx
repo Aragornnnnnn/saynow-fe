@@ -24,7 +24,7 @@ interface ChatMessage {
   translatedText?: string;
 }
 
-type PageState = 'loading' | 'idle' | 'recording' | 'submitting' | 'error';
+type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'error';
 
 export default function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -47,19 +47,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const sessionStartedRef = useRef(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef('');
   const bottomRef = useRef<HTMLDivElement>(null);
+  const stoppingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRecording = pageState === 'recording';
   const prevHeartsRef = useRef(3);
   const [heartShake, setHeartShake] = useState(false);
   const [heartToast, setHeartToast] = useState<string | null>(null);
-  const [showHeartGuide, setShowHeartGuide] = useState(false);
-
-
-  // 첫 대화에서만 하트 안내 표시
-  useEffect(() => {
-    const seen = localStorage.getItem('saynow-heart-guide-seen');
-    if (!seen) setShowHeartGuide(true);
-  }, []);
+  const [emptyToast, setEmptyToast] = useState(false);
 
   // 하트 깎일 때 감지
   useEffect(() => {
@@ -114,22 +109,112 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     setShowExitModal(true);
   });
 
+  async function submitUserUtterance(text: string) {
+    if (!sessionId || pageState === 'submitting') return;
+    const userMsgId = `user-${Date.now()}`;
+    setMessages((prev) => [...prev, { id: userMsgId, role: 'user', text }]);
+    setTranscript('');
+    setPageState('submitting');
+
+    try {
+      const result = await submitUtterance(sessionId, text);
+      setRemainingHearts(result.remainingHearts);
+      setFeedbackAvailable(result.feedbackAvailable);
+
+      if (!result.feedbackAvailable && result.originalQuestion) {
+        const aiMsgId = `ai-${Date.now()}`;
+        setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...', translatedText: result.translatedQuestion }]);
+        await new Promise((r) => setTimeout(r, 600));
+        setMessages((prev) =>
+          prev.map((m) => (m.id === aiMsgId ? { ...m, text: result.originalQuestion } : m))
+        );
+      }
+      setPageState('idle');
+    } catch (e) {
+      setError((e as Error).message);
+      setPageState('error');
+    }
+  }
+
   // 앱: 브릿지 STT 이벤트 구독
   useBridgeEvent('STT_PARTIAL', useCallback((msg) => {
-    setTranscript(msg.transcript);
+    setPageState((prev) => {
+      if (prev !== 'recording') return prev;
+      transcriptRef.current = msg.transcript;
+      setTranscript(msg.transcript);
+      return prev;
+    });
   }, []));
 
   useBridgeEvent('STT_FINAL', useCallback((msg) => {
-    setTranscript(msg.transcript);
-    setPageState('idle');
-    if (msg.transcript.trim() && sessionId) {
-      submitUserUtterance(msg.transcript.trim());
+    setPageState((prev) => {
+      if (prev === 'stopping') {
+        clearStoppingTimeout();
+        const text = msg.transcript.trim();
+        if (text && sessionId) {
+          transcriptRef.current = text;
+          setTranscript(text);
+          setTimeout(() => submitUserUtterance(text), 0);
+          return 'submitting';
+        } else {
+          setEmptyToast(true);
+          return 'idle';
+        }
+      }
+      if (prev === 'recording') {
+        // silence detection 자동 종료 — transcript만 업데이트 (useStt에서 자동 재시작)
+        transcriptRef.current = msg.transcript;
+        setTranscript(msg.transcript);
+      }
+      return prev;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]));
+
+  // stopping 상태에서 3초 내 STT_FINAL 없으면 강제 idle 복구
+  function startStoppingTimeout() {
+    if (stoppingTimeoutRef.current) clearTimeout(stoppingTimeoutRef.current);
+    stoppingTimeoutRef.current = setTimeout(() => {
+      setPageState((prev) => {
+        if (prev !== 'stopping') return prev;
+        const text = transcriptRef.current.trim();
+        if (text && sessionId) {
+          setTimeout(() => submitUserUtterance(text), 0);
+          return 'submitting';
+        }
+        setEmptyToast(true);
+        return 'idle';
+      });
+    }, 3000);
+  }
+
+  function clearStoppingTimeout() {
+    if (stoppingTimeoutRef.current) {
+      clearTimeout(stoppingTimeoutRef.current);
+      stoppingTimeoutRef.current = null;
     }
-  }, [sessionId])); // eslint-disable-line react-hooks/exhaustive-deps
+  }
+
+  useBridgeEvent('STT_ERROR', useCallback(() => {
+    clearStoppingTimeout();
+    setPageState((prev) => {
+      if (prev !== 'stopping' && prev !== 'recording') return prev;
+      const text = transcriptRef.current.trim();
+      if (text && sessionId) {
+        setTimeout(() => submitUserUtterance(text), 0);
+        return 'submitting';
+      }
+      setEmptyToast(true);
+      return 'idle';
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId]));
 
   useBridgeEvent('MIC_PERMISSION_DENIED', useCallback(() => {
+    clearStoppingTimeout();
     setShowMicDeniedModal(true);
     setPageState('idle');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []));
 
   // 웹: 브라우저 SpeechRecognition
@@ -150,6 +235,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     recognition.continuous = true;
     recognition.interimResults = true;
 
+    transcriptRef.current = '';
+
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let final = '';
       let interim = '';
@@ -160,7 +247,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           interim += event.results[i][0].transcript;
         }
       }
-      setTranscript(final + interim);
+      const text = final || interim;
+      transcriptRef.current = text;
+      setTranscript(text);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -180,16 +269,22 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   async function handleMicPress() {
+    setEmptyToast(false);
     if (isRecording) {
       if (isNative) {
+        // STT_FINAL 이벤트에서 최종 transcript 받은 후 제출
+        setPageState('stopping');
         stopNativeStt();
+        startStoppingTimeout();
       } else {
         stopWebStt();
-        if (!transcript.trim() || !sessionId) {
+        const text = transcriptRef.current.trim();
+        if (!text || !sessionId) {
           setPageState('idle');
+          setEmptyToast(true);
           return;
         }
-        await submitUserUtterance(transcript.trim());
+        await submitUserUtterance(text);
       }
     } else {
       if (speakingId) {
@@ -197,52 +292,23 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         setSpeakingId(null);
       }
       if (isNative) {
+        transcriptRef.current = '';
+        setTranscript('');
         startNativeStt();
         setPageState('recording');
-        setTranscript('');
       } else {
         await startWebStt();
       }
     }
   }
 
-  async function submitUserUtterance(text: string) {
-    if (!sessionId) return;
-    const userMsgId = `user-${Date.now()}`;
-    setMessages((prev) => [...prev, { id: userMsgId, role: 'user', text }]);
-    setTranscript('');
-    setPageState('submitting');
-
-    try {
-      const result = await submitUtterance(sessionId, text);
-      setRemainingHearts(result.remainingHearts);
-      setFeedbackAvailable(result.feedbackAvailable);
-
-      if (!result.feedbackAvailable && result.originalQuestion) {
-        // AI 타이핑 애니메이션용 placeholder 추가 후 교체
-        const aiMsgId = `ai-${Date.now()}`;
-        setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...', translatedText: result.translatedQuestion }]);
-        await new Promise((r) => setTimeout(r, 600));
-        setMessages((prev) =>
-          prev.map((m) => (m.id === aiMsgId ? { ...m, text: result.originalQuestion } : m))
-        );
-      }
-      setPageState('idle');
-    } catch (e) {
-      setError((e as Error).message);
-      setPageState('error');
-    }
-  }
-
   async function handleNext() {
     if (!feedbackAvailable) return;
-    localStorage.setItem('saynow-heart-guide-seen', '1');
     if (sessionId) await exitSession(sessionId).catch(() => {});
     router.push(`/feedback/${sessionId}`);
   }
 
   async function handleExit() {
-    localStorage.setItem('saynow-heart-guide-seen', '1');
     if (sessionId) await exitSession(sessionId).catch(() => {});
     router.push('/');
   }
@@ -299,7 +365,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {/* 하트 안내 — 첫 대화에서만 표시 */}
       <div className="h-5 px-4">
-        {showHeartGuide && (
+        {(
           <p className="text-center text-xs text-muted-foreground">
             질문에 맞는 대답을 해야 하트가 유지돼요
           </p>
@@ -320,6 +386,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           </motion.div>
         )}
       </AnimatePresence>
+
 
       {/* 채팅 메시지 영역 */}
       <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3">
@@ -381,6 +448,28 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           </AnimatePresence>
         </div>
 
+        {/* 빈 음성 말풍선 */}
+        <AnimatePresence>
+          {emptyToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 4 }}
+              transition={{ duration: 0.15 }}
+              className="relative mb-2 flex justify-center"
+            >
+              <div className="rounded-2xl bg-[#F5F5F3] px-4 py-2.5 text-sm font-medium text-foreground shadow-sm whitespace-nowrap">
+                목소리가 안 들렸어요, 다시 눌러서 말해주세요 🎤
+              </div>
+              {/* 아래 화살표 */}
+              <div
+                className="absolute -bottom-2 left-1/2 -translate-x-1/2"
+                style={{ width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid #F5F5F3' }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {feedbackAvailable ? (
           /* 결과 보기 버튼 */
           <button
@@ -393,16 +482,16 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           /* 마이크 버튼 — 가로로 아이콘 + 텍스트 */
           <button
             onClick={handleMicPress}
-            disabled={pageState === 'submitting'}
+            disabled={pageState === 'submitting' || pageState === 'stopping'}
             className={`relative flex w-full items-center justify-center gap-3 rounded-2xl py-4 shadow-md transition-all duration-150 active:scale-[0.98] ${
               isRecording
                 ? 'bg-[#F0F0EE]'
-                : pageState === 'submitting'
+                : pageState === 'submitting' || pageState === 'stopping'
                   ? 'bg-primary/60 cursor-not-allowed'
                   : 'bg-primary'
             }`}
           >
-            {pageState === 'submitting' ? (
+            {pageState === 'submitting' || pageState === 'stopping' ? (
               <>
                 <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
                 <span className="text-sm font-semibold text-white">분석 중...</span>

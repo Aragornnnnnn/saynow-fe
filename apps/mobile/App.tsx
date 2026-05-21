@@ -35,6 +35,7 @@ export default function App() {
     onPartial: (transcript) => postToWeb({ type: 'STT_PARTIAL', transcript }),
     onFinal: (transcript) => postToWeb({ type: 'STT_FINAL', transcript }),
     onDenied: () => postToWeb({ type: 'MIC_PERMISSION_DENIED' }),
+    onError: () => postToWeb({ type: 'STT_ERROR' }),
   });
 
   useEffect(() => {
