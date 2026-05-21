@@ -8,7 +8,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { exitApp } from '@/bridge/commands';
-import { webBridge } from '@/bridge/webBridge';
 import type { ApiScenario, ApiCategory } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
 import { useAuthStore } from '@/store/authStore';
@@ -20,7 +19,7 @@ export default function Home() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
   const [badgeRect, setBadgeRect] = useState<DOMRect | null>(null);
-  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const canFetch = _hasHydrated && (!!accessToken || !!refreshToken);
@@ -34,7 +33,7 @@ export default function Home() {
 
   useBackButtonBridge(() => {
     if (expandedScenarioId !== null) { setExpandedScenarioId(null); return; }
-    if (webBridge.isAvailable()) setShowExitConfirm(true);
+    exitApp();
   });
 
   if (!_hasHydrated || !canFetch) return null;
@@ -194,44 +193,6 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      {/* 앱 종료 확인 모달 */}
-      <AnimatePresence>
-        {showExitConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-8"
-            onClick={() => setShowExitConfirm(false)}
-          >
-            <motion.div
-              initial={{ y: 24, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: 24, opacity: 0 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="w-full rounded-2xl bg-card p-5 shadow-xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <p className="text-center text-base font-semibold text-foreground">앱을 종료할까요?</p>
-              <div className="mt-4 flex gap-2">
-                <button
-                  onClick={() => setShowExitConfirm(false)}
-                  className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-muted-foreground"
-                >
-                  취소
-                </button>
-                <button
-                  onClick={() => exitApp()}
-                  className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white"
-                >
-                  종료
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </main>
   );
 }
