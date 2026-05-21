@@ -1,11 +1,11 @@
 export type SocialProvider = 'GOOGLE' | 'KAKAO';
 
 export interface AuthMember {
-  memberId: string;
+  userId: string;
   nickname: string | null;
   email: string | null;
   provider: string;
-  newMember: boolean;
+  newUser: boolean;
 }
 
 export interface NativeAuthSession {
@@ -24,7 +24,13 @@ type AuthTokenResponse = {
 };
 
 type SocialLoginResponse = AuthTokenResponse & {
-  member: AuthMember;
+  member: {
+    memberId: string;
+    nickname: string | null;
+    email: string | null;
+    provider: string;
+    newMember: boolean;
+  };
 };
 
 const API_BASE_URL = firstNonEmpty(
@@ -42,14 +48,25 @@ export async function socialLogin(
     idToken: describeToken(idToken),
     nonceLength: nonce.length,
   });
-  const session = await request<SocialLoginResponse>('/api/v1/auth/social-login', {
+  const raw = await request<SocialLoginResponse>('/api/v1/auth/social-login', {
     method: 'POST',
     body: JSON.stringify({ provider, idToken, nonce }),
   });
+  const session: NativeAuthSession = {
+    accessToken: raw.accessToken,
+    refreshToken: raw.refreshToken,
+    member: {
+      userId: raw.member.memberId,
+      nickname: raw.member.nickname,
+      email: raw.member.email,
+      provider: raw.member.provider,
+      newUser: raw.member.newMember,
+    },
+  };
   if (__DEV__) console.log('[AuthDebug][API] social-login success', {
     provider: session.member.provider,
-    memberId: session.member.memberId,
-    newMember: session.member.newMember,
+    userId: session.member.userId,
+    newUser: session.member.newUser,
     accessTokenLength: session.accessToken.length,
     refreshTokenLength: session.refreshToken.length,
   });

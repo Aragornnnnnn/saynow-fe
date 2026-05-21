@@ -45,7 +45,7 @@ export function useStt({ onPartial, onFinal, onDenied }: UseSttOptions) {
     ExpoSpeechRecognitionModule.start({
       lang: 'en-US',
       interimResults: true,
-      continuous: false,
+      continuous: true,
     });
   }, [onDenied]);
 
