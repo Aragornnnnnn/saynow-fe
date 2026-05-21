@@ -128,8 +128,16 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       setRemainingHearts(result.remainingHearts);
       setFeedbackAvailable(result.feedbackAvailable);
 
-      // 피드백 가능하면 백그라운드에서 미리 요청
+      // 마지막 답변 — 마무리 멘트 + 백그라운드 피드백 prefetch
       if (result.feedbackAvailable) {
+        const closingLines = [
+          "Great job! Let's see how you did! 😊",
+          "Nice work! Check out your feedback! 🎉",
+          "Well done! See how it sounded to a native speaker 👀",
+          "That's a wrap! Let's check your results ✨",
+        ];
+        const closing = closingLines[Math.floor(Math.random() * closingLines.length)];
+        setMessages((prev) => [...prev, { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing }]);
         queryClient.prefetchQuery({
           queryKey: feedbackQueryKeys.detail(sessionId),
           queryFn: () => createFeedback(sessionId),
