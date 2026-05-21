@@ -129,13 +129,13 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       // 마지막 답변 — ... 말풍선 → 마무리 멘트 → 결과 보기 버튼
       if (result.feedbackAvailable) {
-        const closingLines = [
-          "Great job! Let's see how you did! 😊",
-          "Nice work! Check out your feedback! 🎉",
-          "Well done! See how it sounded to a native speaker 👀",
-          "That's a wrap! Let's check your results ✨",
+        const closingLines: [string, string][] = [
+          ["Great job! Let's see how you did! 😊", "수고했어요! 결과를 확인해봐요!"],
+          ["Nice work! Check out your feedback! 🎉", "잘 하셨어요! 피드백을 확인해봐요!"],
+          ["Well done! See how it sounded to a native speaker 👀", "훌륭해요! 원어민에게 어떻게 들렸는지 볼게요!"],
+          ["That's a wrap! Let's check your results ✨", "대화 완료! 결과를 확인해봐요!"],
         ];
-        const closing = closingLines[Math.floor(Math.random() * closingLines.length)];
+        const [closing, closingKo] = closingLines[Math.floor(Math.random() * closingLines.length)];
         const aiMsgId = `ai-closing-${Date.now()}`;
         setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...' }]);
         queryClient.prefetchQuery({
@@ -143,7 +143,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           queryFn: () => createFeedback(sessionId),
         });
         await new Promise((r) => setTimeout(r, 1000));
-        setMessages((prev) => prev.map((m) => (m.id === aiMsgId ? { ...m, text: closing } : m)));
+        setMessages((prev) => prev.map((m) => (m.id === aiMsgId ? { ...m, text: closing, translatedText: closingKo } : m)));
         await new Promise((r) => setTimeout(r, 300));
         setFeedbackAvailable(true);
         setPageState('idle');
