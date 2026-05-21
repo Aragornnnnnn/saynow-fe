@@ -70,5 +70,7 @@ function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHan
       return handlers.AUTH_SESSION_CLEARED?.(message);
     case 'HAPTIC':
       return handlers.HAPTIC?.(message);
+    case 'EXIT_APP':
+      return handlers.EXIT_APP?.(message);
   }
 }
