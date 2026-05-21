@@ -51,7 +51,7 @@ export default function App() {
         await clearAuthSession();
       } finally {
         setIsReady(true);
-        SplashScreen.hideAsync();
+        // 스플래시는 WebView onLoadEnd에서 숨김
       }
     }
     bootstrap();
