@@ -13,7 +13,8 @@ const HOOK_MESSAGES = [
   '영어로 말했는데 한번에 알아들었을까요?',
 ];
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
-import { requestNativeLogin, triggerHaptic, updateNativeAuthSession } from '@/bridge/commands';
+import { requestNativeLogin, triggerHaptic, updateNativeAuthSession, exitApp } from '@/bridge/commands';
+import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { webBridge } from '@/bridge/webBridge';
 import { useAuthStore } from '@/store/authStore';
 import type { SocialProvider } from '@/lib/api';
@@ -48,6 +49,7 @@ function LoginPageContent() {
   const [errorMessage, setErrorMessage] = useState<string | null>(() => searchParams.get('error'));
   const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
   const isPending = pendingProvider !== null;
+  useBackButtonBridge(() => exitApp());
   const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear, !isPending);
 
   useEffect(() => {
