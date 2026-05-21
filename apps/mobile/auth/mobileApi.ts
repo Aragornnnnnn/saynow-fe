@@ -24,7 +24,7 @@ type AuthTokenResponse = {
 };
 
 type SocialLoginResponse = AuthTokenResponse & {
-  member: {
+  user: {
     userId: string;
     nickname: string | null;
     email: string | null;
@@ -56,11 +56,11 @@ export async function socialLogin(
     accessToken: raw.accessToken,
     refreshToken: raw.refreshToken,
     member: {
-      userId: raw.member.userId,
-      nickname: raw.member.nickname,
-      email: raw.member.email,
-      provider: raw.member.provider,
-      newUser: raw.member.newUser,
+      userId: raw.user.userId,
+      nickname: raw.user.nickname,
+      email: raw.user.email,
+      provider: raw.user.provider,
+      newUser: raw.user.newUser,
     },
   };
   if (__DEV__) console.log('[AuthDebug][API] social-login success', {
