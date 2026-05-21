@@ -136,14 +136,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           ["That's a wrap! Let's check your results ✨", "대화 완료! 결과를 확인해봐요!"],
         ];
         const [closing, closingKo] = closingLines[Math.floor(Math.random() * closingLines.length)];
-        const aiMsgId = `ai-closing-${Date.now()}`;
-        setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...' }]);
         queryClient.prefetchQuery({
           queryKey: feedbackQueryKeys.detail(sessionId),
           queryFn: () => createFeedback(sessionId),
         });
         await new Promise((r) => setTimeout(r, 1000));
-        setMessages((prev) => prev.map((m) => (m.id === aiMsgId ? { ...m, text: closing, translatedText: closingKo } : m)));
+        setMessages((prev) => [...prev, { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing, translatedText: closingKo }]);
         await new Promise((r) => setTimeout(r, 300));
         setFeedbackAvailable(true);
         setPageState('idle');
