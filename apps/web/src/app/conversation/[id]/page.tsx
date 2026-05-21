@@ -124,11 +124,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     try {
       const result = await submitUtterance(sessionId, text);
 
-      // 하트 깎임 효과 먼저
+      // 하트 깎임 효과
       setRemainingHearts(result.remainingHearts);
-      setFeedbackAvailable(result.feedbackAvailable);
 
-      // 마지막 답변 — 마무리 멘트 + 백그라운드 피드백 prefetch
+      // 마지막 답변 — ... 말풍선 → 마무리 멘트 → 결과 보기 버튼
       if (result.feedbackAvailable) {
         const closingLines = [
           "Great job! Let's see how you did! 😊",
@@ -137,11 +136,16 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           "That's a wrap! Let's check your results ✨",
         ];
         const closing = closingLines[Math.floor(Math.random() * closingLines.length)];
-        setMessages((prev) => [...prev, { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing }]);
+        const aiMsgId = `ai-closing-${Date.now()}`;
+        setMessages((prev) => [...prev, { id: aiMsgId, role: 'ai', text: '...' }]);
         queryClient.prefetchQuery({
           queryKey: feedbackQueryKeys.detail(sessionId),
           queryFn: () => createFeedback(sessionId),
         });
+        await new Promise((r) => setTimeout(r, 1000));
+        setMessages((prev) => prev.map((m) => (m.id === aiMsgId ? { ...m, text: closing } : m)));
+        await new Promise((r) => setTimeout(r, 300));
+        setFeedbackAvailable(true);
         setPageState('idle');
         return;
       }
