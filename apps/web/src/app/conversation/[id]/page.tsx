@@ -362,24 +362,24 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     return (
       <main className="flex h-full flex-col bg-background">
         <div className="flex items-center justify-between px-4 pb-2 pt-6">
-          <div className="h-6 w-6 rounded-full bg-card animate-pulse" />
+          <div className="h-6 w-6 rounded-full bg-card skeleton" />
           <div className="flex gap-0.5">
-            {[0,1,2].map(i => <div key={i} className="h-5 w-5 rounded-full bg-card animate-pulse" />)}
+            {[0,1,2].map(i => <div key={i} className="h-5 w-5 rounded-full bg-card skeleton" />)}
           </div>
         </div>
         <div className="flex-1 px-4 py-3 space-y-3">
           <div className="flex justify-start">
-            <div className="h-16 w-3/4 rounded-2xl rounded-bl-sm bg-card animate-pulse" />
+            <div className="h-16 w-3/4 rounded-2xl rounded-bl-sm bg-card skeleton" />
           </div>
           <div className="flex justify-end">
-            <div className="h-10 w-1/2 rounded-2xl rounded-br-sm bg-card animate-pulse" />
+            <div className="h-10 w-1/2 rounded-2xl rounded-br-sm bg-card skeleton" />
           </div>
           <div className="flex justify-start">
-            <div className="h-12 w-2/3 rounded-2xl rounded-bl-sm bg-card animate-pulse" />
+            <div className="h-12 w-2/3 rounded-2xl rounded-bl-sm bg-card skeleton" />
           </div>
         </div>
         <div className="px-4 pb-10 pt-2">
-          <div className="h-14 w-full rounded-2xl bg-card animate-pulse" />
+          <div className="h-14 w-full rounded-2xl bg-card skeleton" />
         </div>
       </main>
     );
