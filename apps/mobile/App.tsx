@@ -31,6 +31,7 @@ export default function App() {
   const webviewRef = useRef<WebView>(null);
   const [isReady, setIsReady] = useState(false);
   const [hasError, setHasError] = useState(false);
+  const [authScript, setAuthScript] = useState<string | null>(null);
   const postToWeb = usePostToWeb(webviewRef);
   const { start: startStt, stop: stopStt } = useStt({
     onPartial: (transcript) => postToWeb({ type: 'STT_PARTIAL', transcript }),
@@ -46,7 +47,7 @@ export default function App() {
         if (stored?.refreshToken && stored.member) {
           const refreshed = await refreshAuthSession(stored.refreshToken, stored.member);
           await saveAuthSession(refreshed);
-          webviewRef.current?.injectJavaScript(createAuthScript(refreshed));
+          setAuthScript(createAuthScript(refreshed));
         }
       } catch {
         await clearAuthSession();
@@ -153,6 +154,7 @@ export default function App() {
             webviewDebuggingEnabled={__DEV__}
             javaScriptCanOpenWindowsAutomatically
             setSupportMultipleWindows
+            injectedJavaScriptBeforeContentLoaded={authScript ?? 'true;'}
             onLoadEnd={() => SplashScreen.hideAsync()}
             onMessage={handleMessage}
             onError={handleError}
