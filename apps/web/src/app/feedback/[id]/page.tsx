@@ -1,9 +1,10 @@
 // 피드백 페이지 — 대화 결과 이해도 및 발화별 말풍선 피드백
 'use client';
 
-import { use, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
+import confetti from 'canvas-confetti';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { useFeedbackQuery } from '@/queries/feedback';
 import { AiBubble } from '@/components/chat/AiBubble';
@@ -42,29 +43,12 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   return (
     <main className='flex h-full flex-col bg-background'>
       <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain'>
-        {/* 상단 결과 섹션 */}
-        <div className='px-5 pt-12 pb-6 text-center'>
-          <p className='mb-1 text-4xl'>{feedback.cleared ? '🎉' : '😅'}</p>
-          <h1 className='text-xl font-bold text-foreground'>{feedback.cleared ? '클리어!' : '아쉬워요'}</h1>
-          <p className='mt-2 text-sm text-muted-foreground'>
-            총 이해도{' '}
-            <span className={`text-2xl font-bold ${comprehensionStyle(feedback.comprehensionScore)}`}>
-              {feedback.comprehensionScore}%
-            </span>
-          </p>
-          <div className='mt-2 flex justify-center gap-0.5'>
-            {Array.from({ length: 3 }).map((_, i) => (
-              <span key={i} className={`text-base ${i < feedback.remainingHearts ? 'opacity-100' : 'opacity-20'}`}>
-                ❤️
-              </span>
-            ))}
-          </div>
-          {feedback.feedbackSummary && (
-            <p className='mt-3 text-sm text-muted-foreground leading-relaxed'>{feedback.feedbackSummary}</p>
-          )}
-        </div>
-
-        {/* 채팅 피드백 섹션 */}
+        <ResultHeader
+          cleared={feedback.cleared}
+          score={feedback.comprehensionScore}
+          remainingHearts={feedback.remainingHearts}
+          summary={feedback.feedbackSummary}
+        />
         <div className='px-4 pb-6 space-y-6'>
           <TurnList turns={feedback.turnFeedbacks} />
         </div>
@@ -82,6 +66,115 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   );
 }
 
+// ─── ResultHeader ─────────────────────────────────────────────────────────────
+
+interface ResultHeaderProps {
+  cleared: boolean;
+  score: number;
+  remainingHearts: number;
+  summary?: string;
+}
+
+function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeaderProps) {
+  const [displayScore, setDisplayScore] = useState(0);
+
+  // 입장 시 컨페티 + 카운트업
+  useEffect(() => {
+    if (cleared) {
+      confetti({
+        particleCount: 120,
+        spread: 80,
+        origin: { y: 0.4 },
+        colors: ['#E07A3A', '#FFF4ED', '#f59e0b', '#ffffff', '#fbbf24'],
+      });
+    }
+
+    // 카운트업: 700ms 동안 0 → score
+    const duration = 700;
+    const frameRate = 60;
+    const totalFrames = Math.round((duration / 1000) * frameRate);
+    let frame = 0;
+    const timer = setInterval(() => {
+      frame += 1;
+      const progress = frame / totalFrames;
+      // easeOut 커브
+      setDisplayScore(Math.round(score * (1 - Math.pow(1 - progress, 3))));
+      if (frame >= totalFrames) {
+        setDisplayScore(score);
+        clearInterval(timer);
+      }
+    }, 1000 / frameRate);
+
+    return () => clearInterval(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.45, ease: 'easeOut' }}
+      className='px-5 pt-12 pb-6 text-center'
+    >
+      <motion.p
+        initial={{ scale: 0.5, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1, duration: 0.4, type: 'spring', stiffness: 260, damping: 16 }}
+        className='mb-1 text-5xl'
+      >
+        {cleared ? '🎉' : '😅'}
+      </motion.p>
+
+      <motion.h1
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25, duration: 0.3 }}
+        className='text-xl font-bold text-foreground'
+      >
+        {cleared ? '클리어!' : '아쉬워요'}
+      </motion.h1>
+
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35, duration: 0.3 }}
+      >
+        <p className='mt-2 text-sm text-muted-foreground'>
+          총 이해도{' '}
+          <span className={`text-3xl font-bold tabular-nums ${comprehensionStyle(score)}`}>
+            {displayScore}%
+          </span>
+        </p>
+        <div className='mt-2 flex justify-center gap-0.5'>
+          {Array.from({ length: 3 }).map((_, i) => (
+            <motion.span
+              key={i}
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: i < remainingHearts ? 1 : 0.2 }}
+              transition={{ delay: 0.45 + i * 0.08, type: 'spring', stiffness: 300, damping: 18 }}
+              className='text-base'
+            >
+              ❤️
+            </motion.span>
+          ))}
+        </div>
+        {summary && (
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.7, duration: 0.4 }}
+            className='mt-3 text-sm text-muted-foreground leading-relaxed'
+          >
+            {summary}
+          </motion.p>
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// ─── TurnList ─────────────────────────────────────────────────────────────────
+
 function TurnList({ turns }: { turns: ApiTurnFeedback[] }) {
   return (
     <>
@@ -91,6 +184,8 @@ function TurnList({ turns }: { turns: ApiTurnFeedback[] }) {
     </>
   );
 }
+
+// ─── TurnBubblePair ───────────────────────────────────────────────────────────
 
 function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
   const [expanded, setExpanded] = useState(false);
@@ -146,7 +241,6 @@ function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
             transition={{ duration: 0.18, ease: 'easeOut' }}
             className='flex flex-col items-end gap-2'
           >
-            {/* 외국인 귀에 들린 방식 — 두 필드를 한 블록으로 */}
             {(turn.nativeLanguageInterpretation || turn.nativeUnderstanding) && (
               <div className='rounded-2xl rounded-tr-none bg-zinc-100 px-4 py-3 max-w-[85%] space-y-1'>
                 <p className='text-[11px] font-semibold text-muted-foreground tracking-wide'>🎧 외국인 귀에는</p>
@@ -158,7 +252,6 @@ function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
                 )}
               </div>
             )}
-            {/* 더 나은 표현 */}
             {turn.betterExpression && (
               <div className='rounded-2xl rounded-tr-none bg-green-50 border border-green-200 px-4 py-3 max-w-[85%] space-y-1'>
                 <p className='text-[11px] font-semibold text-green-600 tracking-wide'>✨ 이렇게 말하면 더 자연스러워요</p>
@@ -171,6 +264,8 @@ function TurnBubblePair({ turn }: { turn: ApiTurnFeedback }) {
     </div>
   );
 }
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
 
 function comprehensionStyle(score: number): string {
   if (score >= 70) return 'text-green-600';

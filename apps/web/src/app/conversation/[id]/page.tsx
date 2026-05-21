@@ -65,7 +65,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   useEffect(() => {
     if (prevHeartsRef.current > remainingHearts) {
       setHeartShake(true);
-      setHeartToast(remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '질문을 잘 읽고 대답해보세요 ❤️');
+      setHeartToast(remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '조금 더 자세히 대답해보세요 💪');
       setTimeout(() => setHeartShake(false), 600);
       setTimeout(() => setHeartToast(null), 2500);
     }
@@ -314,7 +314,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-24 left-1/2 z-20 -translate-x-1/2 rounded-full bg-foreground px-4 py-2 text-sm font-medium text-background shadow-lg"
+            className="absolute top-24 left-1/2 z-20 -translate-x-1/2 whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-medium text-white shadow-lg"
           >
             {heartToast}
           </motion.div>
