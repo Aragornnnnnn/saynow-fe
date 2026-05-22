@@ -103,11 +103,21 @@ export default function Home() {
           onClick={(e) => { if (e.target === scrollRef.current) setExpandedScenarioId(null); }}
         >
           {isPending ? (
-            <div className="mt-6 space-y-4">
+            <div className="mt-6 flex flex-col items-center px-4">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex flex-col items-center gap-2">
-                  <div className="h-20 w-20 skeleton rounded-full bg-card" />
-                  <div className="h-4 w-32 skeleton rounded bg-card" />
+                <div key={i} className="flex w-full flex-col items-center">
+                  <div className="relative">
+                    <div className="h-22 w-22 skeleton rounded-full bg-card" />
+                    <div className="absolute -bottom-1 -right-1 h-5 w-5 skeleton rounded-full bg-card" />
+                  </div>
+                  <div className="mt-2 h-4 w-28 skeleton rounded bg-card" />
+                  {i < 2 && (
+                    <div className="my-3 flex flex-col items-center gap-1">
+                      {Array.from({ length: 3 }).map((_, j) => (
+                        <div key={j} className="h-1.5 w-1.5 rounded-full bg-border" />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -122,16 +132,18 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 더 많은 시나리오 예고 — 남은 공간 전체 차지 */}
-      <div className="flex flex-col items-center pb-10 pt-3">
-        <div className="flex flex-col items-center gap-1 pb-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
-          ))}
+      {/* 더 많은 시나리오 예고 — 로딩 중엔 숨김 */}
+      {!isPending && (
+        <div className="flex flex-col items-center pb-10 pt-3">
+          <div className="flex flex-col items-center gap-1 pb-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
+            ))}
+          </div>
+          <span className="text-4xl">☁️</span>
+          <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
         </div>
-        <span className="text-4xl">☁️</span>
-        <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
-      </div>
+      )}
 
       {/* fixed 팝오버 카드 */}
       <AnimatePresence initial={false}>
