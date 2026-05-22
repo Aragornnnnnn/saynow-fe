@@ -446,16 +446,21 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* 하트 안내 — 블러 전환 시 페이드인 */}
-      <motion.div
-        className="relative z-20 h-5 px-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: bgBlurred ? 1 : 0 }}
-        transition={{ duration: 0.6 }}
-      >
-        <p className="text-center text-xs text-white/70">
-          질문에 맞는 대답을 해야 하트가 유지돼요
-        </p>
-      </motion.div>
+      <AnimatePresence>
+        {bgBlurred && (
+          <motion.div
+            className="relative z-20 px-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+          >
+            <p className="text-center text-xs text-white/70">
+              질문에 맞는 대답을 해야 하트가 유지돼요
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 그라데이션 테두리 플래시 */}
       <AnimatePresence>
