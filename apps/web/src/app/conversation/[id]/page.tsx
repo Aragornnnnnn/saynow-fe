@@ -143,6 +143,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           queryKey: feedbackQueryKeys.detail(sessionId),
           queryFn: () => createFeedback(sessionId),
         });
+        // 피드백 페이지 진입 시 이미지 flash 방지 — 브라우저 캐시에 미리 올려둠
+        (['success', 'fail'] as const).forEach((type) => {
+          const img = new Image();
+          img.src = getScenarioImage(Number(id), type);
+        });
         await new Promise((r) => setTimeout(r, 1000));
         setMessages((prev) => [...prev, { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing, translatedText: closingKo }]);
         setPageState('idle');
@@ -333,8 +338,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     }
   }
 
+  const [navigating, setNavigating] = useState(false);
+
   function handleNext() {
-    if (!feedbackAvailable) return;
+    if (!feedbackAvailable || navigating) return;
+    setNavigating(true);
     if (sessionId) exitSession(sessionId).catch(() => {});
     router.push(`/feedback/${sessionId}?scenarioId=${id}`);
   }
@@ -579,9 +587,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             transition={{ duration: 0.3, ease: 'easeOut' }}
             whileTap={{ scale: 0.95 }}
             onClick={handleNext}
-            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white transition-opacity"
+            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white transition-opacity flex items-center justify-center gap-2"
           >
-            결과 보기
+            {navigating
+              ? <><span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" /><span>이동 중...</span></>
+              : '결과 보기'
+            }
           </motion.button>
         ) : (
           /* 마이크 버튼 — 가로로 아이콘 + 텍스트 */
