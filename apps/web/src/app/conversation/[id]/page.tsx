@@ -378,9 +378,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             {[0,1,2].map(i => <span key={i} className="text-lg drop-shadow-md">❤️</span>)}
           </div>
         </div>
-        <div className="relative z-20 h-5 px-4">
-          <p className="text-center text-xs text-white/70 drop-shadow">질문에 맞는 대답을 해야 하트가 유지돼요</p>
-        </div>
+        <div className="relative z-20 h-5 px-4" />
         <div className="relative z-20 flex-1" />
         <div className="relative z-20 px-4 pb-10 pt-2">
           <div className="mb-3 h-6" />
