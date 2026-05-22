@@ -227,7 +227,7 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
       ))}
 
       {/* 더 많은 시나리오 예고 */}
-      <div className="-mx-4 w-[calc(100%+2rem)] flex flex-col items-center" style={{ minHeight: '30vh', background: 'linear-gradient(to bottom, transparent 0%, #CBD5E1 60%, #B0BEC5 100%)' }}>
+      <div className="-mx-4 w-[calc(100%+2rem)] flex flex-col items-center pb-12" style={{ background: 'linear-gradient(to bottom, transparent 0%, #F0E8E0 60%, #E8DDD0 100%)' }}>
         <div className="flex flex-col items-center gap-1 py-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
