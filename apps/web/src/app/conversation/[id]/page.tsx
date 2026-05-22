@@ -364,7 +364,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   if (pageState === 'loading') {
     const loadingBgUrl = getScenarioImage(Number(id), 'play');
     return (
-      <main className="relative flex h-full flex-col overflow-hidden">
+      <main className="relative flex h-dvh flex-col overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${loadingBgUrl})`, backgroundColor: '#a07860' }} />
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40"
@@ -397,7 +397,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const bgImageUrl = getScenarioImage(Number(id), 'play');
 
   return (
-    <main className="relative flex h-full flex-col overflow-hidden">
+    <main className="relative flex h-dvh flex-col overflow-hidden">
       {/* 배경 이미지 */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-[filter] duration-[800ms] ease-in-out"
@@ -445,12 +445,17 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* 하트 안내 */}
-      <div className="relative z-20 h-5 px-4">
-        <p className="text-center text-xs text-white/80" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>
+      {/* 하트 안내 — 블러 전환 시 페이드인 */}
+      <motion.div
+        className="relative z-20 h-5 px-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: bgBlurred ? 1 : 0 }}
+        transition={{ duration: 0.6 }}
+      >
+        <p className="text-center text-xs text-white/70">
           질문에 맞는 대답을 해야 하트가 유지돼요
         </p>
-      </div>
+      </motion.div>
 
       {/* 그라데이션 테두리 플래시 */}
       <AnimatePresence>
