@@ -6,13 +6,22 @@ import { MSWProvider } from "@/mocks/MSWProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SayNow",
-  description: "실제 외국인 상황을 시뮬레이션하며 영어 회화를 연습하세요",
+  title: "SayNow — 외국인과의 영어 회화 연습",
+  description: "실제 외국인 상황을 시뮬레이션하며 영어 회화를 연습하고, AI가 외국인 관점의 이해도 피드백을 드려요.",
+  keywords: ["영어 회화", "영어 연습", "AI 영어", "영어 스피킹", "SayNow"],
+  openGraph: {
+    title: "SayNow — 외국인과의 영어 회화 연습",
+    description: "실제 외국인 상황을 시뮬레이션하며 영어 회화를 연습하고, AI가 외국인 관점의 이해도 피드백을 드려요.",
+    siteName: "SayNow",
+    locale: "ko_KR",
+    type: "website",
+  },
   icons: {
     icon: [
       { url: "/favicons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
       { url: "/favicons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
       { url: "/favicons/favicon-96x96.png", sizes: "96x96", type: "image/png" },
+      { url: "/favicons/android-icon-192x192.png", sizes: "192x192", type: "image/png" },
     ],
     apple: [
       { url: "/favicons/apple-icon-57x57.png", sizes: "57x57" },
@@ -25,6 +34,14 @@ export const metadata: Metadata = {
       { url: "/favicons/apple-icon-152x152.png", sizes: "152x152" },
       { url: "/favicons/apple-icon-180x180.png", sizes: "180x180" },
     ],
+    other: [
+      { rel: "apple-touch-icon-precomposed", url: "/favicons/apple-icon-precomposed.png" },
+    ],
+  },
+  manifest: "/favicons/manifest.json",
+  other: {
+    "msapplication-TileColor": "#ffffff",
+    "msapplication-TileImage": "/favicons/ms-icon-144x144.png",
   },
 };
 
