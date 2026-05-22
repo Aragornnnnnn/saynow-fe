@@ -151,7 +151,7 @@ export default function Home() {
                 return (
                   <>
                     <div
-                      className="absolute -top-2 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent"
+                      className="absolute -top-1.75 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent"
                       style={{ left: arrowLeft - 8, borderBottomColor: cardBg }}
                     />
                     <div className="rounded-2xl px-5 py-4 shadow-lg" style={{ background: cardBg }}>
