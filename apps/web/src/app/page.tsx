@@ -239,7 +239,6 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
           <ScenarioBadgeItem
             scenario={scenario}
             index={index}
-            isLast={index === scenarios.length - 1}
             isExpanded={expandedId === scenario.scenarioId}
             onBadgeClick={onBadgeClick}
             onStart={onStart}
@@ -254,13 +253,12 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
 interface ScenarioBadgeItemProps {
   scenario: ApiScenario;
   index: number;
-  isLast: boolean;
   isExpanded: boolean;
   onBadgeClick: (scenario: ApiScenario, el: HTMLElement) => void;
   onStart: (scenarioId: number) => void;
 }
 
-function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick }: ScenarioBadgeItemProps) {
+function ScenarioBadgeItem({ scenario, index, isExpanded, onBadgeClick }: ScenarioBadgeItemProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const isLocked = scenario.locked;
   const isCleared = scenario.cleared;
@@ -319,13 +317,11 @@ function ScenarioBadgeItem({ scenario, index, isLast, isExpanded, onBadgeClick }
       </p>
 
       {/* 점선 커넥터 */}
-      {!isLast && (
-        <div className="my-3 flex flex-col items-center gap-1">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
-          ))}
-        </div>
-      )}
+      <div className="my-3 flex flex-col items-center gap-1">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
+        ))}
+      </div>
     </>
   );
 }
