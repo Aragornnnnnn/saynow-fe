@@ -22,33 +22,14 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   const feedback = feedbackQuery.data;
   const error = feedbackQuery.error;
 
-  if (feedbackQuery.isPending) {
+  const [loadingDone, setLoadingDone] = useState(!feedbackQuery.isPending);
+
+  if (!loadingDone) {
     return (
-      <main className='flex h-full flex-col bg-background'>
-        <div className='no-scrollbar flex-1 overflow-y-auto'>
-          {/* 헤더 스켈레톤 */}
-          <div className='px-5 pt-12 pb-6 flex flex-col items-center gap-3'>
-            <div className='h-12 w-12 rounded-full bg-card skeleton' />
-            <div className='h-6 w-24 rounded-lg bg-card skeleton' />
-            <div className='h-10 w-20 rounded-lg bg-card skeleton' />
-            <div className='flex gap-0.5'>
-              {[0,1,2].map(i => <div key={i} className='h-5 w-5 rounded-full bg-card skeleton' />)}
-            </div>
-            <div className='h-4 w-64 rounded bg-card skeleton' />
-            <div className='h-4 w-48 rounded bg-card skeleton' />
-          </div>
-          {/* 카드 스켈레톤 */}
-          <div className='px-4 pb-6 space-y-6'>
-            {[0,1,2].map(i => (
-              <div key={i} className='rounded-2xl bg-card p-4 space-y-3'>
-                <div className='h-4 w-3/4 rounded bg-muted skeleton' />
-                <div className='h-4 w-1/2 rounded bg-muted skeleton' />
-                <div className='h-16 w-full rounded-xl bg-muted skeleton' />
-              </div>
-            ))}
-          </div>
-        </div>
-      </main>
+      <FeedbackLoadingScreen
+        dataReady={!feedbackQuery.isPending}
+        onDone={() => setLoadingDone(true)}
+      />
     );
   }
 
@@ -94,6 +75,58 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
         </div>
       </main>
     </IntroCardLayout>
+  );
+}
+
+// ─── FeedbackLoadingScreen ────────────────────────────────────────────────────
+
+function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDone: () => void }) {
+  const [progress, setProgress] = useState(0);
+  const dataReadyRef = useRef(dataReady);
+  dataReadyRef.current = dataReady;
+
+  useEffect(() => {
+    const start = Date.now();
+    const duration = 2800;
+    let raf: number;
+    function tick() {
+      const elapsed = Date.now() - start;
+      const t = Math.min(elapsed / duration, 1);
+      const natural = t * t * (3 - 2 * t) * 92;
+      // 데이터 준비 완료면 100%로 직행
+      if (dataReadyRef.current) {
+        setProgress(100);
+        setTimeout(onDone, 300);
+        return;
+      }
+      setProgress(natural);
+      if (t < 1) raf = requestAnimationFrame(tick);
+    }
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 루프 종료 후 데이터 도착 감지
+  useEffect(() => {
+    if (dataReady) {
+      setProgress(100);
+      const t = setTimeout(onDone, 300);
+      return () => clearTimeout(t);
+    }
+  }, [dataReady, onDone]);
+
+  return (
+    <main className='flex h-full flex-col items-center justify-center bg-background px-8 gap-5'>
+      <p className='text-sm font-medium text-muted-foreground'>결과 분석 중...</p>
+      <div className='w-full max-w-xs h-1.5 rounded-full bg-muted overflow-hidden'>
+        <motion.div
+          className='h-full rounded-full bg-primary'
+          style={{ width: `${progress}%` }}
+          transition={{ ease: 'linear' }}
+        />
+      </div>
+    </main>
   );
 }
 
