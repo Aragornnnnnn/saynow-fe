@@ -395,7 +395,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const bgImageUrl = getScenarioImage(Number(id), 'play');
 
   return (
-    <main className="relative flex h-dvh flex-col overflow-hidden">
+    <main className="relative flex h-dvh flex-col overflow-hidden bg-black">
       {/* 배경 이미지 */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-[filter] duration-[800ms] ease-in-out"
