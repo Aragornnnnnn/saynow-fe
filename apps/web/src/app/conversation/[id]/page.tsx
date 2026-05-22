@@ -145,9 +145,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         });
         await new Promise((r) => setTimeout(r, 1000));
         setMessages((prev) => [...prev, { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing, translatedText: closingKo }]);
-        await new Promise((r) => setTimeout(r, 300));
-        setFeedbackAvailable(true);
         setPageState('idle');
+        await new Promise((r) => setTimeout(r, 400));
+        setFeedbackAvailable(true);
         return;
       }
 
