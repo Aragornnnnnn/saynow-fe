@@ -121,7 +121,7 @@ export default function Home() {
           ) : null}
         </div>
         {/* 하단 그라데이션 */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-background to-transparent" />
+        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-[#E0F2F1] to-transparent" />
       </div>
 
       {/* fixed 팝오버 카드 */}
@@ -225,6 +225,17 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
           />
         </motion.div>
       ))}
+
+      {/* 더 많은 시나리오 예고 */}
+      <div className="-mx-4 w-[calc(100%+2rem)] flex flex-col items-center" style={{ minHeight: '30vh', background: 'linear-gradient(to bottom, transparent 0%, #CBD5E1 60%, #B0BEC5 100%)' }}>
+        <div className="flex flex-col items-center gap-1 py-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
+          ))}
+        </div>
+        <span className="text-4xl">☁️</span>
+        <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
+      </div>
     </div>
   );
 }
