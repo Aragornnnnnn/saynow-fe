@@ -12,6 +12,7 @@ import type { ApiScenario, ApiCategory } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
 import { useAuthStore } from '@/store/authStore';
 import { prefetchSession } from '@/lib/api';
+import { getScenarioImage } from '@/lib/scenarioImages';
 
 export default function Home() {
   const router = useRouter();
@@ -55,6 +56,11 @@ export default function Home() {
     setExpandedScenarioId((prev) => {
       if (prev === scenario.scenarioId) { setBadgeRect(null); return null; }
       setBadgeRect(rect);
+      // 팝오버 열릴 때 대화/피드백 이미지 미리 로드
+      (['play', 'success', 'fail'] as const).forEach((type) => {
+        const img = new Image();
+        img.src = getScenarioImage(scenario.scenarioId, type);
+      });
       return scenario.scenarioId;
     });
   }
