@@ -123,7 +123,7 @@ export default function Home() {
             </div>
           ) : activeCategory ? (
             <ScenarioBadgeList
-              scenarios={activeCategory.scenarios}
+              scenarios={activeCategory.scenarios.slice(0, 3)}
               expandedId={expandedScenarioId}
               onBadgeClick={(scenario, el) => handleBadgeClick(scenario, el.getBoundingClientRect())}
               onStart={(id) => { prefetchSession(id); router.push(`/conversation/${id}`); }}

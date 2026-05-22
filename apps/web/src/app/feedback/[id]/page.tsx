@@ -2,12 +2,13 @@
 'use client';
 
 import { use, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { useFeedbackQuery } from '@/queries/feedback';
 import { triggerHaptic } from '@/bridge/commands';
+import { getScenarioImage } from '@/lib/scenarioImages';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { useTts } from '@/hooks/useTts';
@@ -15,6 +16,8 @@ import { useTts } from '@/hooks/useTts';
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const scenarioId = Number(searchParams.get('scenarioId') ?? 1);
   const feedbackQuery = useFeedbackQuery(Number(id));
   const feedback = feedbackQuery.data;
   const error = feedbackQuery.error;
@@ -63,28 +66,113 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   }
 
   return (
-    <main className='flex h-full flex-col bg-background'>
-      <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain'>
-        <ResultHeader
-          cleared={feedback.cleared}
-          score={feedback.comprehensionScore}
-          remainingHearts={feedback.remainingHearts}
-          summary={feedback.feedbackSummary}
-        />
-        <div className='px-4 pb-6 space-y-6'>
-          <TurnList turns={feedback.turnFeedbacks} />
+    <IntroCardLayout
+      cleared={feedback.cleared}
+      score={feedback.comprehensionScore}
+      scenarioId={scenarioId}
+    >
+      <main className='flex h-full flex-col bg-background'>
+        <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain'>
+          <ResultHeader
+            cleared={feedback.cleared}
+            score={feedback.comprehensionScore}
+            remainingHearts={feedback.remainingHearts}
+            summary={feedback.feedbackSummary}
+          />
+          <div className='px-4 pb-6 space-y-6'>
+            <TurnList turns={feedback.turnFeedbacks} />
+          </div>
         </div>
-      </div>
 
-      <div className='px-4 pb-3 pt-3 border-t border-border'>
-        <button
-          onClick={() => router.replace('/')}
-          className='w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity'
+        <div className='px-4 pb-3 pt-3 border-t border-border'>
+          <button
+            onClick={() => router.replace('/')}
+            className='w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity'
+          >
+            홈으로 가기
+          </button>
+        </div>
+      </main>
+    </IntroCardLayout>
+  );
+}
+
+// ─── IntroCardLayout ──────────────────────────────────────────────────────────
+
+interface IntroCardLayoutProps {
+  cleared: boolean;
+  score: number;
+  scenarioId: number;
+  children: React.ReactNode;
+}
+
+function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayoutProps) {
+  const [slidUp, setSlidUp] = useState(false);
+  const imageUrl = getScenarioImage(scenarioId, cleared ? 'success' : 'fail');
+
+  useEffect(() => {
+    if (cleared) {
+      triggerHaptic('heavy');
+      confetti({
+        particleCount: 140,
+        spread: 85,
+        origin: { y: 0.4 },
+        colors: ['#E07A3A', '#FFF4ED', '#f59e0b', '#ffffff', '#fbbf24'],
+      });
+    }
+  }, [cleared]);
+
+  return (
+    <div className='relative h-full overflow-hidden'>
+      {/* 피드백 콘텐츠 — 뒤에 깔림 */}
+      <div className='absolute inset-0'>{children}</div>
+
+      {/* 인트로 카드 — 위로 슬라이드 아웃 */}
+      <motion.div
+        className='absolute inset-0 flex flex-col'
+        animate={{ y: slidUp ? '-100%' : 0 }}
+        transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
+      >
+        {/* 배경 이미지 */}
+        <div
+          className='absolute inset-0 bg-cover bg-center'
+          style={{ backgroundImage: `url(${imageUrl})`, backgroundColor: cleared ? '#5a9e6f' : '#9e5a5a' }}
+        />
+        <div
+          className='absolute inset-0'
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 20%, rgba(0,0,0,0.78) 100%)' }}
+        />
+
+        {/* 콘텐츠 */}
+        <motion.div
+          className='relative z-10 mt-auto flex flex-col items-center gap-2 pb-16 px-7'
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
         >
-          홈으로 가기
-        </button>
-      </div>
-    </main>
+          <span className='text-5xl leading-none'>{cleared ? '🎉' : '😅'}</span>
+          <p className='mt-2 text-4xl font-extrabold tracking-tight text-white'>
+            {cleared ? '클리어!' : '아쉬워요'}
+          </p>
+          <p className='text-lg font-semibold text-white/75'>이해도 {score}%</p>
+
+          {/* 깜빡이는 화살표 힌트 */}
+          <div
+            className='mt-6 flex cursor-pointer flex-col items-center gap-1'
+            onClick={() => setSlidUp(true)}
+          >
+            <motion.span
+              className='text-2xl text-white/50'
+              animate={{ y: [0, 7, 0] }}
+              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+            >
+              ↓
+            </motion.span>
+            <span className='text-xs text-white/45'>피드백 보기</span>
+          </div>
+        </motion.div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -100,18 +188,8 @@ interface ResultHeaderProps {
 function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeaderProps) {
   const [displayScore, setDisplayScore] = useState(0);
 
-  // 입장 시 컨페티 + 카운트업
+  // 카운트업: 700ms 동안 0 → score (confetti/haptic은 IntroCardLayout에서 처리)
   useEffect(() => {
-    if (cleared) {
-      triggerHaptic('heavy');
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.4 },
-        colors: ['#E07A3A', '#FFF4ED', '#f59e0b', '#ffffff', '#fbbf24'],
-      });
-    }
-
     // 카운트업: 700ms 동안 0 → score
     const duration = 700;
     const frameRate = 60;

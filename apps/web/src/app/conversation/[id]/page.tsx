@@ -13,6 +13,7 @@ import { useBridgeEvent } from '@/bridge/useBridgeEvent';
 import { startNativeStt, stopNativeStt, triggerHaptic } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
+import { getScenarioImage } from '@/lib/scenarioImages';
 import ExitConfirmModal from './ExitConfirmModal';
 import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
@@ -42,6 +43,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [transcript, setTranscript] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
   const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
+  const [bgBlurred, setBgBlurred] = useState(false);
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
@@ -97,10 +99,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       });
   }, [id]);
 
-  // AI 메시지 추가될 때마다 TTS 자동 재생 + 스크롤
+  // AI 메시지 추가될 때마다 TTS 자동 재생 + 스크롤 + 첫 메시지에서 블러 트리거
   useEffect(() => {
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'ai' && lastMsg.text !== '...') {
+      setBgBlurred(true);
       speak(lastMsg.text, null, {
         onStart: () => setSpeakingId(lastMsg.id),
         onEnd: () => setSpeakingId(null),
@@ -333,7 +336,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   function handleNext() {
     if (!feedbackAvailable) return;
     if (sessionId) exitSession(sessionId).catch(() => {});
-    router.push(`/feedback/${sessionId}`);
+    router.push(`/feedback/${sessionId}?scenarioId=${id}`);
   }
 
   async function handleExit() {
@@ -360,38 +363,65 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   if (pageState === 'loading') {
     return (
-      <main className="flex h-full flex-col bg-background">
-        <div className="flex items-center justify-between px-4 pb-2 pt-6">
-          <div className="h-6 w-6 rounded-full bg-card skeleton" />
+      <main className="relative flex h-full flex-col overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${getScenarioImage(Number(id), 'play')})`, backgroundColor: '#a07860' }}
+        />
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }}
+        />
+        <div className="relative z-20 flex items-center justify-between px-4 pb-2 pt-14">
+          <div className="h-9 w-9 rounded-full bg-white/20 skeleton" />
           <div className="flex gap-0.5">
-            {[0,1,2].map(i => <div key={i} className="h-5 w-5 rounded-full bg-card skeleton" />)}
+            {[0,1,2].map(i => <div key={i} className="h-5 w-5 rounded-full bg-white/20 skeleton" />)}
           </div>
         </div>
-        <div className="flex-1 px-4 py-3 space-y-3">
+        <div className="relative z-20 flex-1 px-4 py-3 space-y-3">
           <div className="flex justify-start">
-            <div className="h-16 w-3/4 rounded-2xl rounded-bl-sm bg-card skeleton" />
-          </div>
-          <div className="flex justify-end">
-            <div className="h-10 w-1/2 rounded-2xl rounded-br-sm bg-card skeleton" />
-          </div>
-          <div className="flex justify-start">
-            <div className="h-12 w-2/3 rounded-2xl rounded-bl-sm bg-card skeleton" />
+            <div className="h-16 w-3/4 rounded-2xl rounded-bl-sm bg-white/20 skeleton" />
           </div>
         </div>
-        <div className="px-4 pb-10 pt-2">
-          <div className="h-14 w-full rounded-2xl bg-card skeleton" />
+        <div className="relative z-20 px-4 pb-10 pt-2">
+          <div className="h-14 w-full rounded-2xl bg-white/20 skeleton" />
         </div>
       </main>
     );
   }
 
+  const bgImageUrl = getScenarioImage(Number(id), 'play');
+
   return (
-    <main className="relative flex h-full flex-col bg-background overflow-hidden">
+    <main className="relative flex h-full flex-col overflow-hidden">
+      {/* 배경 이미지 */}
+      <div
+        className="absolute inset-0 bg-cover bg-center transition-[filter] duration-[800ms] ease-in-out"
+        style={{
+          backgroundImage: `url(${bgImageUrl})`,
+          filter: bgBlurred ? 'blur(14px) brightness(0.35) saturate(0.8)' : 'none',
+          transform: bgBlurred ? 'scale(1.06)' : 'scale(1)',
+          transition: 'filter 800ms ease, transform 800ms ease',
+          backgroundColor: '#a07860',
+        }}
+      />
+      {/* 상단 그라데이션 — 항상 표시해서 헤더 가시성 보장 */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40"
+        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }}
+      />
+      {/* 하단 그라데이션 — 블러 전환과 함께 등장 */}
+      <motion.div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-64"
+        style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)' }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: bgBlurred ? 1 : 0 }}
+        transition={{ duration: 0.8 }}
+      />
+
       {/* 상단 헤더 */}
-      <div className="flex items-center justify-between px-4 pb-2 pt-6">
+      <div className="relative z-20 flex items-center justify-between px-4 pb-2 pt-14">
         <button
           onClick={() => setShowExitModal(true)}
-          className="flex items-center gap-1 text-muted-foreground active:text-foreground transition-colors"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
         >
           <ChevronLeft size={20} />
         </button>
@@ -402,7 +432,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             className="flex gap-0.5"
           >
             {Array.from({ length: 3 }).map((_, i) => (
-              <span key={i} className={`text-base transition-opacity duration-300 ${i < (3 - remainingHearts) ? 'opacity-20' : 'opacity-100'}`}>
+              <span key={i} className={`text-lg drop-shadow-md transition-opacity duration-300 ${i < (3 - remainingHearts) ? 'opacity-20' : 'opacity-100'}`}>
                 ❤️
               </span>
             ))}
@@ -410,13 +440,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* 하트 안내 — 첫 대화에서만 표시 */}
-      <div className="h-5 px-4">
-        {(
-          <p className="text-center text-xs text-muted-foreground">
-            질문에 맞는 대답을 해야 하트가 유지돼요
-          </p>
-        )}
+      {/* 하트 안내 */}
+      <div className="relative z-20 h-5 px-4">
+        <p className="text-center text-xs text-white/70 drop-shadow">
+          질문에 맞는 대답을 해야 하트가 유지돼요
+        </p>
       </div>
 
       {/* 그라데이션 테두리 플래시 */}
@@ -434,7 +462,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </AnimatePresence>
 
       {/* 채팅 메시지 영역 */}
-      <div className="no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3">
+      <div className="no-scrollbar relative z-20 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3">
         {messages.map((msg) => (
           msg.role === 'ai' ? (
             <div key={msg.id}>
@@ -487,7 +515,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* 하단 컨트롤 */}
-      <div className="px-4 pb-10 pt-2">
+      <div className="relative z-20 px-4 pb-10 pt-2">
         {/* STT transcript */}
         <div className="mb-3 min-h-6 text-center">
           <AnimatePresence mode="wait">
@@ -498,7 +526,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.15 }}
-                className="text-sm text-muted-foreground italic"
+                className="text-sm text-white/80 italic drop-shadow"
               >
                 {transcript || '듣고 있어요...'}
               </motion.p>
