@@ -132,19 +132,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* 더 많은 시나리오 예고 — 로딩 중엔 숨김 */}
-      {!isPending && (
-        <div className="flex flex-col items-center pb-10 pt-3">
-          <div className="flex flex-col items-center gap-1 pb-3">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
-            ))}
-          </div>
-          <span className="text-4xl">☁️</span>
-          <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
-        </div>
-      )}
-
       {/* fixed 팝오버 카드 */}
       <AnimatePresence initial={false}>
         {expandedScenarioId !== null && activeCategory && badgeRect && (() => {
@@ -246,6 +233,11 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
         </motion.div>
       ))}
 
+      {/* 더 많은 시나리오 예고 */}
+      <div className="flex flex-col items-center pb-10">
+        <span className="text-4xl">☁️</span>
+        <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
+      </div>
     </div>
   );
 }
