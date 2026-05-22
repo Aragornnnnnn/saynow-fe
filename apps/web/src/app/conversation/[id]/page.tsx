@@ -109,7 +109,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         onEnd: () => setSpeakingId(null),
       });
     }
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages, speak]);
 
   useBackButtonBridge(() => {
