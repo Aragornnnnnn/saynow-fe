@@ -369,7 +369,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           style={{ backgroundImage: `url(${loadingBgUrl})`, backgroundColor: '#a07860' }} />
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40"
           style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }} />
-        <div className="relative z-20 flex items-center justify-between px-4 pb-2 pt-14">
+        <div className="relative z-20 flex items-center justify-between px-4 pb-2" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
           <button onClick={() => setShowExitModal(true)}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
             <ChevronLeft size={20} />
@@ -410,8 +410,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         }}
       />
       {/* 상단 그라데이션 — 항상 표시해서 헤더 가시성 보장 */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40"
-        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-48"
+        style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)' }}
       />
       {/* 하단 그라데이션 — 블러 전환과 함께 등장 */}
       <motion.div
@@ -423,7 +423,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       />
 
       {/* 상단 헤더 */}
-      <div className="relative z-20 flex items-center justify-between px-4 pb-2 pt-14">
+      <div className="relative z-20 flex items-center justify-between px-4 pb-2" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
         <button
           onClick={() => setShowExitModal(true)}
           className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
@@ -447,7 +447,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {/* 하트 안내 */}
       <div className="relative z-20 h-5 px-4">
-        <p className="text-center text-xs text-white/70 drop-shadow">
+        <p className="text-center text-xs text-white/80" style={{ textShadow: '0 1px 6px rgba(0,0,0,0.8)' }}>
           질문에 맞는 대답을 해야 하트가 유지돼요
         </p>
       </div>
