@@ -362,29 +362,34 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   if (pageState === 'loading') {
+    const loadingBgUrl = getScenarioImage(Number(id), 'play');
     return (
       <main className="relative flex h-full flex-col overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${getScenarioImage(Number(id), 'play')})`, backgroundColor: '#a07860' }}
-        />
+        <div className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${loadingBgUrl})`, backgroundColor: '#a07860' }} />
         <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40"
-          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }}
-        />
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }} />
         <div className="relative z-20 flex items-center justify-between px-4 pb-2 pt-14">
-          <div className="h-9 w-9 rounded-full bg-white/20 skeleton" />
+          <button onClick={() => setShowExitModal(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
+            <ChevronLeft size={20} />
+          </button>
           <div className="flex gap-0.5">
-            {[0,1,2].map(i => <div key={i} className="h-5 w-5 rounded-full bg-white/20 skeleton" />)}
+            {[0,1,2].map(i => <span key={i} className="text-lg drop-shadow-md">❤️</span>)}
           </div>
         </div>
-        <div className="relative z-20 flex-1 px-4 py-3 space-y-3">
-          <div className="flex justify-start">
-            <div className="h-16 w-3/4 rounded-2xl rounded-bl-sm bg-white/20 skeleton" />
-          </div>
+        <div className="relative z-20 h-5 px-4">
+          <p className="text-center text-xs text-white/70 drop-shadow">질문에 맞는 대답을 해야 하트가 유지돼요</p>
         </div>
+        <div className="relative z-20 flex-1" />
         <div className="relative z-20 px-4 pb-10 pt-2">
-          <div className="h-14 w-full rounded-2xl bg-white/20 skeleton" />
+          <div className="mb-3 h-6" />
+          <div className="flex w-full items-center justify-center gap-3 rounded-2xl py-4 bg-primary/60">
+            <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+            <span className="text-sm font-semibold text-white">준비 중...</span>
+          </div>
         </div>
+        {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
       </main>
     );
   }
