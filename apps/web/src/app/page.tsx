@@ -123,7 +123,7 @@ export default function Home() {
       </div>
 
       {/* 더 많은 시나리오 예고 — 남은 공간 전체 차지 */}
-      <div className="flex flex-1 flex-col items-center pb-10 pt-3">
+      <div className="flex flex-col items-center pb-10 pt-3">
         <div className="flex flex-col items-center gap-1 pb-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
