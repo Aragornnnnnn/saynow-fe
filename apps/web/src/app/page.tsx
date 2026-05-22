@@ -73,7 +73,7 @@ export default function Home() {
   }
 
   return (
-    <main className="flex h-dvh flex-col overflow-x-hidden" style={{ background: 'linear-gradient(to bottom, #FAFAF8 60%, #E0F2F1 100%)' }}>
+    <main className="flex h-dvh flex-col overflow-x-hidden" style={{ background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)' }}>
       {/* 헤더 */}
       <div className="px-4 pb-3 pt-6">
         <div className="mb-4 flex items-center justify-between">
@@ -120,8 +120,17 @@ export default function Home() {
             />
           ) : null}
         </div>
-        {/* 하단 그라데이션 */}
-        <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-40 bg-linear-to-t from-[#E0F2F1] to-transparent" />
+      </div>
+
+      {/* 더 많은 시나리오 예고 — 남은 공간 전체 차지 */}
+      <div className="flex flex-1 flex-col items-center pb-10 pt-3">
+        <div className="flex flex-col items-center gap-1 pb-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
+          ))}
+        </div>
+        <span className="text-4xl">☁️</span>
+        <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
       </div>
 
       {/* fixed 팝오버 카드 */}
@@ -226,16 +235,6 @@ function ScenarioBadgeList({ scenarios, expandedId, onBadgeClick, onStart }: Sce
         </motion.div>
       ))}
 
-      {/* 더 많은 시나리오 예고 */}
-      <div className="-mx-4 w-[calc(100%+2rem)] flex flex-col items-center pb-12" style={{ background: 'linear-gradient(to bottom, transparent 0%, #F0E8E0 60%, #E8DDD0 100%)' }}>
-        <div className="flex flex-col items-center gap-1 py-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
-          ))}
-        </div>
-        <span className="text-4xl">☁️</span>
-        <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
-      </div>
     </div>
   );
 }
