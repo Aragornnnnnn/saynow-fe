@@ -27,6 +27,16 @@ export function CategoryFilter({ categories, selectedId, onChange }: CategoryFil
     return () => clearTimeout(id);
   }, [showToast]);
 
+  if (categories.length === 0) {
+    return (
+      <div className="flex gap-2 pb-1">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-8 w-16 skeleton rounded-full bg-card shrink-0" />
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="relative">
       <div className='flex gap-2 overflow-x-auto pb-1 no-scrollbar'>
