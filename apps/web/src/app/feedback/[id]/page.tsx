@@ -108,6 +108,7 @@ interface IntroCardLayoutProps {
 
 function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayoutProps) {
   const [slidUp, setSlidUp] = useState(false);
+  const [dragY, setDragY] = useState(0);
   const imageUrl = getScenarioImage(scenarioId, cleared ? 'success' : 'fail');
 
   useEffect(() => {
@@ -129,9 +130,20 @@ function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayo
 
       {/* 인트로 카드 — 위로 슬라이드 아웃 */}
       <motion.div
-        className='absolute inset-0 flex flex-col'
+        className='absolute inset-0 flex flex-col cursor-pointer'
+        drag={slidUp ? false : 'y'}
+        dragConstraints={{ top: -window.innerHeight, bottom: 0 }}
+        dragElastic={{ top: 0.3, bottom: 0 }}
+        onDrag={(_, info) => setDragY(info.offset.y)}
+        onDragEnd={(_, info) => {
+          if (info.offset.y < -60 || info.velocity.y < -300) {
+            setSlidUp(true);
+          }
+          setDragY(0);
+        }}
+        onClick={() => { if (Math.abs(dragY) < 5) setSlidUp(true); }}
         animate={{ y: slidUp ? '-100%' : 0 }}
-        transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
+        transition={slidUp ? { duration: 0.5, ease: [0.4, 0, 0.2, 1] } : { type: 'spring', stiffness: 400, damping: 40 }}
       >
         {/* 배경 이미지 */}
         <div
@@ -157,10 +169,7 @@ function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayo
           <p className='text-lg font-semibold text-white/75'>이해도 {score}%</p>
 
           {/* 깜빡이는 화살표 힌트 */}
-          <div
-            className='mt-6 flex cursor-pointer flex-col items-center gap-1'
-            onClick={() => setSlidUp(true)}
-          >
+          <div className='mt-6 flex flex-col items-center gap-1 pointer-events-none'>
             <motion.span
               className='text-2xl text-white/50'
               animate={{ y: [0, 7, 0] }}
@@ -168,7 +177,7 @@ function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayo
             >
               ↓
             </motion.span>
-            <span className='text-xs text-white/45'>피드백 보기</span>
+            <span className='text-xs text-white/45'>탭하거나 위로 스와이프</span>
           </div>
         </motion.div>
       </motion.div>
