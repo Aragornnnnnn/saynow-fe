@@ -19,7 +19,8 @@ export type WebToNativeMessage =
       member: BridgeAuthMember;
     }
   | { type: 'AUTH_SESSION_CLEARED' }
-  | { type: 'HAPTIC'; style: 'light' | 'medium' | 'heavy' };
+  | { type: 'HAPTIC'; style: 'light' | 'medium' | 'heavy' }
+  | { type: 'EXIT_APP' };
 
 export type NativeToWebMessage =
   | { type: 'STT_PARTIAL'; transcript: string }
