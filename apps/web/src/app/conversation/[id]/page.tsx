@@ -402,7 +402,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         style={{
           backgroundImage: `url(${bgImageUrl})`,
           filter: bgBlurred ? 'blur(14px) brightness(0.35) saturate(0.8)' : 'none',
-          transform: bgBlurred ? 'scale(1.06)' : 'scale(1)',
+          transform: bgBlurred ? 'scale(1.10)' : 'scale(1)',
           transition: 'filter 800ms ease, transform 800ms ease',
           backgroundColor: '#a07860',
         }}
