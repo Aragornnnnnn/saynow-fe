@@ -61,7 +61,9 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
             summary={feedback.feedbackSummary}
           />
           <div className='px-4 pb-6 space-y-6'>
-            <TurnList turns={feedback.turnFeedbacks} />
+            {feedback.turnFeedbacks.map((turn, index) => (
+              <TurnBubblePair key={turn.turnId} turn={turn} index={index} />
+            ))}
           </div>
         </div>
 
@@ -322,17 +324,6 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
   );
 }
 
-// ─── TurnList ─────────────────────────────────────────────────────────────────
-
-function TurnList({ turns }: { turns: ApiTurnFeedback[] }) {
-  return (
-    <>
-      {turns.map((turn, index) => (
-        <TurnBubblePair key={turn.turnId} turn={turn} index={index} />
-      ))}
-    </>
-  );
-}
 
 // ─── TurnBubblePair ───────────────────────────────────────────────────────────
 
