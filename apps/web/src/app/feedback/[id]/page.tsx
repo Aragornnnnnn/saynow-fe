@@ -82,8 +82,16 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
 
 // ─── FeedbackLoadingScreen ────────────────────────────────────────────────────
 
+const LOADING_MESSAGES = [
+  '대화 내용 분석 중...',
+  '외국인 관점 파악 중...',
+  '이해도 계산 중...',
+  '피드백 정리 중...',
+];
+
 function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDone: () => void }) {
   const [progress, setProgress] = useState(0);
+  const [msgIndex, setMsgIndex] = useState(0);
   const dataReadyRef = useRef(dataReady);
   dataReadyRef.current = dataReady;
   const doneCalledRef = useRef(false);
@@ -124,9 +132,29 @@ function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDo
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dataReady]);
 
+  // 1.2초마다 메시지 순환 (데이터 도착 전까지)
+  useEffect(() => {
+    if (dataReady) return;
+    const id = setInterval(() => {
+      setMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length);
+    }, 1200);
+    return () => clearInterval(id);
+  }, [dataReady]);
+
   return (
     <main className='flex h-full flex-col items-center justify-center bg-background px-8 gap-5'>
-      <p className='text-sm font-medium text-muted-foreground'>결과 분석 중...</p>
+      <AnimatePresence mode='wait'>
+        <motion.p
+          key={msgIndex}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.25 }}
+          className='text-sm font-medium text-muted-foreground'
+        >
+          {LOADING_MESSAGES[msgIndex]}
+        </motion.p>
+      </AnimatePresence>
       <div className='w-full max-w-xs h-1.5 rounded-full bg-muted overflow-hidden'>
         <motion.div
           className='h-full rounded-full bg-primary'
