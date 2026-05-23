@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -15,26 +15,22 @@ import {
 } from 'lucide-react';
 import { clearNativeAuthSession } from '@/bridge/commands';
 import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { logout as requestLogout } from '@/lib/api/auth';
 import { deleteAccount } from '@/lib/api/member';
 import { useAuthStore } from '@/store/authStore';
 
 export default function MyPage() {
   const router = useRouter();
-  const { accessToken, refreshToken, member, _hasHydrated, clearAuth } = useAuthStore();
+  const { isReady } = useRequireAuth();
+  const { member, refreshToken, clearAuth } = useAuthStore();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
   const goHome = useBackButtonReplace('/');
 
-  useEffect(() => {
-    if (_hasHydrated && !accessToken && !refreshToken) {
-      router.replace('/login');
-    }
-  }, [_hasHydrated, accessToken, refreshToken, router]);
-
-  if (!_hasHydrated || (!accessToken && !refreshToken)) return null;
+  if (!isReady) return null;
 
   const displayName = member?.nickname?.trim() || member?.email || 'SayNow 사용자';
   const emailText = member?.email ?? '이메일 정보 없음';

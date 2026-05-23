@@ -7,30 +7,23 @@ import { Lock, ChevronRight, UserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
+import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { exitApp } from '@/bridge/commands';
 import type { ApiScenario, ApiCategory } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
-import { useAuthStore } from '@/store/authStore';
 import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
 
 export default function Home() {
   const router = useRouter();
-  const { accessToken, refreshToken, _hasHydrated } = useAuthStore();
+  const { isReady } = useRequireAuth();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
   const [badgeRect, setBadgeRect] = useState<DOMRect | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const canFetch = _hasHydrated && (!!accessToken || !!refreshToken);
-  const { data, isPending, error, refetch } = useScenariosQuery(canFetch);
-
-  useEffect(() => {
-    if (_hasHydrated && !accessToken && !refreshToken) {
-      router.replace('/login');
-    }
-  }, [_hasHydrated, accessToken, refreshToken, router]);
+  const { data, isPending, error, refetch } = useScenariosQuery(isReady);
 
   useEffect(() => {
     return () => {
@@ -43,7 +36,7 @@ export default function Home() {
     exitApp();
   });
 
-  if (!_hasHydrated || !canFetch) return null;
+  if (!isReady) return null;
 
   const categories = data?.categories ?? [];
 
