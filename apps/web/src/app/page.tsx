@@ -46,6 +46,14 @@ export default function Home() {
       ? categories.find((c) => c.categoryId === selectedCategoryId)
       : categories.find((c) => !c.categoryLocked);
 
+  // 팝오버 카드 계산값
+  const expandedScenario = activeCategory?.scenarios.find((s) => s.scenarioId === expandedScenarioId) ?? null;
+  const cardWidth = 280;
+  const cardLeft = badgeRect ? Math.max(16, Math.min(badgeRect.left + badgeRect.width / 2 - cardWidth / 2, window.innerWidth - cardWidth - 16)) : 0;
+  const cardTop = badgeRect ? badgeRect.bottom + 40 : 0;
+  const arrowLeft = badgeRect ? Math.round(badgeRect.left + badgeRect.width / 2 - cardLeft) : 0;
+  const cardBg = expandedScenario?.locked ? '#9CA3AF' : '#E07A3A';
+
   function handleCategoryChange(id: number | null) {
     setSelectedCategoryId(id);
     setExpandedScenarioId(null);
@@ -139,57 +147,39 @@ export default function Home() {
 
       {/* fixed 팝오버 카드 */}
       <AnimatePresence initial={false}>
-        {expandedScenarioId !== null && activeCategory && badgeRect && (() => {
-          const scenario = activeCategory.scenarios.find((s) => s.scenarioId === expandedScenarioId);
-          if (!scenario) return null;
-          const isComingSoon = scenario.lockReason === 'COMING_SOON';
-          const cardWidth = 280;
-          const left = Math.max(16, Math.min(badgeRect.left + badgeRect.width / 2 - cardWidth / 2, window.innerWidth - cardWidth - 16));
-          // 뱃지 하단 + 제목 텍스트 높이(약 40px) 아래에 카드 표시
-          const top = badgeRect.bottom + 40;
-          const arrowLeft = Math.round(badgeRect.left + badgeRect.width / 2 - left);
-          return (
-            <motion.div
-              key="scenario-card"
-              initial={{ opacity: 0, scale: 0.95, y: -4 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -4 }}
-              transition={{ duration: 0.18, ease: 'easeOut' }}
-              className="fixed z-50"
-              style={{ top, left, width: cardWidth }}
-            >
-              {/* 꼬리 */}
-              {(() => {
-                const cardBg = scenario.locked ? '#9CA3AF' : '#E07A3A';
-                return (
-                  <>
-                    <div
-                      className="absolute -top-1.75 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent"
-                      style={{ left: arrowLeft - 8, borderBottomColor: cardBg }}
-                    />
-                    <div className="rounded-2xl px-5 py-4 shadow-lg" style={{ background: cardBg }}>
-                      <p className="mb-1 text-xs font-semibold text-white/70">달성 목표</p>
-                      <p className="mb-4 text-sm text-white leading-relaxed line-clamp-2">{scenario.scenarioGoal}</p>
-                      {scenario.locked ? (
-                        <button disabled className="w-full rounded-xl bg-white/20 py-3 text-sm font-semibold text-white/60 cursor-default">
-                          {isComingSoon ? '준비 중' : '잠금'}
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => { prefetchSession(scenario.scenarioId); router.push(`/conversation/${scenario.scenarioId}`); }}
-                          className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white py-3 text-sm font-semibold text-primary active:opacity-80 transition-opacity"
-                        >
-                          <span>시작하기</span>
-                          <ChevronRight size={16} />
-                        </button>
-                      )}
-                    </div>
-                  </>
-                );
-              })()}
-            </motion.div>
-          );
-        })()}
+        {expandedScenario && badgeRect && (
+          <motion.div
+            key="scenario-card"
+            initial={{ opacity: 0, scale: 0.95, y: -4 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: -4 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            className="fixed z-50"
+            style={{ top: cardTop, left: cardLeft, width: cardWidth }}
+          >
+            <div
+              className="absolute -top-1.75 w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent"
+              style={{ left: arrowLeft - 8, borderBottomColor: cardBg }}
+            />
+            <div className="rounded-2xl px-5 py-4 shadow-lg" style={{ background: cardBg }}>
+              <p className="mb-1 text-xs font-semibold text-white/70">달성 목표</p>
+              <p className="mb-4 text-sm text-white leading-relaxed line-clamp-2">{expandedScenario.scenarioGoal}</p>
+              {expandedScenario.locked ? (
+                <button disabled className="w-full rounded-xl bg-white/20 py-3 text-sm font-semibold text-white/60 cursor-default">
+                  {expandedScenario.lockReason === 'COMING_SOON' ? '준비 중' : '잠금'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => { prefetchSession(expandedScenario.scenarioId); router.push(`/conversation/${expandedScenario.scenarioId}`); }}
+                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white py-3 text-sm font-semibold text-primary active:opacity-80 transition-opacity"
+                >
+                  <span>시작하기</span>
+                  <ChevronRight size={16} />
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* 배경 딤 — 카드 닫기 */}
