@@ -32,6 +32,12 @@ export default function Home() {
     }
   }, [_hasHydrated, accessToken, refreshToken, router]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    };
+  }, []);
+
   useBackButtonBridge(() => {
     if (expandedScenarioId !== null) { setExpandedScenarioId(null); return; }
     exitApp();
