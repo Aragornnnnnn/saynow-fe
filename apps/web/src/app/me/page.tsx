@@ -57,8 +57,8 @@ export default function MyPage() {
     } catch (error) {
       console.warn('[Auth] logout failed:', error);
     } finally {
-      finishSignedOut();
       setIsLoggingOut(false);
+      finishSignedOut();
     }
   }
 
