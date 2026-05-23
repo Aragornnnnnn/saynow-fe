@@ -28,7 +28,7 @@ interface ChatMessage {
   feedback?: string;
 }
 
-type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'error';
+type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
 
 export default function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -340,11 +340,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     }
   }
 
-  const [navigating, setNavigating] = useState(false);
-
   function handleNext() {
-    if (!feedbackAvailable || navigating) return;
-    setNavigating(true);
+    if (!feedbackAvailable || pageState === 'navigating') return;
+    setPageState('navigating');
     router.push(`/feedback/${sessionId}?scenarioId=${id}`);
   }
 
@@ -590,7 +588,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             onClick={handleNext}
             className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white transition-opacity flex items-center justify-center gap-2"
           >
-            {navigating
+            {pageState === 'navigating'
               ? <><span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" /><span>이동 중...</span></>
               : '결과 보기'
             }
