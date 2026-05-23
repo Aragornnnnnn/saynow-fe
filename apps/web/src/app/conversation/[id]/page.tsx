@@ -47,7 +47,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
-  const { speak } = useTts();
+  const { speak, stop } = useTts();
   const queryClient = useQueryClient();
   const isNative = webBridge.isAvailable();
   const sessionStartedRef = useRef(false);
@@ -326,7 +326,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       }
     } else {
       if (speakingId) {
-        window.speechSynthesis?.cancel();
+        stop();
         setSpeakingId(null);
       }
       if (isNative) {
@@ -496,7 +496,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 onToggleTranslation={() => toggleTranslation(msg.id)}
                 onSpeak={() => {
                   if (speakingId === msg.id) {
-                    window.speechSynthesis?.cancel();
+                    stop();
                     setSpeakingId(null);
                   } else {
                     speak(msg.text, null, {

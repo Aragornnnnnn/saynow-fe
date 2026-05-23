@@ -39,5 +39,11 @@ export function useTts() {
     window.speechSynthesis.speak(utterance);
   }, []);
 
-  return { speak };
+  const stop = useCallback(() => {
+    window.speechSynthesis?.cancel();
+    onEndRef.current?.();
+    onEndRef.current = undefined;
+  }, []);
+
+  return { speak, stop };
 }

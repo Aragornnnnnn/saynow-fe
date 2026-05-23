@@ -342,7 +342,7 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
   const isGood = !turn.feedbackRequired;
-  const { speak } = useTts();
+  const { speak, stop } = useTts();
   const feedbackRef = useRef<HTMLDivElement>(null);
 
   function handleUserBubblePress() {
@@ -359,7 +359,7 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
 
   function handleSpeak() {
     if (isSpeaking) {
-      window.speechSynthesis?.cancel();
+      stop();
       setIsSpeaking(false);
       return;
     }
