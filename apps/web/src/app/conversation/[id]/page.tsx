@@ -150,9 +150,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         });
         await new Promise((r) => setTimeout(r, 1000));
         setMessages((prev) => [...prev, { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing, translatedText: closingKo }]);
-        setPageState('idle');
         await new Promise((r) => setTimeout(r, 400));
         setFeedbackAvailable(true);
+        setPageState('idle');
         return;
       }
 
@@ -343,7 +343,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   function handleNext() {
     if (!feedbackAvailable || navigating) return;
     setNavigating(true);
-    if (sessionId) exitSession(sessionId).catch(() => {});
     router.push(`/feedback/${sessionId}?scenarioId=${id}`);
   }
 
