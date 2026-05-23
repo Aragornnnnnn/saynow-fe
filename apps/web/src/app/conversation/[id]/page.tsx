@@ -62,16 +62,18 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [emptyToast, setEmptyToast] = useState(false);
   const [redFlash, setRedFlash] = useState(false);
 
-  // 하트 깎일 때 감지
   useEffect(() => {
-    if (prevHeartsRef.current > remainingHearts) {
-      setHeartShake(true);
-      setRedFlash(true);
-      triggerHaptic('medium');
-      setTimeout(() => setHeartShake(false), 1000);
-      setTimeout(() => setRedFlash(false), 400);
+    if (prevHeartsRef.current <= remainingHearts) {
+      prevHeartsRef.current = remainingHearts;
+      return;
     }
     prevHeartsRef.current = remainingHearts;
+    setHeartShake(true);
+    setRedFlash(true);
+    triggerHaptic('medium');
+    const t1 = setTimeout(() => setHeartShake(false), 1000);
+    const t2 = setTimeout(() => setRedFlash(false), 400);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [remainingHearts]);
 
   // 세션 시작
