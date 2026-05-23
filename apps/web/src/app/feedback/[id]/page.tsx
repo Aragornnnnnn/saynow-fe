@@ -84,6 +84,13 @@ function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDo
   const [progress, setProgress] = useState(0);
   const dataReadyRef = useRef(dataReady);
   dataReadyRef.current = dataReady;
+  const doneCalledRef = useRef(false);
+
+  function callDone() {
+    if (doneCalledRef.current) return;
+    doneCalledRef.current = true;
+    setTimeout(onDone, 300);
+  }
 
   useEffect(() => {
     const start = Date.now();
@@ -93,10 +100,9 @@ function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDo
       const elapsed = Date.now() - start;
       const t = Math.min(elapsed / duration, 1);
       const natural = t * t * (3 - 2 * t) * 92;
-      // 데이터 준비 완료면 100%로 직행
       if (dataReadyRef.current) {
         setProgress(100);
-        setTimeout(onDone, 300);
+        callDone();
         return;
       }
       setProgress(natural);
@@ -111,10 +117,10 @@ function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDo
   useEffect(() => {
     if (dataReady) {
       setProgress(100);
-      const t = setTimeout(onDone, 300);
-      return () => clearTimeout(t);
+      callDone();
     }
-  }, [dataReady, onDone]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataReady]);
 
   return (
     <main className='flex h-full flex-col items-center justify-center bg-background px-8 gap-5'>
