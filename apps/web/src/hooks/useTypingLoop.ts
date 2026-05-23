@@ -53,7 +53,7 @@ export function useTypingLoop(messages: string[], onType?: () => void, onClear?:
 
     timeoutId = setTimeout(tick, NEXT_DELAY_MS);
     return () => clearTimeout(timeoutId);
-  }, [messages]);
+  }, [messages, enabled]);
 
   return displayed;
 }
