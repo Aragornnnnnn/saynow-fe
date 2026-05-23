@@ -1,4 +1,5 @@
 import type { SocialProvider } from './api/auth';
+import { generateRandomHex } from './crypto';
 
 type PendingSocialLogin = {
   provider: SocialProvider;
@@ -166,11 +167,6 @@ function isPrivateLanHostname(hostname: string) {
   );
 }
 
-function generateRandomHex(byteLength: number) {
-  const array = new Uint8Array(byteLength);
-  crypto.getRandomValues(array);
-  return Array.from(array, (byte) => byte.toString(16).padStart(2, '0')).join('');
-}
 
 function generateCodeVerifier() {
   return base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));

@@ -4,6 +4,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTypingLoop } from '@/hooks/useTypingLoop';
+import { generateRandomHex } from '@/lib/crypto';
 
 const HOOK_MESSAGES = [
   '말했는데 돌아온 건 "Sorry?" 였어요',
@@ -71,12 +72,6 @@ function LoginPageContent() {
     return () => window.removeEventListener('pageshow', resetCancelledLogin);
   }, []);
 
-  function generateNonce(): string {
-    const array = new Uint8Array(16);
-    crypto.getRandomValues(array);
-    return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
-  }
-
   async function startLogin(provider: SocialProvider) {
     setErrorMessage(null);
     setPendingProvider(provider);
@@ -86,7 +81,7 @@ function LoginPageContent() {
       return;
     }
 
-    nonce.current = generateNonce();
+    nonce.current = generateRandomHex(16);
     try {
       await startWebSocialLogin(provider, nonce.current);
     } catch (err) {
