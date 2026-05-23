@@ -1,10 +1,5 @@
-export type BridgeAuthMember = {
-  userId: string;
-  nickname: string | null;
-  email: string | null;
-  provider: string;
-  newUser: boolean;
-};
+import type { AuthMember } from '@/store/authStore';
+export type BridgeAuthMember = AuthMember;
 
 export type WebToNativeMessage =
   | { type: 'START_STT' }

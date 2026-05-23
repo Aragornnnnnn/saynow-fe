@@ -1,4 +1,5 @@
 import { request } from './client';
+import type { AuthMember } from '@/store/authStore';
 
 export type SocialProvider = 'GOOGLE' | 'KAKAO';
 
@@ -11,13 +12,7 @@ export interface AuthTokenResponse {
 }
 
 export interface SocialLoginResponse extends AuthTokenResponse {
-  user: {
-    userId: string;
-    nickname: string | null;
-    email: string | null;
-    provider: string;
-    newUser: boolean;
-  };
+  user: AuthMember;
 }
 
 export function socialLogin(
