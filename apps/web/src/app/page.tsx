@@ -22,11 +22,10 @@ export default function Home() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
   const [badgeRect, setBadgeRect] = useState<DOMRect | null>(null);
-  const [showSurvey, setShowSurvey] = useState(false);
+  const [showSurvey, setShowSurvey] = useState(() => searchParams.get('survey') === 'true');
 
   useEffect(() => {
     if (searchParams.get('survey') === 'true') {
-      setShowSurvey(true);
       router.replace('/');
     }
   }, [searchParams, router]);
