@@ -1,3 +1,4 @@
+import { Settings } from 'react-native-fbsdk-next';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
@@ -24,6 +25,7 @@ import type { WebCommandHandlers } from './bridge/useWebViewBridge';
 import { useStt } from './hooks/useStt';
 
 SplashScreen.preventAutoHideAsync();
+Settings.initializeSDK();
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? (__DEV__ ? 'http://localhost:3000' : undefined);
 
