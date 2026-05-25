@@ -32,7 +32,7 @@ export function AiBubble({
       className="flex flex-col items-start gap-2"
     >
       <div className="max-w-[80%]">
-        <div className="rounded-2xl rounded-bl-none bg-[#EBEBEB] px-4 py-3">
+        <div className="rounded-3xl rounded-bl-md bg-[#EBEBEB] px-4 py-3">
           {isDots ? (
             <TypingDots />
           ) : (
