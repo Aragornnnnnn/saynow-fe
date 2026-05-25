@@ -67,14 +67,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
           </div>
         </div>
 
-        <div className='px-4 pb-3 pt-3 border-t border-border'>
-          <button
-            onClick={() => router.replace('/')}
-            className='w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity'
-          >
-            홈으로 가기
-          </button>
-        </div>
+        <HomeButton onNavigate={() => router.replace('/?survey=true')} />
       </main>
     </IntroCardLayout>
   );
@@ -443,6 +436,21 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
         )}
       </AnimatePresence>
     </motion.div>
+  );
+}
+
+// ─── HomeButton ───────────────────────────────────────────────────────────────
+
+function HomeButton({ onNavigate }: { onNavigate: () => void }) {
+  return (
+    <div className='px-4 pb-3 pt-3 border-t border-border'>
+      <button
+        onClick={onNavigate}
+        className='w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity'
+      >
+        홈으로 가기
+      </button>
+    </div>
   );
 }
 

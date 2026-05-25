@@ -2,10 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, ChevronRight, UserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CategoryFilter } from '@/components/CategoryFilter';
+import { SurveySheet } from '@/components/SurveySheet';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { exitApp } from '@/bridge/commands';
@@ -16,10 +17,19 @@ import { getScenarioImage } from '@/lib/scenarioImages';
 
 export default function Home() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { isReady } = useRequireAuth();
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
   const [badgeRect, setBadgeRect] = useState<DOMRect | null>(null);
+  const [showSurvey, setShowSurvey] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get('survey') === 'true') {
+      setShowSurvey(true);
+      router.replace('/');
+    }
+  }, [searchParams, router]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -193,6 +203,13 @@ export default function Home() {
             className="fixed inset-0 z-40"
             onClick={() => { setExpandedScenarioId(null); setBadgeRect(null); }}
           />
+        )}
+      </AnimatePresence>
+
+      {/* 서베이 */}
+      <AnimatePresence>
+        {showSurvey && (
+          <SurveySheet onDone={() => setShowSurvey(false)} />
         )}
       </AnimatePresence>
 
