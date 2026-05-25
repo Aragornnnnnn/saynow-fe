@@ -23,7 +23,7 @@ export function UserBubble({ text, onPress, children }: UserBubbleProps) {
         disabled={!onPress}
         className={`max-w-[80%] text-left ${onPress ? 'active:opacity-75' : ''}`}
       >
-        <div className="rounded-3xl rounded-br-md bg-primary px-4 py-3">
+        <div className="rounded-2xl rounded-br-md bg-primary px-4 py-3">
           <p className="text-sm text-white leading-relaxed">{text}</p>
         </div>
       </button>
