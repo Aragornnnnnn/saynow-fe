@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { triggerHaptic } from '@/bridge/commands';
 
-const EMOJIS = ['😩', '😕', '😐', '🙂', '🤩'] as const;
+const EMOJIS = ['😩', '😟', '😶', '😄', '🤩'] as const;
 type EmojiScore = 1 | 2 | 3 | 4 | 5;
 
 interface SurveySheetProps {
@@ -29,9 +29,11 @@ export function SurveySheet({ onDone }: SurveySheetProps) {
       <div className='mb-5 flex items-start justify-between'>
         <div>
           <p className='text-base font-bold text-foreground'>방금 연습 어떠셨어요?</p>
-          <p className='mt-0.5 text-xs text-muted-foreground'>솔직하게 말해줘요, 다 반영할게요.</p>
+          <p className='mt-0.5 text-xs text-muted-foreground'>솔직하게 말해줘요, 다 듣고 반영할게요</p>
         </div>
-        <button onClick={onDone} className='text-xl leading-none text-muted-foreground'>✕</button>
+        <button onClick={onDone} className='text-xl leading-none text-muted-foreground'>
+          ✕
+        </button>
       </div>
 
       {/* 이모티콘 */}
@@ -88,9 +90,7 @@ export function SurveySheet({ onDone }: SurveySheetProps) {
             className='overflow-hidden'
           >
             <div className='mb-5'>
-              <p className='mb-2 text-sm font-medium text-foreground'>
-                어떤 점이 아쉬우셨나요?
-              </p>
+              <p className='mb-2 text-sm font-medium text-foreground'>어떤 점이 아쉬우셨나요?</p>
               <textarea
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
