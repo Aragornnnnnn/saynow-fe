@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, ChevronRight, UserRound } from 'lucide-react';
@@ -15,7 +15,15 @@ import { useScenariosQuery } from '@/queries/scenarios';
 import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
 
-export default function Home() {
+export default function Page() {
+  return (
+    <Suspense>
+      <Home />
+    </Suspense>
+  );
+}
+
+function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isReady } = useRequireAuth();
