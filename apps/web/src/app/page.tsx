@@ -30,7 +30,8 @@ function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isReady } = useRequireAuth();
-  const { _hasHydrated, refreshToken } = useAuthStore((s) => ({ _hasHydrated: s._hasHydrated, refreshToken: s.refreshToken }));
+  const _hasHydrated = useAuthStore((s) => s._hasHydrated);
+  const refreshToken = useAuthStore((s) => s.refreshToken);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
   const [badgeRect, setBadgeRect] = useState<DOMRect | null>(null);
@@ -136,24 +137,9 @@ function Home() {
   }
 
   return (
-    <main className="flex h-dvh flex-col overflow-x-hidden" style={{
-      background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)',
-      position: 'relative',
-    }}>
-      {/* 공항 배경 이미지 */}
-      <div style={{
-        position: 'absolute',
-        inset: 0,
-        backgroundImage: 'url(/background1.png)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        opacity: 0.28,
-        filter: 'sepia(12%) brightness(1.05)',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }} />
+    <main className="flex h-dvh flex-col overflow-x-hidden" style={{ background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)' }}>
       {/* 헤더 */}
-      <div className="relative z-10 px-4 pb-3 pt-6">
+      <div className="px-4 pb-3 pt-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-foreground">SayNow</h1>
           <Link href="/me" className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -169,10 +155,21 @@ function Home() {
       </div>
 
       {/* 시나리오 목록 */}
-      <div className="relative z-10 flex-1 overflow-hidden">
+      <div className="relative flex-1 overflow-hidden">
+        {/* 공항 배경 이미지 */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'url(/background1.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 20%',
+          opacity: 0.32,
+          filter: 'sepia(8%) brightness(1.02)',
+          pointerEvents: 'none',
+        }} />
         <div
           ref={scrollRef}
-          className="no-scrollbar h-full overflow-y-auto overscroll-y-contain"
+          className="no-scrollbar relative z-10 h-full overflow-y-auto overscroll-y-contain"
           style={{ scrollBehavior: 'smooth' }}
           onScroll={() => {
             if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
@@ -284,7 +281,7 @@ interface ScenarioBadgeListProps {
 
 function ScenarioBadgeList({ scenarios, expandedId, newlyUnlockedIds, onBadgeClick, onStart }: ScenarioBadgeListProps) {
   return (
-    <div className="relative mt-6 flex flex-col items-center px-4">
+    <div className="relative mt-16 flex flex-col items-center px-4">
       {scenarios.map((scenario, index) => (
         <motion.div
           key={scenario.scenarioId}
@@ -295,7 +292,6 @@ function ScenarioBadgeList({ scenarios, expandedId, newlyUnlockedIds, onBadgeCli
         >
           <ScenarioBadgeItem
             scenario={scenario}
-            index={index}
             isExpanded={expandedId === scenario.scenarioId}
             isNewlyUnlocked={newlyUnlockedIds.has(scenario.scenarioId)}
             onBadgeClick={onBadgeClick}
@@ -305,17 +301,24 @@ function ScenarioBadgeList({ scenarios, expandedId, newlyUnlockedIds, onBadgeCli
       ))}
 
       {/* 더 많은 시나리오 예고 */}
-      <div className="flex flex-col items-center pb-10">
-        <span className="text-4xl">☁️</span>
-        <p className="mt-2 text-sm font-semibold text-foreground">더 많은 시나리오가 곧 공개돼요</p>
-      </div>
+      {(() => {
+        const allCleared = scenarios.every((s) => s.cleared);
+        return (
+          <div className="flex flex-col items-center pb-10">
+            <span className={`text-4xl transition-opacity duration-500 ${allCleared ? 'opacity-100' : 'opacity-40'}`}>☁️</span>
+            <p className={`mt-2 text-sm font-semibold transition-opacity duration-500 ${allCleared ? 'opacity-100' : 'opacity-40'}`}
+              style={{ color: '#111111', textShadow: '0 1px 4px rgba(251,251,250,0.9), 0 0 8px rgba(251,251,250,0.7)' }}>
+              더 많은 시나리오가 곧 공개돼요
+            </p>
+          </div>
+        );
+      })()}
     </div>
   );
 }
 
 interface ScenarioBadgeItemProps {
   scenario: ApiScenario;
-  index: number;
   isExpanded: boolean;
   isNewlyUnlocked: boolean;
   onBadgeClick: (scenario: ApiScenario, el: HTMLElement) => void;
@@ -327,7 +330,7 @@ function isNextTarget(scenario: ApiScenario): boolean {
   return !scenario.locked && !scenario.cleared && scenario.lockReason === null;
 }
 
-function ScenarioBadgeItem({ scenario, index, isExpanded, isNewlyUnlocked, onBadgeClick }: ScenarioBadgeItemProps) {
+function ScenarioBadgeItem({ scenario, isExpanded, isNewlyUnlocked, onBadgeClick }: ScenarioBadgeItemProps) {
   const ref = useRef<HTMLButtonElement>(null);
   const isLocked = scenario.locked;
   const isCleared = scenario.cleared;
@@ -396,14 +399,6 @@ function ScenarioBadgeItem({ scenario, index, isExpanded, isNewlyUnlocked, onBad
             <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
           )}
 
-          {/* 순서 뱃지 */}
-          <span
-            className={`absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${
-              isLocked ? 'bg-border text-muted-foreground' : 'bg-primary text-white'
-            }`}
-          >
-            {isCleared ? '✓' : index + 1}
-          </span>
         </button>
       </div>
 
