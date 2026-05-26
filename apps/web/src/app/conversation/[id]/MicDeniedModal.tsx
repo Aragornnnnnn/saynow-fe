@@ -12,8 +12,7 @@ export default function MicDeniedModal({ isNative, onClose }: MicDeniedModalProp
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div className="mx-6 w-full max-w-sm rounded-3xl bg-card px-6 pb-8 pt-6" onClick={(e) => e.stopPropagation()}>
-        <h2 className="mb-1 text-base font-bold text-foreground">마이크 권한이 필요해요</h2>
-        <p className="mb-5 text-sm text-muted-foreground">영어 말하기 연습엔 꼭 필요해요</p>
+        <h2 className="mb-5 text-base font-bold text-foreground">마이크를 켜야 대화할 수 있어요</h2>
 
         {isNative && (
           <div className="mb-5 rounded-2xl bg-[#F5F5F3] px-4 py-4 space-y-2">
