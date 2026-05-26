@@ -398,9 +398,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
           <button
             onClick={handleStartSession}
-            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white"
+            className="w-full rounded-2xl bg-white py-4 text-base font-bold text-primary"
           >
-            도전할게요
+            도전할게요 →
           </button>
         </div>
 
