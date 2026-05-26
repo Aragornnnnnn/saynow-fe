@@ -15,6 +15,7 @@ import { useScenariosQuery } from '@/queries/scenarios';
 import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
 import { useScenarioStore } from '@/store/scenarioStore';
+import { useAuthStore } from '@/store/authStore';
 import { Button } from '@/components/ui/Button';
 
 export default function Page() {
@@ -29,6 +30,7 @@ function Home() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { isReady } = useRequireAuth();
+  const { _hasHydrated, refreshToken } = useAuthStore((s) => ({ _hasHydrated: s._hasHydrated, refreshToken: s.refreshToken }));
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
   const [badgeRect, setBadgeRect] = useState<DOMRect | null>(null);
@@ -42,7 +44,8 @@ function Home() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const { data, isPending, error, refetch } = useScenariosQuery(isReady);
+  // hydration 완료 + refreshToken 확인 즉시 쿼리 시작 — isReady(accessToken 발급 완료)까지 기다리지 않음
+  const { data, isPending, error, refetch } = useScenariosQuery(_hasHydrated && !!refreshToken);
   const setScenario = useScenarioStore((s) => s.setScenario);
 
   // 이전 데이터와 비교해서 새로 unlock된 시나리오 ID 세트 계산

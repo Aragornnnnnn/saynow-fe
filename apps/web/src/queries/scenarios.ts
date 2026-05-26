@@ -13,5 +13,6 @@ export function useScenariosQuery(enabled = true) {
     queryKey: scenarioQueryKeys.all,
     queryFn: () => getScenarios(),
     enabled,
+    staleTime: 5 * 60 * 1000,
   });
 }
