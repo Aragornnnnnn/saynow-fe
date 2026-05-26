@@ -6,6 +6,7 @@ export interface ApiScenario {
   displayOrder: number;
   scenarioTitle: string;
   scenarioGoal: string;
+  scenarioSituation: string;
   scenarioEmoji: string | null;
   cleared: boolean;
   locked: boolean;

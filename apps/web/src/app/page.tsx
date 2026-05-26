@@ -14,6 +14,7 @@ import type { ApiScenario, ApiCategory } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
 import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
+import { useScenarioStore } from '@/store/scenarioStore';
 
 export default function Page() {
   return (
@@ -41,6 +42,7 @@ function Home() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { data, isPending, error, refetch } = useScenariosQuery(isReady);
+  const setScenario = useScenarioStore((s) => s.setScenario);
 
   useEffect(() => {
     return () => {
@@ -80,6 +82,13 @@ function Home() {
     setExpandedScenarioId((prev) => {
       if (prev === scenario.scenarioId) { setBadgeRect(null); return null; }
       setBadgeRect(rect);
+      setScenario({
+        scenarioId: scenario.scenarioId,
+        scenarioTitle: scenario.scenarioTitle,
+        scenarioSituation: scenario.scenarioSituation,
+        scenarioGoal: scenario.scenarioGoal,
+        scenarioEmoji: scenario.scenarioEmoji,
+      });
       // 팝오버 열릴 때 대화/피드백 이미지 미리 로드
       (['play', 'success', 'fail'] as const).forEach((type) => {
         const img = new Image();

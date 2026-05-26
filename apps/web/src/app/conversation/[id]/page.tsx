@@ -14,6 +14,7 @@ import { startNativeStt, stopNativeStt, triggerHaptic } from '@/bridge/commands'
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import { getScenarioImage } from '@/lib/scenarioImages';
+import { useScenarioStore } from '@/store/scenarioStore';
 import ExitConfirmModal from './ExitConfirmModal';
 import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
@@ -28,13 +29,13 @@ interface ChatMessage {
   feedback?: string;
 }
 
-type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
+type PageState = 'briefing' | 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
 
 export default function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
 
-  const [pageState, setPageState] = useState<PageState>('loading');
+  const [pageState, setPageState] = useState<PageState>('briefing');
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [remainingHearts, setRemainingHearts] = useState(3);
@@ -47,6 +48,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
+  const scenarioInfo = useScenarioStore((s) => s.current);
   const { speak, stop } = useTts();
   const queryClient = useQueryClient();
   const isNative = webBridge.isAvailable();
@@ -76,30 +78,29 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [remainingHearts]);
 
-  // 세션 시작
-  useEffect(() => {
+  async function handleStartSession() {
     if (sessionStartedRef.current) return;
     sessionStartedRef.current = true;
-    startSession(Number(id))
-      .then((data) => {
-        setSessionId(data.sessionId);
-        setRemainingHearts(data.remainingHearts);
-        setFeedbackAvailable(data.feedbackAvailable);
-        setMessages([
-          {
-            id: `ai-0`,
-            role: 'ai',
-            text: data.originalQuestion,
-            translatedText: data.translatedQuestion,
-          },
-        ]);
-        setPageState('idle');
-      })
-      .catch((e: Error) => {
-        setError(e.message);
-        setPageState('error');
-      });
-  }, [id]);
+    setPageState('loading');
+    try {
+      const data = await startSession(Number(id));
+      setSessionId(data.sessionId);
+      setRemainingHearts(data.remainingHearts);
+      setFeedbackAvailable(data.feedbackAvailable);
+      setMessages([
+        {
+          id: `ai-0`,
+          role: 'ai',
+          text: data.originalQuestion,
+          translatedText: data.translatedQuestion,
+        },
+      ]);
+      setPageState('idle');
+    } catch (e) {
+      setError((e as Error).message);
+      setPageState('error');
+    }
+  }
 
   // AI 메시지 추가될 때마다 TTS 자동 재생 + 스크롤 + 첫 메시지에서 블러 트리거
   useEffect(() => {
@@ -364,6 +365,49 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             돌아가기
           </button>
         </div>
+      </main>
+    );
+  }
+
+  if (pageState === 'briefing') {
+    const bgUrl = getScenarioImage(Number(id), 'play');
+    return (
+      <main className="relative flex h-dvh flex-col overflow-hidden">
+        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${bgUrl})`, backgroundColor: '#a07860' }} />
+        <div className="pointer-events-none absolute inset-0 bg-black/30" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3"
+          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }} />
+
+        <div className="relative z-20 flex items-center px-4" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
+          <button onClick={() => router.push('/')}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
+            <ChevronLeft size={20} />
+          </button>
+        </div>
+
+        <div className="relative z-20 flex-1" />
+
+        <div className="relative z-20 px-5 pb-10 space-y-5">
+          <div>
+            <div className="mb-3 text-4xl">{scenarioInfo?.scenarioEmoji ?? '🗣️'}</div>
+            <h2 className="text-xl font-bold text-white mb-1">{scenarioInfo?.scenarioTitle}</h2>
+            <p className="text-sm text-white/70 leading-relaxed">{scenarioInfo?.scenarioSituation}</p>
+          </div>
+
+          <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3">
+            <p className="text-xs font-semibold text-white/50 mb-1">달성 목표</p>
+            <p className="text-sm text-white leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
+          </div>
+
+          <button
+            onClick={handleStartSession}
+            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white"
+          >
+            대화 시작할게요
+          </button>
+        </div>
+
+        {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
       </main>
     );
   }
