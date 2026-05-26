@@ -1,6 +1,8 @@
 // 대화 중 나가기 버튼 클릭 시 표시되는 확인 모달
 'use client';
 
+import { Button } from '@/components/ui/Button';
+
 interface ExitConfirmModalProps {
   onConfirm: () => void;
   onCancel: () => void;
@@ -21,18 +23,8 @@ export default function ExitConfirmModal({ onConfirm, onCancel }: ExitConfirmMod
           지금 나가면 진행 중인 대화가 저장되지 않아요.
         </p>
         <div className="flex gap-3">
-          <button
-            onClick={onConfirm}
-            className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-foreground active:bg-muted transition-colors"
-          >
-            나가기
-          </button>
-          <button
-            onClick={onCancel}
-            className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
-          >
-            계속하기
-          </button>
+          <Button variant="ghost" size="md" onClick={onConfirm}>나가기</Button>
+          <Button size="md" onClick={onCancel}>계속하기</Button>
         </div>
       </div>
     </div>

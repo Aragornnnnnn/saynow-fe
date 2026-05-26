@@ -15,6 +15,7 @@ import { useScenariosQuery } from '@/queries/scenarios';
 import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
 import { useScenarioStore } from '@/store/scenarioStore';
+import { Button } from '@/components/ui/Button';
 
 export default function Page() {
   return (
@@ -195,13 +196,14 @@ function Home() {
                   {expandedScenario.lockReason === 'COMING_SOON' ? '준비 중' : '잠금'}
                 </button>
               ) : (
-                <button
+                <Button
+                  variant="white"
+                  size="md"
                   onClick={() => { prefetchSession(expandedScenario.scenarioId); router.push(`/conversation/${expandedScenario.scenarioId}`); }}
-                  className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-white py-3 text-sm font-semibold text-primary active:opacity-80 transition-opacity"
                 >
-                  <span>시작하기</span>
+                  시작하기
                   <ChevronRight size={16} />
-                </button>
+                </Button>
               )}
             </div>
           </motion.div>

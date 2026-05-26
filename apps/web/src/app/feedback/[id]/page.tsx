@@ -12,6 +12,7 @@ import { getScenarioImage } from '@/lib/scenarioImages';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { useTts } from '@/hooks/useTts';
+import { Button } from '@/components/ui/Button';
 
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -444,12 +445,7 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
 function HomeButton({ onNavigate }: { onNavigate: () => void }) {
   return (
     <div className='px-4 pb-3 pt-3 border-t border-border'>
-      <button
-        onClick={onNavigate}
-        className='w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity'
-      >
-        홈으로 가기
-      </button>
+      <Button onClick={onNavigate}>홈으로 가기</Button>
     </div>
   );
 }

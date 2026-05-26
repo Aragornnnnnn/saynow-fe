@@ -4,6 +4,7 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { triggerHaptic } from '@/bridge/commands';
+import { Button } from '@/components/ui/Button';
 
 const EMOJIS = ['😩', '😟', '😶', '😄', '🤩'] as const;
 type EmojiScore = 1 | 2 | 3 | 4 | 5;
@@ -107,12 +108,7 @@ export function SurveySheet({ onDone }: SurveySheetProps) {
       </AnimatePresence>
 
       {/* 완료 버튼 */}
-      <button
-        onClick={onDone}
-        className='w-full rounded-xl bg-primary py-3 text-sm font-semibold text-white transition-opacity active:opacity-80'
-      >
-        완료
-      </button>
+      <Button size="md" onClick={onDone}>완료</Button>
     </>
   );
 

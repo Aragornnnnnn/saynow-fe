@@ -19,6 +19,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { logout as requestLogout } from '@/lib/api/auth';
 import { deleteAccount } from '@/lib/api/member';
 import { useAuthStore } from '@/store/authStore';
+import { Button } from '@/components/ui/Button';
 
 export default function MyPage() {
   const router = useRouter();
@@ -158,22 +159,25 @@ export default function MyPage() {
               </p>
             )}
             <div className="mt-5 grid grid-cols-2 gap-2">
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="md"
                 onClick={() => setIsDeleteDialogOpen(false)}
                 disabled={isDeletingAccount}
-                className="h-12 rounded-xl border border-border bg-background text-sm font-semibold text-foreground disabled:cursor-not-allowed disabled:opacity-50"
               >
                 취소
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
+                variant="danger"
+                size="md"
                 onClick={handleDeleteAccount}
+                loading={isDeletingAccount}
                 disabled={isDeletingAccount}
-                className="h-12 rounded-xl bg-red-600 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isDeletingAccount ? '처리 중' : '탈퇴하기'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

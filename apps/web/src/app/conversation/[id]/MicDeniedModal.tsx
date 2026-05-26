@@ -2,6 +2,7 @@
 'use client';
 
 import { openNativeSettings } from '@/bridge/commands';
+import { Button } from '@/components/ui/Button';
 
 interface MicDeniedModalProps {
   isNative: boolean;
@@ -32,22 +33,11 @@ export default function MicDeniedModal({ isNative, onClose }: MicDeniedModalProp
         )}
 
         <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-xl border border-border py-3 text-sm font-medium text-foreground"
-          >
-            닫기
-          </button>
+          <Button variant="ghost" size="md" onClick={onClose}>닫기</Button>
           {isNative && (
-            <button
-              onClick={() => {
-                onClose();
-                openNativeSettings();
-              }}
-              className="flex-1 rounded-xl bg-primary py-3 text-sm font-semibold text-white active:opacity-80 transition-opacity"
-            >
+            <Button size="md" onClick={() => { onClose(); openNativeSettings(); }}>
               설정 열기
-            </button>
+            </Button>
           )}
         </div>
       </div>

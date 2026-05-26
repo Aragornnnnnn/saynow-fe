@@ -20,6 +20,7 @@ import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { TypingDots } from '@/components/chat/TypingDots';
+import { Button } from '@/components/ui/Button';
 
 interface ChatMessage {
   id: string;
@@ -396,12 +397,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             </div>
           </div>
 
-          <button
-            onClick={handleStartSession}
-            className="w-full rounded-2xl bg-white py-4 text-base font-bold text-primary"
-          >
+          <Button variant="white" onClick={handleStartSession}>
             도전할게요 →
-          </button>
+          </Button>
         </div>
 
         {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
@@ -625,9 +623,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 12 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
-            whileTap={{ scale: 0.95 }}
             onClick={handleNext}
-            className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white transition-opacity flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold text-white bg-primary shadow-[0_5px_0_#A85822] active:shadow-[0_2px_0_#A85822] active:translate-y-0.75 transition-transform duration-75"
           >
             {pageState === 'navigating'
               ? <><span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" /><span>이동 중...</span></>
@@ -635,26 +632,18 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             }
           </motion.button>
         ) : (
-          /* 마이크 버튼 — 가로로 아이콘 + 텍스트 */
-          <button
+          /* 마이크 버튼 */
+          <Button
             onClick={handleMicPress}
             disabled={pageState === 'submitting' || pageState === 'stopping'}
-            className={`relative flex w-full items-center justify-center gap-3 rounded-2xl py-4 shadow-md transition-all duration-150 active:scale-[0.98] ${
-              isRecording
-                ? 'bg-[#F0F0EE]'
-                : pageState === 'submitting' || pageState === 'stopping'
-                  ? 'bg-primary/60 cursor-not-allowed'
-                  : 'bg-primary'
-            }`}
+            loading={pageState === 'submitting' || pageState === 'stopping'}
+            variant={isRecording ? 'secondary' : 'primary'}
+            className={isRecording ? 'shadow-none! translate-y-0!' : ''}
           >
             {pageState === 'submitting' || pageState === 'stopping' ? (
-              <>
-                <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                <span className="text-sm font-semibold text-white">분석 중...</span>
-              </>
+              <span className="text-sm font-semibold text-white">분석 중...</span>
             ) : isRecording ? (
               <>
-                {/* 음파 바 */}
                 <div className="flex items-center gap-0.75">
                   {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
                     <span
@@ -672,7 +661,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 <span className="text-sm font-semibold text-white">탭하여 말하기</span>
               </>
             )}
-          </button>
+          </Button>
         )}
         </AnimatePresence>
       </div>
