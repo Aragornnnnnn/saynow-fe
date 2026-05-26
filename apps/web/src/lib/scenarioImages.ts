@@ -3,6 +3,5 @@
 type ScenarioImageType = 'play' | 'success' | 'fail';
 
 export function getScenarioImage(scenarioId: number, type: ScenarioImageType): string {
-  const group = scenarioId <= 2 ? '1-2' : '3';
-  return `/images/scenarios/scenario-${group}-${type}.webp`;
+  return `/images/scenarios/scenario-${scenarioId}-${type}.webp`;
 }
