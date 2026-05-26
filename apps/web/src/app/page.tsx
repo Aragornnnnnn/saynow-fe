@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Lock, ChevronRight, UserRound } from 'lucide-react';
+import { Lock, UserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CategoryFilter } from '@/components/CategoryFilter';
 import { SurveySheet } from '@/components/SurveySheet';
@@ -16,7 +16,6 @@ import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
 import { useScenarioStore } from '@/store/scenarioStore';
 import { useAuthStore } from '@/store/authStore';
-import { Button } from '@/components/ui/Button';
 
 export default function Page() {
   return (
@@ -33,8 +32,6 @@ function Home() {
   const _hasHydrated = useAuthStore((s) => s._hasHydrated);
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [expandedScenarioId, setExpandedScenarioId] = useState<number | null>(null);
-  const [badgeRect, setBadgeRect] = useState<DOMRect | null>(null);
   const [showSurvey, setShowSurvey] = useState(() => searchParams.get('survey') === 'true');
 
   useEffect(() => {
@@ -75,10 +72,7 @@ function Home() {
     };
   }, []);
 
-  useBackButtonBridge(() => {
-    if (expandedScenarioId !== null) { setExpandedScenarioId(null); return; }
-    exitApp();
-  });
+  useBackButtonBridge(() => exitApp());
 
   if (!isReady) return null;
 
@@ -90,37 +84,25 @@ function Home() {
       ? categories.find((c) => c.categoryId === selectedCategoryId)
       : categories.find((c) => !c.categoryLocked);
 
-  // 팝오버 카드 계산값
-  const expandedScenario = activeCategory?.scenarios.find((s) => s.scenarioId === expandedScenarioId) ?? null;
-  const cardWidth = 280;
-  const cardLeft = badgeRect ? Math.max(16, Math.min(badgeRect.left + badgeRect.width / 2 - cardWidth / 2, window.innerWidth - cardWidth - 16)) : 0;
-  const cardTop = badgeRect ? badgeRect.bottom + 40 : 0;
-  const arrowLeft = badgeRect ? Math.round(badgeRect.left + badgeRect.width / 2 - cardLeft) : 0;
-  const cardBg = expandedScenario?.locked ? '#9CA3AF' : '#E07A3A';
-
   function handleCategoryChange(id: number | null) {
     setSelectedCategoryId(id);
-    setExpandedScenarioId(null);
   }
 
-  function handleBadgeClick(scenario: ApiScenario, rect: DOMRect) {
-    setExpandedScenarioId((prev) => {
-      if (prev === scenario.scenarioId) { setBadgeRect(null); return null; }
-      setBadgeRect(rect);
-      setScenario({
-        scenarioId: scenario.scenarioId,
-        scenarioTitle: scenario.scenarioTitle,
-        scenarioSituation: scenario.scenarioSituation,
-        scenarioGoal: scenario.scenarioGoal,
-        scenarioEmoji: scenario.scenarioEmoji,
-      });
-      // 팝오버 열릴 때 대화/피드백 이미지 미리 로드
-      (['play', 'success', 'fail'] as const).forEach((type) => {
-        const img = new Image();
-        img.src = getScenarioImage(scenario.scenarioId, type);
-      });
-      return scenario.scenarioId;
+  function handleStart(scenario: ApiScenario) {
+    if (scenario.locked) return;
+    setScenario({
+      scenarioId: scenario.scenarioId,
+      scenarioTitle: scenario.scenarioTitle,
+      scenarioSituation: scenario.scenarioSituation,
+      scenarioGoal: scenario.scenarioGoal,
+      scenarioEmoji: scenario.scenarioEmoji,
     });
+    (['play', 'success', 'fail'] as const).forEach((type) => {
+      const img = new Image();
+      img.src = getScenarioImage(scenario.scenarioId, type);
+    });
+    prefetchSession(scenario.scenarioId);
+    router.push(`/conversation/${scenario.scenarioId}`);
   }
 
   if (error) {
@@ -173,9 +155,8 @@ function Home() {
           style={{ scrollBehavior: 'smooth' }}
           onScroll={() => {
             if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-            scrollTimerRef.current = setTimeout(() => setExpandedScenarioId(null), 150);
+            scrollTimerRef.current = setTimeout(() => {}, 150);
           }}
-          onClick={(e) => { if (e.target === scrollRef.current) setExpandedScenarioId(null); }}
         >
           {isPending ? (
             <div className="mt-6 flex flex-col items-center px-4">
@@ -199,66 +180,12 @@ function Home() {
           ) : activeCategory ? (
             <ScenarioBadgeList
               scenarios={activeCategory.scenarios.slice(0, 3)}
-              expandedId={expandedScenarioId}
               newlyUnlockedIds={newlyUnlockedIds}
-              onBadgeClick={(scenario, el) => handleBadgeClick(scenario, el.getBoundingClientRect())}
-              onStart={(id) => { prefetchSession(id); router.push(`/conversation/${id}`); }}
+              onStart={handleStart}
             />
           ) : null}
         </div>
       </div>
-
-      {/* fixed 팝오버 카드 */}
-      <AnimatePresence initial={false}>
-        {expandedScenario && badgeRect && (
-          <motion.div
-            key="scenario-card"
-            initial={{ opacity: 0, scale: 0.88, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.92, y: -6 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-            className="fixed z-50"
-            style={{ top: cardTop, left: cardLeft, width: cardWidth, transformOrigin: 'top center' }}
-          >
-            <div
-              className="absolute -top-1.5 w-0 h-0 border-l-8 border-r-8 border-b-[9px] border-l-transparent border-r-transparent"
-              style={{ left: arrowLeft - 8, borderBottomColor: cardBg }}
-            />
-            <div className="rounded-2xl px-5 py-4 shadow-lg" style={{ background: cardBg }}>
-              <p className="mb-1 text-xs font-semibold text-white/70">달성 목표</p>
-              <p className="mb-4 text-sm text-white leading-relaxed line-clamp-2">{expandedScenario.scenarioGoal}</p>
-              {expandedScenario.locked ? (
-                <button disabled className="w-full rounded-xl bg-white/20 py-3 text-sm font-semibold text-white/60 cursor-default">
-                  {expandedScenario.lockReason === 'COMING_SOON' ? '준비 중' : '잠금'}
-                </button>
-              ) : (
-                <Button
-                  variant="white"
-                  size="md"
-                  onClick={() => { prefetchSession(expandedScenario.scenarioId); router.push(`/conversation/${expandedScenario.scenarioId}`); }}
-                >
-                  시작하기
-                  <ChevronRight size={16} />
-                </Button>
-              )}
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 배경 딤 — 카드 닫기 */}
-      <AnimatePresence>
-        {expandedScenarioId !== null && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="fixed inset-0 z-40"
-            onClick={() => { setExpandedScenarioId(null); setBadgeRect(null); }}
-          />
-        )}
-      </AnimatePresence>
 
       {/* 서베이 */}
       <AnimatePresence>
@@ -273,13 +200,11 @@ function Home() {
 
 interface ScenarioBadgeListProps {
   scenarios: ApiScenario[];
-  expandedId: number | null;
   newlyUnlockedIds: Set<number>;
-  onBadgeClick: (scenario: ApiScenario, el: HTMLElement) => void;
-  onStart: (scenarioId: number) => void;
+  onStart: (scenario: ApiScenario) => void;
 }
 
-function ScenarioBadgeList({ scenarios, expandedId, newlyUnlockedIds, onBadgeClick, onStart }: ScenarioBadgeListProps) {
+function ScenarioBadgeList({ scenarios, newlyUnlockedIds, onStart }: ScenarioBadgeListProps) {
   return (
     <div className="relative mt-16 flex flex-col items-center px-4">
       {scenarios.map((scenario, index) => (
@@ -292,9 +217,7 @@ function ScenarioBadgeList({ scenarios, expandedId, newlyUnlockedIds, onBadgeCli
         >
           <ScenarioBadgeItem
             scenario={scenario}
-            isExpanded={expandedId === scenario.scenarioId}
             isNewlyUnlocked={newlyUnlockedIds.has(scenario.scenarioId)}
-            onBadgeClick={onBadgeClick}
             onStart={onStart}
           />
         </motion.div>
@@ -319,10 +242,8 @@ function ScenarioBadgeList({ scenarios, expandedId, newlyUnlockedIds, onBadgeCli
 
 interface ScenarioBadgeItemProps {
   scenario: ApiScenario;
-  isExpanded: boolean;
   isNewlyUnlocked: boolean;
-  onBadgeClick: (scenario: ApiScenario, el: HTMLElement) => void;
-  onStart: (scenarioId: number) => void;
+  onStart: (scenario: ApiScenario) => void;
 }
 
 // 잠금 해제됐지만 아직 클리어 안 한 첫 번째 시나리오인지 판단하는 헬퍼
@@ -330,8 +251,7 @@ function isNextTarget(scenario: ApiScenario): boolean {
   return !scenario.locked && !scenario.cleared && scenario.lockReason === null;
 }
 
-function ScenarioBadgeItem({ scenario, isExpanded, isNewlyUnlocked, onBadgeClick }: ScenarioBadgeItemProps) {
-  const ref = useRef<HTMLButtonElement>(null);
+function ScenarioBadgeItem({ scenario, isNewlyUnlocked, onStart }: ScenarioBadgeItemProps) {
   const isLocked = scenario.locked;
   const isCleared = scenario.cleared;
   const isComingSoon = scenario.lockReason === 'COMING_SOON';
@@ -350,57 +270,52 @@ function ScenarioBadgeItem({ scenario, isExpanded, isNewlyUnlocked, onBadgeClick
   return (
     <>
       {/* 뱃지 버튼 */}
-      <div className="relative">
-        <button
-          ref={ref}
-          onClick={() => onBadgeClick(scenario, ref.current!)}
-          style={{ width: 88, height: 88 }}
-          className={`relative flex items-center justify-center rounded-full transition-all duration-150 ${
-            isComingSoon
-              ? 'bg-card shadow-md cursor-default overflow-hidden'
-              : isLocked
-                ? `bg-[#E0E0DC] text-muted-foreground ${isExpanded ? 'shadow-[0_2px_0_#9ca3af] translate-y-1' : 'shadow-[0_6px_0_#9ca3af] active:shadow-[0_2px_0_#9ca3af] active:translate-y-1'}`
-                : isCleared
-                  ? `bg-[#FFF4ED] ring-1 ring-primary/10 overflow-hidden ${isExpanded ? 'shadow-[0_2px_0_#e8b48e] translate-y-1' : 'shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'}`
-                  : isTarget
-                    ? `bg-[#FFF4ED] ring-1 ring-primary/10 badge-shimmer overflow-hidden ${isExpanded ? 'shadow-[0_2px_0_#e8b48e] translate-y-1' : 'shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'}`
-                    : `bg-[#FFF4ED] ring-1 ring-primary/10 ${isExpanded ? 'shadow-[0_2px_0_#e8b48e] translate-y-1' : 'shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'}`
-          }`}
-        >
-          {isComingSoon ? (
-            <>
-              <span className="tossface text-3xl opacity-20 blur-[2px]">{scenario.scenarioEmoji ?? '🗣️'}</span>
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-card/60">
-                <span className="text-xl leading-none">☁️</span>
-                <span className="text-[9px] font-bold text-muted-foreground/70">준비 중</span>
-              </div>
-            </>
-          ) : isLocked && !showUnlockAnim ? (
-            <>
-              <span className="tossface text-3xl opacity-40">{scenario.scenarioEmoji ?? '🗣️'}</span>
-              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-card/60">
-                <Lock size={22} className="text-muted-foreground" />
-              </div>
-            </>
-          ) : showUnlockAnim ? (
-            // unlock 애니메이션: 자물쇠 fade out → 이모지 scale in
-            <AnimatePresence mode="wait">
-              <motion.div
-                key="unlock"
-                className="flex flex-col items-center justify-center"
-                initial={{ scale: 0.4, opacity: 0 }}
-                animate={{ scale: [0.4, 1.3, 1], opacity: 1 }}
-                transition={{ duration: 0.55, times: [0, 0.6, 1], ease: 'easeOut' }}
-              >
-                <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
-              </motion.div>
-            </AnimatePresence>
-          ) : (
-            <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
-          )}
-
-        </button>
-      </div>
+      <button
+        onClick={() => onStart(scenario)}
+        style={{ width: 88, height: 88 }}
+        className={`relative flex items-center justify-center rounded-full transition-all duration-150 ${
+          isComingSoon
+            ? 'bg-card shadow-md cursor-default overflow-hidden'
+            : isLocked
+              ? 'bg-[#E0E0DC] text-muted-foreground shadow-[0_6px_0_#9ca3af] active:shadow-[0_2px_0_#9ca3af] active:translate-y-1'
+              : isCleared
+                ? 'bg-[#FFF4ED] ring-1 ring-primary/10 overflow-hidden shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'
+                : isTarget
+                  ? 'bg-[#FFF4ED] ring-1 ring-primary/10 badge-shimmer overflow-hidden shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'
+                  : 'bg-[#FFF4ED] ring-1 ring-primary/10 shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'
+        }`}
+      >
+        {isComingSoon ? (
+          <>
+            <span className="tossface text-3xl opacity-20 blur-[2px]">{scenario.scenarioEmoji ?? '🗣️'}</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-card/60">
+              <span className="text-xl leading-none">☁️</span>
+              <span className="text-[9px] font-bold text-muted-foreground/70">준비 중</span>
+            </div>
+          </>
+        ) : isLocked && !showUnlockAnim ? (
+          <>
+            <span className="tossface text-3xl opacity-40">{scenario.scenarioEmoji ?? '🗣️'}</span>
+            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-card/60">
+              <Lock size={22} className="text-muted-foreground" />
+            </div>
+          </>
+        ) : showUnlockAnim ? (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key="unlock"
+              className="flex flex-col items-center justify-center"
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: [0.4, 1.3, 1], opacity: 1 }}
+              transition={{ duration: 0.55, times: [0, 0.6, 1], ease: 'easeOut' }}
+            >
+              <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
+        )}
+      </button>
 
       {/* 제목 */}
       <p className={`mt-2 text-sm font-semibold ${isComingSoon ? 'text-muted-foreground/50' : isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
