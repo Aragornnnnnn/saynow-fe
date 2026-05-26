@@ -113,9 +113,24 @@ function Home() {
   }
 
   return (
-    <main className="flex h-dvh flex-col overflow-x-hidden" style={{ background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)' }}>
+    <main className="flex h-dvh flex-col overflow-x-hidden" style={{
+      background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)',
+      position: 'relative',
+    }}>
+      {/* 공항 배경 이미지 */}
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        backgroundImage: 'url(/background1.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        opacity: 0.28,
+        filter: 'sepia(12%) brightness(1.05)',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }} />
       {/* 헤더 */}
-      <div className="px-4 pb-3 pt-6">
+      <div className="relative z-10 px-4 pb-3 pt-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-foreground">SayNow</h1>
           <Link href="/me" className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -131,7 +146,7 @@ function Home() {
       </div>
 
       {/* 시나리오 목록 */}
-      <div className="relative flex-1 overflow-hidden">
+      <div className="relative z-10 flex-1 overflow-hidden">
         <div
           ref={scrollRef}
           className="no-scrollbar h-full overflow-y-auto overscroll-y-contain"
