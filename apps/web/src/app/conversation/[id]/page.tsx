@@ -373,10 +373,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     const bgUrl = getScenarioImage(Number(id), 'play');
     return (
       <main className="relative flex h-dvh flex-col overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${bgUrl})`, backgroundColor: '#a07860' }} />
-        <div className="pointer-events-none absolute inset-0 bg-black/30" />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3"
-          style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }} />
+        <div className="absolute inset-0 bg-cover bg-top" style={{ backgroundImage: `url(${bgUrl})`, backgroundColor: '#a07860' }} />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0"
+          style={{ height: '72%', background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)' }} />
 
         <div className="relative z-20 flex items-center px-4" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
           <button onClick={() => router.push('/')}
@@ -389,21 +388,19 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
         <div className="relative z-20 px-5 pb-10 space-y-5">
           <div>
-            <div className="mb-3 text-4xl">{scenarioInfo?.scenarioEmoji ?? '🗣️'}</div>
-            <h2 className="text-xl font-bold text-white mb-1">{scenarioInfo?.scenarioTitle}</h2>
-            <p className="text-sm text-white/70 leading-relaxed">{scenarioInfo?.scenarioSituation}</p>
-          </div>
-
-          <div className="rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 px-4 py-3">
-            <p className="text-xs font-semibold text-white/50 mb-1">달성 목표</p>
-            <p className="text-sm text-white leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
+            <h2 className="text-[26px] font-bold text-white leading-tight tracking-tight mb-4">{scenarioInfo?.scenarioTitle}</h2>
+            <p className="text-[15px] text-white/90 leading-relaxed mb-4">{scenarioInfo?.scenarioSituation}</p>
+            <div className="flex items-center gap-2">
+              <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white">목표</span>
+              <p className="text-[13px] text-white/80 leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
+            </div>
           </div>
 
           <button
             onClick={handleStartSession}
             className="w-full rounded-2xl bg-primary py-4 text-base font-semibold text-white"
           >
-            대화 시작할게요
+            도전할게요
           </button>
         </div>
 
