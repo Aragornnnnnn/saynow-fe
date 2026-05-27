@@ -436,13 +436,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -6, scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-2xl bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-foreground shadow-md"
+                  className="absolute left-10 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white pl-4 pr-3 py-1.5 text-xs font-semibold text-foreground shadow-md overflow-visible"
                 >
                   상황 다시 확인해봐요
-                  {/* 왼쪽 꼬리 */}
                   <span
-                    className="absolute -left-1.5 top-1/2 -translate-y-1/2"
-                    style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '6px solid rgba(255,255,255,0.9)' }}
+                    className="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2"
+                    style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '6px solid white' }}
                   />
                 </motion.button>
               )}
