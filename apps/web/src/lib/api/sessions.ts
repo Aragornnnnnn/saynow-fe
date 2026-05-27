@@ -45,6 +45,21 @@ export function submitUtterance(
   });
 }
 
+export interface ApiGuideResult {
+  sessionId: number;
+  answer: string;
+}
+
+export function askGuide(
+  sessionId: number,
+  question: string,
+): Promise<ApiGuideResult> {
+  return request(`/api/v1/sessions/${sessionId}/guide`, {
+    method: 'POST',
+    body: JSON.stringify({ question }),
+  });
+}
+
 export function exitSession(sessionId: number): Promise<void> {
   return request(`/api/v1/sessions/${sessionId}`, { method: 'DELETE' });
 }
