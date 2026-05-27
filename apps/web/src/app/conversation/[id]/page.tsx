@@ -3,7 +3,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic } from 'lucide-react';
+import { ChevronLeft, Mic, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { startSession, submitUtterance, exitSession, createFeedback } from '@/lib/api';
@@ -45,6 +45,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [transcript, setTranscript] = useState('');
   const [showExitModal, setShowExitModal] = useState(false);
   const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
+  const [showBriefingSheet, setShowBriefingSheet] = useState(false);
   const [bgBlurred, setBgBlurred] = useState(false);
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
@@ -64,6 +65,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [heartShake, setHeartShake] = useState(false);
   const [emptyToast, setEmptyToast] = useState(false);
   const [redFlash, setRedFlash] = useState(false);
+  const [showSituationHint, setShowSituationHint] = useState(false);
+  const situationHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (prevHeartsRef.current <= remainingHearts) {
@@ -76,6 +79,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     triggerHaptic('medium');
     const t1 = setTimeout(() => setHeartShake(false), 1000);
     const t2 = setTimeout(() => setRedFlash(false), 400);
+    // 하트 깎이면 상황 힌트 버튼 4초간 표시
+    if (situationHintTimerRef.current) clearTimeout(situationHintTimerRef.current);
+    setShowSituationHint(true);
+    situationHintTimerRef.current = setTimeout(() => setShowSituationHint(false), 4000);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [remainingHearts]);
 
@@ -378,16 +385,27 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         <div className="pointer-events-none absolute inset-x-0 bottom-0"
           style={{ height: '72%', background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)' }} />
 
-        <div className="relative z-20 flex items-center px-4" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
+        <motion.div
+          className="relative z-20 flex items-center px-4"
+          style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3, ease: 'easeOut' }}
+        >
           <button onClick={() => router.push('/')}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
             <ChevronLeft size={20} />
           </button>
-        </div>
+        </motion.div>
 
         <div className="relative z-20 flex-1" />
 
-        <div className="relative z-20 px-5 pb-10 space-y-5">
+        <motion.div
+          className="relative z-20 px-5 pb-10 space-y-5"
+          initial={{ opacity: 0, y: 32 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div>
             <h2 className="text-[26px] font-bold text-white leading-tight tracking-tight mb-4">{scenarioInfo?.scenarioTitle}</h2>
             <p className="text-[15px] text-white/90 leading-relaxed mb-4">{scenarioInfo?.scenarioSituation}</p>
@@ -400,7 +418,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           <Button variant="white" onClick={handleStartSession}>
             도전할게요 →
           </Button>
-        </div>
+        </motion.div>
 
         {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
       </main>
@@ -426,13 +444,18 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         </div>
         <div className="relative z-20 h-5 px-4" />
         <div className="relative z-20 flex-1" />
-        <div className="relative z-20 px-4 pb-10 pt-2">
+        <motion.div
+          className="relative z-20 px-4 pb-10 pt-2"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+        >
           <div className="mb-3 h-6" />
           <div className="flex w-full items-center justify-center gap-3 rounded-2xl py-4 bg-primary/60">
             <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
             <span className="text-sm font-semibold text-white">준비 중...</span>
           </div>
-        </div>
+        </motion.div>
         {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
       </main>
     );
@@ -441,7 +464,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const bgImageUrl = getScenarioImage(Number(id), 'play');
 
   return (
-    <main className="relative flex h-dvh flex-col overflow-hidden bg-black">
+    <motion.main
+      className="relative flex h-dvh flex-col overflow-hidden bg-black"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3, ease: 'easeOut' }}
+    >
       {/* 배경 이미지 */}
       <div
         className="absolute inset-0 bg-cover bg-center transition-[filter] duration-[800ms] ease-in-out"
@@ -468,12 +496,42 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {/* 상단 헤더 */}
       <div className="relative z-20 flex items-center justify-between px-4 pb-2" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
-        <button
-          onClick={() => setShowExitModal(true)}
-          className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
-        >
-          <ChevronLeft size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowExitModal(true)}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
+          >
+            <ChevronLeft size={20} />
+          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowBriefingSheet(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
+            >
+              <Info size={18} />
+            </button>
+            {/* 하트 깎일 때 말풍선 유도 */}
+            <AnimatePresence>
+              {showSituationHint && !feedbackAvailable && (
+                <motion.button
+                  onClick={() => { setShowSituationHint(false); setShowBriefingSheet(true); }}
+                  initial={{ opacity: 0, x: -6, scale: 0.9 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -6, scale: 0.9 }}
+                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
+                  className="absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-2xl rounded-tl-sm bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-foreground shadow-md"
+                >
+                  상황 다시 확인해봐요
+                  {/* 왼쪽 꼬리 */}
+                  <span
+                    className="absolute -left-1.5 top-1/2 -translate-y-1/2"
+                    style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '6px solid rgba(255,255,255,0.9)' }}
+                  />
+                </motion.button>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
         <div className="relative flex flex-col items-end">
           <motion.div
             animate={heartShake ? { x: [0, -6, 6, -4, 4, 0] } : {}}
@@ -668,7 +726,47 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
       {showMicDeniedModal && <MicDeniedModal isNative={!!window.ReactNativeWebView} onClose={() => setShowMicDeniedModal(false)} />}
-    </main>
+
+      {/* 브리핑 오버레이 — 위에서 내려옴 */}
+      <AnimatePresence>
+        {showBriefingSheet && (
+          <motion.div
+            className="absolute inset-0 z-50 overflow-hidden"
+            initial={{ y: '-100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '-100%' }}
+            transition={{ type: 'spring', stiffness: 320, damping: 32 }}
+          >
+            <div className="relative flex h-full flex-col overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-top" style={{ backgroundImage: `url(${getScenarioImage(Number(id), 'play')})`, backgroundColor: '#a07860' }} />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0"
+                style={{ height: '72%', background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)' }} />
+
+              <div style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }} />
+
+              <div className="relative z-20 flex-1" />
+
+              <div className="relative z-20 px-5 pb-10 space-y-5">
+                <div>
+                  <h2 className="text-[26px] font-bold text-white leading-tight tracking-tight mb-4">{scenarioInfo?.scenarioTitle}</h2>
+                  <p className="text-[15px] text-white/90 leading-relaxed mb-4">{scenarioInfo?.scenarioSituation}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white">목표</span>
+                    <p className="text-[13px] text-white/80 leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowBriefingSheet(false)}
+                  className="w-full rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 py-3.5 text-sm font-semibold text-white"
+                >
+                  대화로 돌아가기
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.main>
   );
 }
 
