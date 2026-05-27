@@ -3,7 +3,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic, Info, Send, X } from 'lucide-react';
+import { ChevronLeft, Mic, Info, ArrowUp, ArrowLeftRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { startSession, submitUtterance, exitSession, createFeedback, askGuide } from '@/lib/api';
@@ -659,52 +659,46 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="rounded-2xl border border-blue-500/40 bg-blue-950/60 px-3 py-2.5 flex flex-col gap-2"
+            className="relative flex items-center gap-2"
           >
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest text-blue-400 uppercase">
-                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-                Guide Mode
-              </span>
-              <button
-                onClick={() => { setIsGuideMode(false); setGuideInput(''); }}
-                className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-white/40"
-              >
-                <X size={12} />
-              </button>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                autoFocus
-                type="text"
-                value={guideInput}
-                onChange={(e) => setGuideInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleGuideSubmit(); }}
-                placeholder="궁금한 거 한국어로 물어보세요"
-                className="flex-1 rounded-full bg-blue-500/10 border border-blue-500/30 px-4 h-11 text-sm text-white placeholder:text-blue-300/40 outline-none focus:border-blue-400/60"
-              />
-              <button
-                onClick={handleGuideSubmit}
-                disabled={!guideInput.trim() || isGuideLoading}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_4px_14px_rgba(59,130,246,0.45)] disabled:bg-blue-500/25 disabled:shadow-none transition-colors"
-              >
-                {isGuideLoading
-                  ? <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                  : <Send size={16} />
-                }
-              </button>
-            </div>
+            {/* 말하기로 돌아가기 버튼 — 주황 (반대 모드 색) */}
+            <button
+              onClick={() => { setIsGuideMode(false); setGuideInput(''); }}
+              className="absolute -top-11 right-0 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75"
+            >
+              <Mic size={12} />
+              말하기로 돌아가기
+            </button>
+            <input
+              autoFocus
+              type="text"
+              value={guideInput}
+              onChange={(e) => setGuideInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleGuideSubmit(); }}
+              placeholder="모르는 표현, 한국어로 물어보세요"
+              className="flex-1 rounded-full bg-white/8 border border-white/15 px-5 h-14 text-sm text-white placeholder:text-white/35 outline-none focus:border-white/25 transition-colors"
+            />
+            <button
+              onClick={handleGuideSubmit}
+              disabled={!guideInput.trim() || isGuideLoading}
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_5px_0_#1d4ed8] disabled:bg-white/15 disabled:shadow-none disabled:text-white/30 transition-colors"
+            >
+              {isGuideLoading
+                ? <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                : <ArrowUp size={18} />
+              }
+            </button>
           </motion.div>
         ) : (
           /* 마이크 버튼 */
           <motion.div key="mic-btn" className="relative">
-            {/* GUIDE 버튼 — 우상단 */}
+            {/* 가이드 질문하기 버튼 — 파랑 (반대 모드 색) */}
             <button
               onClick={() => setIsGuideMode(true)}
-              className="absolute -top-7 right-0 flex items-center gap-1 rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-1 text-[11px] font-bold tracking-widest text-blue-400 uppercase"
+              className="absolute -top-11 right-0 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75"
             >
-              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
-              GUIDE
+              <span>💬</span>
+              대화 중 질문하기
             </button>
             <Button
               onClick={handleMicPress}
