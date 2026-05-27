@@ -3,10 +3,10 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic, Info } from 'lucide-react';
+import { ChevronLeft, Mic, Info, Send, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { startSession, submitUtterance, exitSession, createFeedback } from '@/lib/api';
+import { startSession, submitUtterance, exitSession, createFeedback, askGuide } from '@/lib/api';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
@@ -19,6 +19,8 @@ import ExitConfirmModal from './ExitConfirmModal';
 import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
+import { GuideQBubble } from '@/components/chat/GuideQBubble';
+import { GuideABubble } from '@/components/chat/GuideABubble';
 import { TypingDots } from '@/components/chat/TypingDots';
 import { Button } from '@/components/ui/Button';
 
@@ -67,6 +69,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [redFlash, setRedFlash] = useState(false);
   const [showSituationHint, setShowSituationHint] = useState(false);
   const situationHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [isGuideMode, setIsGuideMode] = useState(false);
+  const [guideInput, setGuideInput] = useState('');
+  const [isGuideLoading, setIsGuideLoading] = useState(false);
 
   useEffect(() => {
     if (prevHeartsRef.current <= remainingHearts) {
@@ -315,6 +320,27 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     recognitionRef.current = null;
   }
 
+  async function handleGuideSubmit() {
+    const question = guideInput.trim();
+    if (!question || !sessionId || isGuideLoading) return;
+
+    setIsGuideLoading(true);
+    setGuideInput('');
+    setIsGuideMode(false);
+
+    const qId = crypto.randomUUID();
+    setMessages((prev) => [...prev, { id: qId, role: 'guide-q', text: question }]);
+
+    try {
+      const result = await askGuide(sessionId, question);
+      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'guide-a', text: result.answer }]);
+    } catch {
+      setMessages((prev) => prev.filter((m) => m.id !== qId));
+    } finally {
+      setIsGuideLoading(false);
+    }
+  }
+
   async function handleMicPress() {
     setEmptyToast(false);
     if (isRecording) {
@@ -546,6 +572,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 </motion.div>
               )}
             </div>
+          ) : msg.role === 'guide-q' ? (
+            <GuideQBubble key={msg.id} text={msg.text} />
+          ) : msg.role === 'guide-a' ? (
+            <GuideABubble key={msg.id} text={msg.text} />
           ) : (
             <UserBubble key={msg.id} text={msg.text} />
           )
@@ -621,37 +651,91 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               : '결과 보기'
             }
           </motion.button>
+        ) : isGuideMode ? (
+          /* 가이드 입력 모드 */
+          <motion.div
+            key="guide-input"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            className="rounded-2xl border border-blue-500/40 bg-blue-950/60 px-3 py-2.5 flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5 text-[11px] font-bold tracking-widest text-blue-400 uppercase">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+                Guide Mode
+              </span>
+              <button
+                onClick={() => { setIsGuideMode(false); setGuideInput(''); }}
+                className="flex h-6 w-6 items-center justify-center rounded-full bg-white/10 text-white/40"
+              >
+                <X size={12} />
+              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                type="text"
+                value={guideInput}
+                onChange={(e) => setGuideInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handleGuideSubmit(); }}
+                placeholder="궁금한 거 한국어로 물어보세요"
+                className="flex-1 rounded-full bg-blue-500/10 border border-blue-500/30 px-4 h-11 text-sm text-white placeholder:text-blue-300/40 outline-none focus:border-blue-400/60"
+              />
+              <button
+                onClick={handleGuideSubmit}
+                disabled={!guideInput.trim() || isGuideLoading}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_4px_14px_rgba(59,130,246,0.45)] disabled:bg-blue-500/25 disabled:shadow-none transition-colors"
+              >
+                {isGuideLoading
+                  ? <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                  : <Send size={16} />
+                }
+              </button>
+            </div>
+          </motion.div>
         ) : (
           /* 마이크 버튼 */
-          <Button
-            onClick={handleMicPress}
-            disabled={pageState === 'submitting' || pageState === 'stopping'}
-            loading={pageState === 'submitting' || pageState === 'stopping'}
-            variant={isRecording ? 'secondary' : 'primary'}
-            className={isRecording ? 'shadow-none! translate-y-0!' : ''}
-          >
-            {pageState === 'submitting' || pageState === 'stopping' ? (
-              <span className="text-sm font-semibold text-white">분석 중...</span>
-            ) : isRecording ? (
-              <>
-                <div className="flex items-center gap-0.75">
-                  {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
-                    <span
-                      key={i}
-                      className="w-0.75 rounded-full bg-primary animate-[wave_0.6s_ease-in-out_infinite_alternate]"
-                      style={{ height: `${h * 20}px`, animationDelay: `${i * 0.1}s` }}
-                    />
-                  ))}
-                </div>
-                <span className="text-sm font-semibold text-muted-foreground">말하기가 끝나면 눌러주세요</span>
-              </>
-            ) : (
-              <>
-                <Mic size={20} className="text-white" />
-                <span className="text-sm font-semibold text-white">탭하여 말하기</span>
-              </>
-            )}
-          </Button>
+          <motion.div key="mic-btn" className="relative">
+            {/* GUIDE 버튼 — 우상단 */}
+            <button
+              onClick={() => setIsGuideMode(true)}
+              className="absolute -top-7 right-0 flex items-center gap-1 rounded-full bg-blue-500/15 border border-blue-500/30 px-2.5 py-1 text-[11px] font-bold tracking-widest text-blue-400 uppercase"
+            >
+              <span className="h-1.5 w-1.5 rounded-full bg-blue-400" />
+              GUIDE
+            </button>
+            <Button
+              onClick={handleMicPress}
+              disabled={pageState === 'submitting' || pageState === 'stopping'}
+              loading={pageState === 'submitting' || pageState === 'stopping'}
+              variant={isRecording ? 'secondary' : 'primary'}
+              className={isRecording ? 'shadow-none! translate-y-0!' : ''}
+            >
+              {pageState === 'submitting' || pageState === 'stopping' ? (
+                <span className="text-sm font-semibold text-white">분석 중...</span>
+              ) : isRecording ? (
+                <>
+                  <div className="flex items-center gap-0.75">
+                    {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
+                      <span
+                        key={i}
+                        className="w-0.75 rounded-full bg-primary animate-[wave_0.6s_ease-in-out_infinite_alternate]"
+                        style={{ height: `${h * 20}px`, animationDelay: `${i * 0.1}s` }}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm font-semibold text-muted-foreground">말하기가 끝나면 눌러주세요</span>
+                </>
+              ) : (
+                <>
+                  <Mic size={20} className="text-white" />
+                  <span className="text-sm font-semibold text-white">탭하여 말하기</span>
+                </>
+              )}
+            </Button>
+          </motion.div>
         )}
         </AnimatePresence>
       </div>
