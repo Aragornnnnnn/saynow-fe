@@ -24,7 +24,7 @@ import { Button } from '@/components/ui/Button';
 
 interface ChatMessage {
   id: string;
-  role: 'ai' | 'user';
+  role: 'ai' | 'user' | 'guide-q' | 'guide-a';
   text: string;
   translatedText?: string;
   feedback?: string;
