@@ -377,91 +377,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  if (pageState === 'briefing') {
-    const bgUrl = getScenarioImage(Number(id), 'play');
-    return (
-      <main className="relative flex h-dvh flex-col overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-top" style={{ backgroundImage: `url(${bgUrl})`, backgroundColor: '#a07860' }} />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0"
-          style={{ height: '72%', background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)' }} />
-
-        <motion.div
-          className="relative z-20 flex items-center px-4"
-          style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-        >
-          <button onClick={() => router.push('/')}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
-            <ChevronLeft size={20} />
-          </button>
-        </motion.div>
-
-        <div className="relative z-20 flex-1" />
-
-        <motion.div
-          className="relative z-20 px-5 pb-10 space-y-5"
-          initial={{ opacity: 0, y: 32 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div>
-            <h2 className="text-[26px] font-bold text-white leading-tight tracking-tight mb-4">{scenarioInfo?.scenarioTitle}</h2>
-            <p className="text-[15px] text-white/90 leading-relaxed mb-4">{scenarioInfo?.scenarioSituation}</p>
-            <div className="flex items-center gap-2">
-              <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white">목표</span>
-              <p className="text-[13px] text-white/80 leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
-            </div>
-          </div>
-
-          <Button variant="white" onClick={handleStartSession}>
-            도전할게요 →
-          </Button>
-        </motion.div>
-
-        {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
-      </main>
-    );
-  }
-
-  if (pageState === 'loading') {
-    const loadingBgUrl = getScenarioImage(Number(id), 'play');
-    return (
-      <main className="relative flex h-dvh flex-col overflow-hidden">
-        <div className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${loadingBgUrl})`, backgroundColor: '#a07860' }} />
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-40"
-          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)' }} />
-        <div className="relative z-20 flex items-center justify-between px-4 pb-2" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
-          <button onClick={() => setShowExitModal(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
-            <ChevronLeft size={20} />
-          </button>
-          <div className="flex gap-0.5">
-            {[0,1,2].map(i => <span key={i} className="text-lg drop-shadow-md">❤️</span>)}
-          </div>
-        </div>
-        <div className="relative z-20 h-5 px-4" />
-        <div className="relative z-20 flex-1" />
-        <motion.div
-          className="relative z-20 px-4 pb-10 pt-2"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div className="mb-3 h-6" />
-          <div className="flex w-full items-center justify-center gap-3 rounded-2xl py-4 bg-primary/60">
-            <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-            <span className="text-sm font-semibold text-white">준비 중...</span>
-          </div>
-        </motion.div>
-        {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
-      </main>
-    );
-  }
-
   const bgImageUrl = getScenarioImage(Number(id), 'play');
+  const isBriefing = pageState === 'briefing' || pageState === 'loading';
 
   return (
     <motion.main
@@ -519,7 +436,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -6, scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-2xl rounded-tl-sm bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-foreground shadow-md"
+                  className="absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-2xl bg-white/90 backdrop-blur-sm px-3 py-1.5 text-xs font-semibold text-foreground shadow-md"
                 >
                   상황 다시 확인해봐요
                   {/* 왼쪽 꼬리 */}
@@ -726,6 +643,66 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
       {showMicDeniedModal && <MicDeniedModal isNative={!!window.ReactNativeWebView} onClose={() => setShowMicDeniedModal(false)} />}
+
+      {/* 초기 브리핑 오버레이 — 진입 시 덮고 있다가 fade out */}
+      <AnimatePresence>
+        {isBriefing && (
+          <motion.div
+            className="absolute inset-0 z-50 overflow-hidden"
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, ease: 'easeInOut' }}
+          >
+            <div className="relative flex h-full flex-col overflow-hidden">
+              <div className="absolute inset-0 bg-cover bg-top" style={{ backgroundImage: `url(${bgImageUrl})`, backgroundColor: '#a07860' }} />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0"
+                style={{ height: '72%', background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)' }} />
+
+              {/* 뒤로가기 */}
+              <motion.div
+                className="relative z-20 flex items-center px-4"
+                style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+              >
+                <button onClick={() => router.push('/')}
+                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
+                  <ChevronLeft size={20} />
+                </button>
+              </motion.div>
+
+              <div className="relative z-20 flex-1" />
+
+              <motion.div
+                className="relative z-20 px-5 pb-10 space-y-5"
+                initial={{ opacity: 0, y: 32 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div>
+                  <h2 className="text-[26px] font-bold text-white leading-tight tracking-tight mb-4">{scenarioInfo?.scenarioTitle}</h2>
+                  <p className="text-[15px] text-white/90 leading-relaxed mb-4">{scenarioInfo?.scenarioSituation}</p>
+                  <div className="flex items-center gap-2">
+                    <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white">목표</span>
+                    <p className="text-[13px] text-white/80 leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
+                  </div>
+                </div>
+                {pageState === 'loading' ? (
+                  <div className="flex w-full items-center justify-center gap-3 rounded-2xl py-4 bg-primary/60">
+                    <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                    <span className="text-sm font-semibold text-white">준비 중...</span>
+                  </div>
+                ) : (
+                  <Button variant="white" onClick={handleStartSession}>
+                    도전할게요 →
+                  </Button>
+                )}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* 브리핑 오버레이 — 위에서 내려옴 */}
       <AnimatePresence>
