@@ -421,6 +421,18 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             <ChevronLeft size={20} />
           </button>
           <div className="relative">
+            {/* pulse 링 — 하트 깎일 때 */}
+            <AnimatePresence>
+              {showSituationHint && !feedbackAvailable && (
+                <motion.span
+                  className="absolute inset-0 rounded-full border-2 border-primary pointer-events-none"
+                  initial={{ opacity: 0.8, scale: 1 }}
+                  animate={{ opacity: 0, scale: 1.5 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 1.2, ease: 'easeOut', repeat: Infinity, repeatDelay: 0.6 }}
+                />
+              )}
+            </AnimatePresence>
             <button
               onClick={() => setShowBriefingSheet(true)}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
@@ -436,13 +448,17 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -6, scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="absolute left-10 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white pl-4 pr-3 py-1.5 text-xs font-semibold text-foreground shadow-md overflow-visible"
+                  className="absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-md"
                 >
-                  상황 다시 확인해봐요
-                  <span
-                    className="absolute left-0 top-1/2 -translate-x-full -translate-y-1/2"
-                    style={{ width: 0, height: 0, borderTop: '5px solid transparent', borderBottom: '5px solid transparent', borderRight: '6px solid white' }}
-                  />
+                  상황 보고 다시 말해봐요
+                  <svg
+                    className="absolute top-1/2 -translate-y-1/2"
+                    style={{ left: '-4px' }}
+                    width="7" height="12" viewBox="0 0 7 12"
+                    fill="none"
+                  >
+                    <path d="M7 0 L0 6 L7 12 Z" fill="white" />
+                  </svg>
                 </motion.button>
               )}
             </AnimatePresence>
