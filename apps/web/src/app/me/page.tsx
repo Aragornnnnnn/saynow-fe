@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   ArrowLeft,
   ChevronRight,
@@ -76,7 +77,12 @@ export default function MyPage() {
   }
 
   return (
-    <main className="flex h-dvh flex-col bg-background">
+    <motion.main
+      className="flex h-dvh flex-col bg-background"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
       <header className="flex items-center gap-3 px-4 pb-3 pt-6">
         <button
           type="button"
@@ -182,7 +188,7 @@ export default function MyPage() {
           </div>
         </div>
       )}
-    </main>
+    </motion.main>
   );
 }
 

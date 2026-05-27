@@ -119,7 +119,13 @@ function Home() {
   }
 
   return (
-    <main className="flex h-dvh flex-col overflow-x-hidden" style={{ background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)' }}>
+    <motion.main
+      className="flex h-dvh flex-col overflow-x-hidden"
+      style={{ background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)' }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25, ease: 'easeOut' }}
+    >
       {/* 헤더 */}
       <div className="px-4 pb-3 pt-6">
         <div className="mb-4 flex items-center justify-between">
@@ -194,7 +200,7 @@ function Home() {
         )}
       </AnimatePresence>
 
-    </main>
+    </motion.main>
   );
 }
 

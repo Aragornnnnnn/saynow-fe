@@ -2,6 +2,7 @@
 'use client';
 
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTypingLoop } from '@/hooks/useTypingLoop';
 import { generateRandomHex } from '@/lib/crypto';
@@ -107,7 +108,12 @@ function LoginPageContent() {
   });
 
   return (
-    <main className="flex flex-col h-dvh bg-background items-center justify-between px-6 py-10">
+    <motion.main
+      className="flex flex-col h-dvh bg-background items-center justify-between px-6 py-10"
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+    >
       <div className="w-full">
         <span className="text-lg font-bold text-primary tracking-tight">SayNow</span>
       </div>
@@ -149,7 +155,7 @@ function LoginPageContent() {
           </div>
         )}
       </div>
-    </main>
+    </motion.main>
   );
 }
 
