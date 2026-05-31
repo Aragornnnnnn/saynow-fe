@@ -8,6 +8,7 @@ import {
   ArrowLeft,
   ChevronRight,
   FileText,
+  FlaskConical,
   LogOut,
   ShieldCheck,
   UserRound,
@@ -130,6 +131,14 @@ export default function MyPage() {
             href="/me/terms"
             icon={FileText}
             title="서비스 이용약관"
+          />
+        </section>
+
+        <section className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
+          <MenuLink
+            href="/stt-test"
+            icon={FlaskConical}
+            title="실험실 — STT 인식률 테스트"
           />
         </section>
 
