@@ -92,6 +92,14 @@ function refreshAccessToken(auth: AuthStoreState): Promise<string | null> {
   return refreshPromise;
 }
 
+export async function ensureAccessToken(): Promise<string | null> {
+  const auth = getAuthStore();
+  if (!auth) return null;
+  if (auth.accessToken) return auth.accessToken;
+  if (!auth.refreshToken) return null;
+  return tryRefresh(auth);
+}
+
 async function tryRefresh(auth: AuthStoreState): Promise<string | null> {
   if (!auth.member) return null;
 

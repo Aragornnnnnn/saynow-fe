@@ -1,5 +1,5 @@
 // 세션 완료 및 피드백 생성 API
-import { request } from './client';
+import { request, ensureAccessToken } from './client';
 
 export interface ApiTurnFeedback {
   turnId: number;
@@ -51,11 +51,16 @@ function getAccessToken(): string | null {
 }
 
 export async function* streamFeedback(sessionId: number): AsyncGenerator<FeedbackSseEvent> {
-  const token = getAccessToken();
-  const headers: Record<string, string> = { Accept: 'text/event-stream' };
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  let token = getAccessToken();
+  if (!token) token = await ensureAccessToken();
+  if (!token) throw new Error('인증이 필요해요.');
 
-  const response = await fetch(`/api/v1/feedback/stream/${sessionId}`, { headers });
+  const headers: Record<string, string> = {
+    Accept: 'text/event-stream',
+    Authorization: `Bearer ${token}`,
+  };
+
+  const response = await fetch(`/api/v1/sessions/${sessionId}/feedback/stream`, { method: 'POST', headers });
 
   if (!response.ok || !response.body) {
     throw new Error(`SSE 연결 실패 (${response.status})`);
