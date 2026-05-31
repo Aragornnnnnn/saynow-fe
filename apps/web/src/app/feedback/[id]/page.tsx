@@ -20,8 +20,8 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   const searchParams = useSearchParams();
   const scenarioId = Number(searchParams.get('scenarioId') ?? 1);
   // 훅 한 줄만 바꾸면 POST ↔ SSE 전환
-  // const { header, turnFeedbacks, isDone, error } = useFeedbackQuery(Number(id));
-  const { header, turnFeedbacks, isDone, error } = useFeedbackStream(Number(id));
+  const { header, turnFeedbacks, isDone, error } = useFeedbackQuery(Number(id));
+  // const { header, turnFeedbacks, isDone, error } = useFeedbackStream(Number(id));
 
   // prefetch로 이미 데이터가 있으면 로딩 스크린 건너뜀
   const [loadingDone, setLoadingDone] = useState(isDone && header !== null);
