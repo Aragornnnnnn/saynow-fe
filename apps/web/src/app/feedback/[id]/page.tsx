@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import type { ApiTurnFeedback } from '@/lib/api';
-import { useFeedbackQuery } from '@/queries/feedback';
+import { useFeedbackQuery, useFeedbackStream } from '@/queries/feedback';
 import { triggerHaptic } from '@/bridge/commands';
 import { getScenarioImage } from '@/lib/scenarioImages';
 import { AiBubble } from '@/components/chat/AiBubble';
@@ -19,22 +19,23 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const searchParams = useSearchParams();
   const scenarioId = Number(searchParams.get('scenarioId') ?? 1);
-  const feedbackQuery = useFeedbackQuery(Number(id));
-  const feedback = feedbackQuery.data;
-  const error = feedbackQuery.error;
+  // 훅 한 줄만 바꾸면 POST ↔ SSE 전환
+  // const { header, turnFeedbacks, isDone, error } = useFeedbackQuery(Number(id));
+  const { header, turnFeedbacks, isDone, error } = useFeedbackStream(Number(id));
 
-  const [loadingDone, setLoadingDone] = useState(!feedbackQuery.isPending);
+  // prefetch로 이미 데이터가 있으면 로딩 스크린 건너뜀
+  const [loadingDone, setLoadingDone] = useState(isDone && header !== null);
 
   if (!loadingDone) {
     return (
       <FeedbackLoadingScreen
-        dataReady={!feedbackQuery.isPending}
+        dataReady={header !== null}
         onDone={() => setLoadingDone(true)}
       />
     );
   }
 
-  if (error || !feedback) {
+  if (error || !header) {
     return (
       <main className='flex h-full items-center justify-center bg-background px-6'>
         <div className='space-y-4 text-center'>
@@ -49,26 +50,26 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
 
   return (
     <IntroCardLayout
-      cleared={feedback.cleared}
-      score={feedback.comprehensionScore}
+      cleared={header.cleared}
+      score={header.comprehensionScore}
       scenarioId={scenarioId}
     >
       <main className='flex h-full flex-col bg-background'>
         <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain'>
           <ResultHeader
-            cleared={feedback.cleared}
-            score={feedback.comprehensionScore}
-            remainingHearts={feedback.remainingHearts}
-            summary={feedback.feedbackSummary}
+            cleared={header.cleared}
+            score={header.comprehensionScore}
+            remainingHearts={header.remainingHearts}
+            summary={header.feedbackSummary}
           />
           <div className='px-4 pb-6 space-y-6'>
-            {feedback.turnFeedbacks.map((turn, index) => (
+            {turnFeedbacks.map((turn, index) => (
               <TurnBubblePair key={turn.turnId} turn={turn} index={index} />
             ))}
           </div>
         </div>
 
-        <HomeButton onNavigate={() => router.replace('/?survey=true')} />
+        <HomeButton onNavigate={() => router.replace(`/?survey=true&sessionId=${header.sessionId}`)} />
       </main>
     </IntroCardLayout>
   );
