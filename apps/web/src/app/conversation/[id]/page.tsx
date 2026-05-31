@@ -77,6 +77,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const keyboardOffset = useKeyboardOffset();
 
   useEffect(() => {
+    if (keyboardOffset > 0) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [keyboardOffset]);
+
+  useEffect(() => {
     if (prevHeartsRef.current <= remainingHearts) {
       prevHeartsRef.current = remainingHearts;
       return;
@@ -509,11 +515,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* 하트 안내 — 블러 전환 시 페이드인 */}
+      {/* 하트 안내 — 블러 전환 시 페이드인, absolute로 채팅 영역 공간 차지 안 함 */}
       <AnimatePresence>
         {bgBlurred && (
           <motion.div
-            className="relative z-20 px-4"
+            className="pointer-events-none absolute inset-x-0 z-20"
+            style={{ top: 'calc(max(env(safe-area-inset-top), 16px) + 8px + 44px + 8px)' }}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -600,7 +607,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       {/* 하단 컨트롤 */}
       <div
         className="relative z-20 px-4 pt-2"
-        style={{ paddingBottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : '40px' }}
+        style={{ paddingBottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : '16px' }}
       >
         {/* STT transcript */}
         <div className="mb-3 min-h-6 text-center">
@@ -666,17 +673,20 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="relative flex items-center gap-2"
+            className="flex min-w-0 flex-col gap-2"
             onAnimationComplete={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
           >
-            {/* 말하기로 돌아가기 버튼 — 주황 (반대 모드 색) */}
-            <button
-              onClick={() => { setIsGuideMode(false); setGuideInput(''); }}
-              className="absolute -top-11 right-0 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75"
-            >
-              <Mic size={12} />
-              말하기로 돌아가기
-            </button>
+            {/* 말하기로 돌아가기 버튼 — 오른쪽 정렬 인라인 */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => { setIsGuideMode(false); setGuideInput(''); }}
+                className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75"
+              >
+                <Mic size={12} />
+                말하기로 돌아가기
+              </button>
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
             <input
               autoFocus
               type="text"
@@ -684,7 +694,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               onChange={(e) => setGuideInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter') handleGuideSubmit(); }}
               placeholder="모르는 표현, 한국어로 물어보세요"
-              className="flex-1 rounded-full bg-white/8 border border-white/15 px-5 h-14 text-sm text-white placeholder:text-white/35 outline-none focus:border-white/25 transition-colors"
+              className="min-w-0 flex-1 rounded-full bg-white/8 border border-white/15 px-5 h-14 text-sm text-white placeholder:text-white/35 outline-none focus:border-white/25 transition-colors"
             />
             <button
               onClick={handleGuideSubmit}
@@ -696,6 +706,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 : <ArrowUp size={18} />
               }
             </button>
+            </div>
           </motion.div>
         ) : (
           /* 마이크 버튼 */
