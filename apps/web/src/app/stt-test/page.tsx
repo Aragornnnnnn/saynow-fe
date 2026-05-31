@@ -20,43 +20,43 @@ type Result = {
 // 정답 문장 — 시나리오별 고정
 const SENTENCE_PRESETS = [
   {
-    label: '공항',
+    label: '입국심사',
     sentences: [
-      "Could I see your boarding pass and passport please?",
-      "Your gate is B12, boarding starts in 30 minutes",
-      "I need to check in this bag as oversized baggage",
-      "Is this flight on time or is there a delay?",
-      "Where is the nearest baggage claim area?",
+      "I'm here for tourism, about two weeks.",
+      "I'm staying at the Hilton Hotel in downtown.",
+      "I have nothing to declare.",
+      "This is my first time visiting.",
+      "I have a return ticket for the 15th.",
     ],
   },
   {
-    label: '카페',
+    label: '수하물',
     sentences: [
-      "I'd like a large iced americano to go please",
-      "Can I get a venti oat milk latte with an extra shot?",
-      "Do you have any sugar-free syrup options?",
-      "I'll have a cappuccino for here, no whipped cream",
-      "What's the difference between a latte and a flat white?",
+      "My bag hasn't come out yet, it's been about 30 minutes.",
+      "It's a large black suitcase with a red tag.",
+      "Can I get a reference number for the claim?",
+      "I have a connecting flight tomorrow morning.",
+      "Where do I pick it up once it's found?",
     ],
   },
   {
-    label: '길 안내',
+    label: '비행기 놓침',
     sentences: [
-      "Could you tell me where the nearest subway station is?",
-      "Turn left at the intersection and go straight for two blocks",
-      "The bus stop is right around the corner from here",
-      "How long does it take to get downtown from here?",
-      "Is there a taxi stand near the exit?",
+      "I just missed my flight to New York.",
+      "Is there any other flight today?",
+      "Can I get rebooked on the next available flight?",
+      "I have travel insurance, does that help?",
+      "What's the earliest I can get out?",
     ],
   },
   {
     label: '기본',
     sentences: [
-      "Yes please, that sounds great",
-      "I wanna grab a coffee before the meeting",
-      "Do you have any recommendations for a good restaurant nearby?",
+      "Yes please, that sounds great.",
+      "I'm not sure I understood that correctly.",
+      "Could you say that again more slowly?",
       "Excuse me, could you help me with this?",
-      "I'm not sure I understood that correctly",
+      "Do you have any recommendations?",
     ],
   },
 ];
@@ -69,13 +69,30 @@ const HINT_PRESETS = [
     words: [] as string[],
   },
   {
-    label: '공항',
-    description: '탑승, 수하물, 보안 검색 관련 단어',
+    label: '입국심사',
+    description: '여권, 체류 목적, 신고 관련 단어',
     words: [
-      'boarding pass', 'gate', 'terminal', 'departure', 'arrival',
-      'check-in', 'baggage', 'carry-on', 'overhead bin', 'aisle',
-      'window seat', 'passport', 'customs', 'immigration', 'security',
-      'delayed', 'on time', 'connecting flight', 'layover', 'lounge',
+      'passport', 'visa', 'tourism', 'business', 'declare', 'customs',
+      'immigration', 'duration', 'stay', 'hotel', 'return ticket',
+      'departure date', 'address', 'first time', 'fingerprint',
+    ],
+  },
+  {
+    label: '수하물',
+    description: '짐 찾기, 분실, 클레임 관련 단어',
+    words: [
+      'baggage', 'suitcase', 'luggage', 'claim', 'lost', 'delayed',
+      'tag', 'carousel', 'reference number', 'report', 'connecting flight',
+      'description', 'black', 'hard case', 'delivery',
+    ],
+  },
+  {
+    label: '비행기 놓침',
+    description: '재예약, 보험, 다음 편 관련 단어',
+    words: [
+      'missed', 'flight', 'rebook', 'next available', 'standby',
+      'travel insurance', 'compensation', 'voucher', 'hotel', 'overnight',
+      'departure', 'boarding', 'gate', 'ticket', 'refund',
     ],
   },
   {
