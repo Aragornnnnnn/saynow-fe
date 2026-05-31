@@ -21,7 +21,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   const isRunningRef = useRef(false);
 
   useSpeechRecognitionEvent('result', (event) => {
-    const transcript = event.results.map((r) => r[0]?.transcript ?? '').join(' ').trim();
+    const transcript = event.results[0]?.transcript ?? '';
     if (event.isFinal) {
       onFinal(transcript);
     } else {
