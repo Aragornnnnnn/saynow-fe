@@ -33,6 +33,7 @@ function Home() {
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [showSurvey, setShowSurvey] = useState(() => searchParams.get('survey') === 'true');
+  const surveySessionId = showSurvey ? Number(searchParams.get('sessionId')) || null : null;
 
   useEffect(() => {
     if (searchParams.get('survey') === 'true') {
@@ -196,7 +197,7 @@ function Home() {
       {/* 서베이 */}
       <AnimatePresence>
         {showSurvey && (
-          <SurveySheet onDone={() => setShowSurvey(false)} />
+          <SurveySheet sessionId={surveySessionId} onDone={() => setShowSurvey(false)} />
         )}
       </AnimatePresence>
 

@@ -5,15 +5,17 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { triggerHaptic } from '@/bridge/commands';
 import { Button } from '@/components/ui/Button';
+import { submitNps } from '@/lib/api';
 
 const EMOJIS = ['😩', '😟', '😶', '😄', '🤩'] as const;
 type EmojiScore = 1 | 2 | 3 | 4 | 5;
 
 interface SurveySheetProps {
+  sessionId: number | null;
   onDone: () => void;
 }
 
-export function SurveySheet({ onDone }: SurveySheetProps) {
+export function SurveySheet({ sessionId, onDone }: SurveySheetProps) {
   const [score, setScore] = useState<EmojiScore | null>(null);
   const [comment, setComment] = useState('');
   const needsComment = score !== null && score <= 2;
@@ -24,6 +26,17 @@ export function SurveySheet({ onDone }: SurveySheetProps) {
     if (s > 2) setComment('');
   }
 
+  async function handleDone() {
+    if (score !== null && sessionId !== null) {
+      try {
+        await submitNps(sessionId, score, comment || undefined);
+      } catch {
+        // 제출 실패해도 UX 차단 안 함
+      }
+    }
+    onDone();
+  }
+
   const content = (
     <>
       {/* 헤더 */}
@@ -32,7 +45,7 @@ export function SurveySheet({ onDone }: SurveySheetProps) {
           <p className='text-base font-bold text-foreground'>방금 연습 어떠셨어요?</p>
           <p className='mt-0.5 text-xs text-muted-foreground'>솔직하게 말해줘요, 다 듣고 반영할게요</p>
         </div>
-        <button onClick={onDone} className='text-xl leading-none text-muted-foreground'>
+        <button onClick={handleDone} className='text-xl leading-none text-muted-foreground'>
           ✕
         </button>
       </div>
@@ -108,7 +121,7 @@ export function SurveySheet({ onDone }: SurveySheetProps) {
       </AnimatePresence>
 
       {/* 완료 버튼 */}
-      <Button size="md" onClick={onDone}>완료</Button>
+      <Button size="md" onClick={handleDone}>완료</Button>
     </>
   );
 
@@ -119,7 +132,7 @@ export function SurveySheet({ onDone }: SurveySheetProps) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      <motion.div className='absolute inset-0 bg-black/40' onClick={onDone} />
+      <motion.div className='absolute inset-0 bg-black/40' onClick={handleDone} />
       <motion.div
         className='relative w-full max-w-sm rounded-3xl bg-background px-6 py-6 shadow-xl'
         initial={{ scale: 0.88, opacity: 0, y: 16 }}
