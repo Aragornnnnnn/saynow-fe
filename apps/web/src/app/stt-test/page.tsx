@@ -184,6 +184,7 @@ export default function SttTestPage() {
   const partialCountRef = useRef(0);
   const transcriptRef = useRef('');
   const refTextRef = useRef(refText);
+  const sessionIdRef = useRef(0);
   useEffect(() => { refTextRef.current = refText; }, [refText]);
 
   function copyResults() {
@@ -212,7 +213,9 @@ export default function SttTestPage() {
 
   useEffect(() => {
     if (mode !== 'native') return;
+    const sid = sessionIdRef.current;
     return webBridge.subscribe((msg) => {
+      if (sessionIdRef.current !== sid) return;
       if (msg.type === 'STT_PARTIAL') {
         partialCountRef.current += 1;
         setPartialCount(partialCountRef.current);
@@ -222,8 +225,6 @@ export default function SttTestPage() {
       if (msg.type === 'STT_FINAL') {
         transcriptRef.current = msg.transcript;
         setTranscript(msg.transcript);
-        saveResult(buildConfigLabel());
-        setIsRecording(false);
       }
       if (msg.type === 'STT_ERROR' || msg.type === 'MIC_PERMISSION_DENIED') {
         setIsRecording(false);
@@ -233,6 +234,7 @@ export default function SttTestPage() {
   }, [mode, languageModel, hintPresetIdx, customWords]);
 
   function resetRecordingState() {
+    sessionIdRef.current += 1;
     partialCountRef.current = 0;
     transcriptRef.current = '';
     setPartialCount(0);
