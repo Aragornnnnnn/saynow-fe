@@ -7,7 +7,7 @@ export type BridgeAuthMember = {
 };
 
 export type WebToNativeMessage =
-  | { type: 'START_STT' }
+  | { type: 'START_STT'; contextualStrings?: string[]; languageModel?: 'web_search' | 'free_form' }
   | { type: 'STOP_STT' }
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
@@ -50,7 +50,22 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
   if (!isRecord(value) || typeof value.type !== 'string') return null;
 
   switch (value.type) {
-    case 'START_STT':
+    case 'START_STT': {
+      const contextualStrings =
+        Array.isArray(value.contextualStrings) &&
+        value.contextualStrings.every((s) => typeof s === 'string')
+          ? (value.contextualStrings as string[])
+          : undefined;
+      const languageModel =
+        value.languageModel === 'web_search' || value.languageModel === 'free_form'
+          ? value.languageModel
+          : undefined;
+      return {
+        type: value.type,
+        ...(contextualStrings ? { contextualStrings } : {}),
+        ...(languageModel ? { languageModel } : {}),
+      };
+    }
     case 'STOP_STT':
     case 'OPEN_SETTINGS':
       return { type: value.type };

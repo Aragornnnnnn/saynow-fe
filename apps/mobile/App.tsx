@@ -62,7 +62,7 @@ export default function App() {
   }, []);
 
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
-    START_STT: () => startStt(),
+    START_STT: (message) => startStt({ contextualStrings: message.contextualStrings, languageModel: message.languageModel }),
     STOP_STT: () => stopStt(),
     OPEN_SETTINGS: () => Linking.openSettings(),
     PLAY_TTS: (message) => {

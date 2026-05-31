@@ -12,6 +12,11 @@ interface UseSttOptions {
   onError: () => void;
 }
 
+interface StartOptions {
+  contextualStrings?: string[];
+  languageModel?: 'web_search' | 'free_form';
+}
+
 export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions) {
   const isRunningRef = useRef(false);
 
@@ -37,7 +42,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     }
   });
 
-  const start = useCallback(async () => {
+  const start = useCallback(async ({ contextualStrings, languageModel }: StartOptions = {}) => {
     if (isRunningRef.current) return;
 
     const { granted, canAskAgain } = await ExpoSpeechRecognitionModule.getPermissionsAsync();
@@ -59,7 +64,9 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
       lang: 'en-US',
       interimResults: true,
       continuous: true,
+      ...(contextualStrings && contextualStrings.length > 0 ? { contextualStrings } : {}),
       androidIntentOptions: {
+        EXTRA_LANGUAGE_MODEL: languageModel ?? 'free_form',
         // Android silence detection을 30초로 늘려 자동 종료 방지
         EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 30000,
         EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 30000,
