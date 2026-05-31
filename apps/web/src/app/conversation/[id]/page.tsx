@@ -97,7 +97,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     if (situationHintTimerRef.current) clearTimeout(situationHintTimerRef.current);
     setShowSituationHint(true);
     situationHintTimerRef.current = setTimeout(() => setShowSituationHint(false), 4000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+    };
   }, [remainingHearts]);
 
   async function handleStartSession() {
@@ -139,7 +142,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }, [messages, speak]);
 
   useBackButtonBridge(() => {
-    if (showExitModal) { setShowExitModal(false); return; }
+    if (showExitModal) {
+      setShowExitModal(false);
+      return;
+    }
     setShowExitModal(true);
   });
 
@@ -159,10 +165,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       // 마지막 답변 — ... 말풍선 → 마무리 멘트 → 결과 보기 버튼
       if (result.feedbackAvailable) {
         const closingLines: [string, string][] = [
-          ["Great job! Let's see how you did!", "수고했어요! 결과를 확인해봐요!"],
-          ["Nice work! Check out your feedback!", "잘 하셨어요! 피드백을 확인해봐요!"],
-          ["Well done! See how it sounded to a native speaker.", "훌륭해요! 원어민에게 어떻게 들렸는지 볼게요!"],
-          ["That's a wrap! Let's check your results.", "대화 완료! 결과를 확인해봐요!"],
+          ["Great job! Let's see how you did!", '수고했어요! 결과를 확인해봐요!'],
+          ['Nice work! Check out your feedback!', '잘 하셨어요! 피드백을 확인해봐요!'],
+          ['Well done! See how it sounded to a native speaker.', '훌륭해요! 원어민에게 어떻게 들렸는지 볼게요!'],
+          ["That's a wrap! Let's check your results.", '대화 완료! 결과를 확인해봐요!'],
         ];
         const [closing, closingKo] = closingLines[Math.floor(Math.random() * closingLines.length)];
         queryClient.prefetchQuery({
@@ -176,7 +182,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         });
         await new Promise((r) => setTimeout(r, 1000));
         setPageState('idle');
-        setMessages((prev) => [...prev, { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing, translatedText: closingKo }]);
+        setMessages((prev) => [
+          ...prev,
+          { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing, translatedText: closingKo },
+        ]);
         await new Promise((r) => setTimeout(r, 400));
         setFeedbackAvailable(true);
         return;
@@ -188,9 +197,20 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       if (result.originalQuestion) {
         const feedbackText = heartsLost
-          ? (result.remainingHearts === 0 ? '하트를 모두 잃었어요 😢' : '조금 더 질문에 맞게 답해보세요 😊')
+          ? result.remainingHearts === 0
+            ? '하트를 모두 잃었어요 😢'
+            : '조금 더 질문에 맞게 답해보세요 😊'
           : undefined;
-        setMessages((prev) => [...prev, { id: `ai-${Date.now()}`, role: 'ai', text: result.originalQuestion, translatedText: result.translatedQuestion, feedback: feedbackText }]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `ai-${Date.now()}`,
+            role: 'ai',
+            text: result.originalQuestion,
+            translatedText: result.translatedQuestion,
+            feedback: feedbackText,
+          },
+        ]);
       }
       setPageState('idle');
     } catch (e) {
@@ -200,39 +220,48 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   // 앱: 브릿지 STT 이벤트 구독
-  useBridgeEvent('STT_PARTIAL', useCallback((msg) => {
-    setPageState((prev) => {
-      if (prev !== 'recording') return prev;
-      transcriptRef.current = msg.transcript;
-      setTranscript(msg.transcript);
-      return prev;
-    });
-  }, []));
-
-  useBridgeEvent('STT_FINAL', useCallback((msg) => {
-    setPageState((prev) => {
-      if (prev === 'stopping') {
-        clearStoppingTimeout();
-        const text = msg.transcript.trim();
-        if (text && sessionId) {
-          transcriptRef.current = text;
-          setTranscript(text);
-          setTimeout(() => submitUserUtterance(text), 0);
-          return 'submitting';
-        } else {
-          setEmptyToast(true);
-          return 'idle';
-        }
-      }
-      if (prev === 'recording') {
-        // silence detection 자동 종료 — transcript만 업데이트 (useStt에서 자동 재시작)
+  useBridgeEvent(
+    'STT_PARTIAL',
+    useCallback((msg) => {
+      setPageState((prev) => {
+        if (prev !== 'recording') return prev;
         transcriptRef.current = msg.transcript;
         setTranscript(msg.transcript);
-      }
-      return prev;
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]));
+        return prev;
+      });
+    }, []),
+  );
+
+  useBridgeEvent(
+    'STT_FINAL',
+    useCallback(
+      (msg) => {
+        setPageState((prev) => {
+          if (prev === 'stopping') {
+            clearStoppingTimeout();
+            const text = msg.transcript.trim();
+            if (text && sessionId) {
+              transcriptRef.current = text;
+              setTranscript(text);
+              setTimeout(() => submitUserUtterance(text), 0);
+              return 'submitting';
+            } else {
+              setEmptyToast(true);
+              return 'idle';
+            }
+          }
+          if (prev === 'recording') {
+            // silence detection 자동 종료 — transcript만 업데이트 (useStt에서 자동 재시작)
+            transcriptRef.current = msg.transcript;
+            setTranscript(msg.transcript);
+          }
+          return prev;
+        });
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      },
+      [sessionId],
+    ),
+  );
 
   // stopping 상태에서 3초 내 STT_FINAL 없으면 강제 idle 복구
   function startStoppingTimeout() {
@@ -258,26 +287,32 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     }
   }
 
-  useBridgeEvent('STT_ERROR', useCallback(() => {
-    clearStoppingTimeout();
-    setPageState((prev) => {
-      if (prev !== 'stopping' && prev !== 'recording') return prev;
-      const text = transcriptRef.current.trim();
-      if (text && sessionId) {
-        setTimeout(() => submitUserUtterance(text), 0);
-        return 'submitting';
-      }
-      setEmptyToast(true);
-      return 'idle';
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionId]));
+  useBridgeEvent(
+    'STT_ERROR',
+    useCallback(() => {
+      clearStoppingTimeout();
+      setPageState((prev) => {
+        if (prev !== 'stopping' && prev !== 'recording') return prev;
+        const text = transcriptRef.current.trim();
+        if (text && sessionId) {
+          setTimeout(() => submitUserUtterance(text), 0);
+          return 'submitting';
+        }
+        setEmptyToast(true);
+        return 'idle';
+      });
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionId]),
+  );
 
-  useBridgeEvent('MIC_PERMISSION_DENIED', useCallback(() => {
-    clearStoppingTimeout();
-    setShowMicDeniedModal(true);
-    setPageState('idle');
-  }, []));
+  useBridgeEvent(
+    'MIC_PERMISSION_DENIED',
+    useCallback(() => {
+      clearStoppingTimeout();
+      setShowMicDeniedModal(true);
+      setPageState('idle');
+    }, []),
+  );
 
   // 웹: 브라우저 SpeechRecognition
   async function startWebStt() {
@@ -323,6 +358,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     recognitionRef.current = recognition;
     setPageState('recording');
     setTranscript('');
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
   }
 
   function stopWebStt() {
@@ -336,10 +372,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
     setIsGuideLoading(true);
     setGuideInput('');
-    setIsGuideMode(false);
 
     const qId = crypto.randomUUID();
     setMessages((prev) => [...prev, { id: qId, role: 'guide-q', text: question }]);
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
 
     try {
       const result = await askGuide(sessionId, question);
@@ -379,6 +415,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         setTranscript('');
         startNativeStt();
         setPageState('recording');
+        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
       } else {
         await startWebStt();
       }
@@ -402,10 +439,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   if (pageState === 'error') {
     return (
-      <main className="flex h-full items-center justify-center bg-background px-6">
-        <div className="space-y-4 text-center">
-          <p className="text-muted-foreground">{error}</p>
-          <button onClick={() => router.push('/')} className="text-sm font-medium text-primary">
+      <main className='flex h-full items-center justify-center bg-background px-6'>
+        <div className='space-y-4 text-center'>
+          <p className='text-muted-foreground'>{error}</p>
+          <button onClick={() => router.push('/')} className='text-sm font-medium text-primary'>
             돌아가기
           </button>
         </div>
@@ -418,14 +455,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   return (
     <motion.main
-      className="relative flex h-dvh flex-col overflow-hidden bg-black"
+      className='relative flex h-dvh flex-col overflow-hidden bg-black'
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
     >
       {/* 배경 이미지 */}
       <div
-        className="absolute inset-0 bg-cover bg-center transition-[filter] duration-[800ms] ease-in-out"
+        className='absolute inset-0 bg-cover bg-center transition-[filter] duration-[800ms] ease-in-out'
         style={{
           backgroundImage: `url(${bgImageUrl})`,
           filter: bgBlurred ? 'blur(14px) brightness(0.35) saturate(0.8)' : 'none',
@@ -435,12 +472,13 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         }}
       />
       {/* 상단 그라데이션 — 항상 표시해서 헤더 가시성 보장 */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-48"
+      <div
+        className='pointer-events-none absolute inset-x-0 top-0 z-10 h-48'
         style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)' }}
       />
       {/* 하단 그라데이션 — 블러 전환과 함께 등장 */}
       <motion.div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-64"
+        className='pointer-events-none absolute inset-x-0 bottom-0 z-10 h-64'
         style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.3) 60%, transparent 100%)' }}
         initial={{ opacity: 0 }}
         animate={{ opacity: bgBlurred ? 1 : 0 }}
@@ -448,20 +486,23 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       />
 
       {/* 상단 헤더 */}
-      <div className="relative z-20 flex items-center justify-between px-4 pb-2" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}>
-        <div className="flex items-center gap-2">
+      <div
+        className='relative z-20 flex items-center justify-between px-4 pb-2'
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}
+      >
+        <div className='flex items-center gap-2'>
           <button
             onClick={() => setShowExitModal(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
+            className='flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors'
           >
             <ChevronLeft size={20} />
           </button>
-          <div className="relative">
+          <div className='relative'>
             {/* pulse 링 — 하트 깎일 때 */}
             <AnimatePresence>
               {showSituationHint && !feedbackAvailable && (
                 <motion.span
-                  className="absolute inset-0 rounded-full border-2 border-primary pointer-events-none"
+                  className='absolute inset-0 rounded-full border-2 border-primary pointer-events-none'
                   initial={{ opacity: 0.8, scale: 1 }}
                   animate={{ opacity: 0, scale: 1.5 }}
                   exit={{ opacity: 0 }}
@@ -471,7 +512,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             </AnimatePresence>
             <button
               onClick={() => setShowBriefingSheet(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors"
+              className='flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors'
             >
               <Info size={18} />
             </button>
@@ -479,35 +520,43 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             <AnimatePresence>
               {showSituationHint && !feedbackAvailable && (
                 <motion.button
-                  onClick={() => { setShowSituationHint(false); setShowBriefingSheet(true); }}
+                  onClick={() => {
+                    setShowSituationHint(false);
+                    setShowBriefingSheet(true);
+                  }}
                   initial={{ opacity: 0, x: -6, scale: 0.9 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -6, scale: 0.9 }}
                   transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className="absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-md"
+                  className='absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-md'
                 >
                   상황 보고 다시 말해봐요
                   <svg
-                    className="absolute top-1/2 -translate-y-1/2"
+                    className='absolute top-1/2 -translate-y-1/2'
                     style={{ left: '-4px' }}
-                    width="7" height="12" viewBox="0 0 7 12"
-                    fill="none"
+                    width='7'
+                    height='12'
+                    viewBox='0 0 7 12'
+                    fill='none'
                   >
-                    <path d="M7 0 L0 6 L7 12 Z" fill="white" />
+                    <path d='M7 0 L0 6 L7 12 Z' fill='white' />
                   </svg>
                 </motion.button>
               )}
             </AnimatePresence>
           </div>
         </div>
-        <div className="relative flex flex-col items-end">
+        <div className='relative flex flex-col items-end'>
           <motion.div
             animate={heartShake ? { x: [0, -6, 6, -4, 4, 0] } : {}}
             transition={{ duration: 0.4 }}
-            className="flex gap-0.5"
+            className='flex gap-0.5'
           >
             {Array.from({ length: 3 }).map((_, i) => (
-              <span key={i} className={`text-lg drop-shadow-md transition-opacity duration-300 ${i < (3 - remainingHearts) ? 'opacity-20' : 'opacity-100'}`}>
+              <span
+                key={i}
+                className={`text-lg drop-shadow-md transition-opacity duration-300 ${i < 3 - remainingHearts ? 'opacity-20' : 'opacity-100'}`}
+              >
                 ❤️
               </span>
             ))}
@@ -515,23 +564,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         </div>
       </div>
 
-      {/* 하트 안내 — 블러 전환 시 페이드인, absolute로 채팅 영역 공간 차지 안 함 */}
-      <AnimatePresence>
-        {bgBlurred && (
-          <motion.div
-            className="pointer-events-none absolute inset-x-0 z-20"
-            style={{ top: 'calc(max(env(safe-area-inset-top), 16px) + 8px + 44px + 8px)' }}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <p className="text-center text-xs text-white/70">
-              질문에 맞는 대답을 해야 하트가 유지돼요
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* 그라데이션 테두리 플래시 */}
       <AnimatePresence>
@@ -541,15 +573,28 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             animate={{ opacity: 0 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.6, ease: 'easeOut' }}
-            className="pointer-events-none absolute inset-0 z-30"
+            className='pointer-events-none absolute inset-0 z-30'
             style={{ boxShadow: 'inset 0 0 40px 8px rgba(239,68,68,0.5), inset 0 0 80px 20px rgba(251,146,60,0.3)' }}
           />
         )}
       </AnimatePresence>
 
       {/* 채팅 메시지 영역 */}
-      <div className="no-scrollbar relative z-20 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3">
-        {messages.map((msg) => (
+      <div className='no-scrollbar relative z-20 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3'>
+        <AnimatePresence>
+          {bgBlurred && (
+            <motion.p
+              className='pointer-events-none text-center text-xs text-white/70'
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6 }}
+            >
+              질문에 맞는 대답을 해야 하트가 유지돼요
+            </motion.p>
+          )}
+        </AnimatePresence>
+        {messages.map((msg) =>
           msg.role === 'ai' ? (
             <div key={msg.id}>
               <AiBubble
@@ -575,9 +620,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.2 }}
-                  className="mt-1.5 flex items-start gap-2"
+                  className='mt-1.5 flex items-start gap-2'
                 >
-                  <div className="rounded-2xl rounded-tl-md bg-muted px-3 py-2 text-xs font-medium text-muted-foreground">
+                  <div className='rounded-2xl rounded-tl-md bg-muted px-3 py-2 text-xs font-medium text-muted-foreground'>
                     {msg.feedback}
                   </div>
                 </motion.div>
@@ -589,14 +634,24 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             <GuideABubble key={msg.id} text={msg.text} />
           ) : (
             <UserBubble key={msg.id} text={msg.text} />
-          )
-        ))}
+          ),
+        )}
 
         {/* AI 타이핑 중 */}
         {pageState === 'submitting' && (
-          <div className="flex items-end gap-2">
-            <div className="max-w-[72%] rounded-2xl rounded-bl-md bg-[#EFEFEF] px-4 py-3">
+          <div className='flex items-end gap-2'>
+            <div className='max-w-[72%] rounded-2xl rounded-bl-md bg-[#EFEFEF] px-4 py-3'>
               <TypingDots />
+            </div>
+          </div>
+        )}
+
+        {/* 가이드 답변 타이핑 중 */}
+        {isGuideLoading && (
+          <div className='flex flex-col items-start gap-1'>
+            <div className='rounded-2xl rounded-bl-md bg-blue-50 px-4 py-3'>
+              <p className='mb-1.5 text-[10px] font-bold text-blue-400'>답변</p>
+              <TypingDots color='blue' />
             </div>
           </div>
         )}
@@ -605,27 +660,35 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* 하단 컨트롤 */}
-      <div
-        className="relative z-20 px-4 pt-2"
-        style={{ paddingBottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : '16px' }}
-      >
+      <div className='relative z-30 px-5 pt-2' style={{ paddingBottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : '16px' }}>
         {/* STT transcript */}
-        <div className="mb-3 min-h-6 text-center">
-          <AnimatePresence mode="wait">
-            {isRecording && (
-              <motion.p
-                key="transcript"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="text-sm text-white/80 italic drop-shadow"
-              >
-                {transcript || '듣고 있어요...'}
-              </motion.p>
-            )}
-          </AnimatePresence>
-        </div>
+        <AnimatePresence>
+          {isRecording && (
+            <motion.p
+              key='transcript'
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className='mb-2 text-center text-sm text-white/80 italic drop-shadow pointer-events-none'
+            >
+              {transcript || '듣고 있어요...'}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        {/* 모드 전환 버튼 */}
+        {!feedbackAvailable && (
+          <div className='mb-2 text-right'>
+            <button
+              onClick={() => { setIsGuideMode(!isGuideMode); setGuideInput(''); }}
+              disabled={pageState === 'submitting' || pageState === 'stopping' || pageState === 'recording' || isGuideLoading}
+              className='inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75 disabled:opacity-40 disabled:pointer-events-none'
+            >
+              {isGuideMode ? <><Mic size={12} />말하기로 돌아가기</> : <><span>💬</span>대화 중 질문하기</>}
+            </button>
+          </div>
+        )}
 
         {/* 빈 음성 말풍선 */}
         <AnimatePresence>
@@ -635,178 +698,186 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 4 }}
               transition={{ duration: 0.15 }}
-              className="relative mb-2 flex justify-center"
+              className='relative mb-2 flex justify-center'
             >
-              <div className="rounded-2xl bg-[#F5F5F3] px-4 py-2.5 text-sm font-medium text-foreground shadow-sm whitespace-nowrap">
+              <div className='rounded-2xl bg-[#F5F5F3] px-4 py-2.5 text-sm font-medium text-foreground shadow-sm whitespace-nowrap'>
                 목소리가 안 들렸어요, 다시 눌러서 말해주세요 🎤
               </div>
               {/* 아래 화살표 */}
               <div
-                className="absolute -bottom-2 left-1/2 -translate-x-1/2"
-                style={{ width: 0, height: 0, borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '8px solid #F5F5F3' }}
+                className='absolute -bottom-2 left-1/2 -translate-x-1/2'
+                style={{
+                  width: 0,
+                  height: 0,
+                  borderLeft: '8px solid transparent',
+                  borderRight: '8px solid transparent',
+                  borderTop: '8px solid #F5F5F3',
+                }}
               />
             </motion.div>
           )}
         </AnimatePresence>
 
-        <AnimatePresence mode="wait">
-        {feedbackAvailable ? (
-          <motion.button
-            key="feedback-btn"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 12 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            onClick={handleNext}
-            className="flex w-full items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold text-white bg-primary shadow-[0_5px_0_#A85822] active:shadow-[0_2px_0_#A85822] active:translate-y-0.75 transition-transform duration-75"
-          >
-            {pageState === 'navigating'
-              ? <><span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" /><span>이동 중...</span></>
-              : '결과 보기'
-            }
-          </motion.button>
-        ) : isGuideMode ? (
-          /* 가이드 입력 모드 */
-          <motion.div
-            key="guide-input"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 8 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            className="flex min-w-0 flex-col gap-2"
-            onAnimationComplete={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
-          >
-            {/* 말하기로 돌아가기 버튼 — 오른쪽 정렬 인라인 */}
-            <div className="flex justify-end">
-              <button
-                onClick={() => { setIsGuideMode(false); setGuideInput(''); }}
-                className="flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75"
-              >
-                <Mic size={12} />
-                말하기로 돌아가기
-              </button>
-            </div>
-            <div className="flex min-w-0 items-center gap-2">
-            <input
-              autoFocus
-              type="text"
-              value={guideInput}
-              onChange={(e) => setGuideInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleGuideSubmit(); }}
-              placeholder="모르는 표현, 한국어로 물어보세요"
-              className="min-w-0 flex-1 rounded-full bg-white/8 border border-white/15 px-5 h-14 text-sm text-white placeholder:text-white/35 outline-none focus:border-white/25 transition-colors"
-            />
-            <button
-              onClick={handleGuideSubmit}
-              disabled={!guideInput.trim() || isGuideLoading}
-              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-500 text-white shadow-[0_5px_0_#1d4ed8] disabled:bg-white/15 disabled:shadow-none disabled:text-white/30 transition-colors"
+        <AnimatePresence mode='wait'>
+          {feedbackAvailable ? (
+            <motion.button
+              key='feedback-btn'
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              onClick={handleNext}
+              className='flex w-full items-center justify-center gap-2 h-14 rounded-2xl text-base font-bold text-white bg-primary shadow-[0_5px_0_#A85822] active:shadow-[0_2px_0_#A85822] active:translate-y-0.75 transition-transform duration-75'
             >
-              {isGuideLoading
-                ? <span className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                : <ArrowUp size={18} />
-              }
-            </button>
-            </div>
-          </motion.div>
-        ) : (
-          /* 마이크 버튼 */
-          <motion.div key="mic-btn" className="relative">
-            {/* 가이드 질문하기 버튼 — 파랑 (반대 모드 색) */}
-            <button
-              onClick={() => setIsGuideMode(true)}
-              className="absolute -top-11 right-0 flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75"
-            >
-              <span>💬</span>
-              대화 중 질문하기
-            </button>
-            <Button
-              onClick={handleMicPress}
-              disabled={pageState === 'submitting' || pageState === 'stopping'}
-              loading={pageState === 'submitting' || pageState === 'stopping'}
-              variant={isRecording ? 'secondary' : 'primary'}
-              className={isRecording ? 'shadow-none! translate-y-0!' : ''}
-            >
-              {pageState === 'submitting' || pageState === 'stopping' ? (
-                <span className="text-sm font-semibold text-white">분석 중...</span>
-              ) : isRecording ? (
+              {pageState === 'navigating' ? (
                 <>
-                  <div className="flex items-center gap-0.75">
-                    {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
-                      <span
-                        key={i}
-                        className="w-0.75 rounded-full bg-primary animate-[wave_0.6s_ease-in-out_infinite_alternate]"
-                        style={{ height: `${h * 20}px`, animationDelay: `${i * 0.1}s` }}
-                      />
-                    ))}
-                  </div>
-                  <span className="text-sm font-semibold text-muted-foreground">말하기가 끝나면 눌러주세요</span>
+                  <span className='h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin' />
+                  <span>이동 중...</span>
                 </>
               ) : (
-                <>
-                  <Mic size={20} className="text-white" />
-                  <span className="text-sm font-semibold text-white">탭하여 말하기</span>
-                </>
+                '결과 보기'
               )}
-            </Button>
-          </motion.div>
-        )}
+            </motion.button>
+          ) : isGuideMode ? (
+            /* 가이드 입력 모드 */
+            <motion.div
+              key='guide-input'
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15, ease: 'easeOut' }}
+              className='flex min-w-0 items-center gap-2'
+              onAnimationComplete={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
+            >
+              <input
+                autoFocus
+                type='text'
+                value={guideInput}
+                onChange={(e) => setGuideInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') handleGuideSubmit();
+                }}
+                placeholder='모르는 표현, 한국어로 물어보세요'
+                className='min-w-0 flex-1 rounded-full bg-white/8 border border-white/15 px-5 h-14 text-sm text-white placeholder:text-white/35 outline-none focus:border-white/25 transition-colors'
+              />
+              <button
+                onClick={handleGuideSubmit}
+                disabled={!guideInput.trim() || isGuideLoading}
+                className='flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-500 shadow-[0_5px_0_#1d4ed8] text-white transition-[background-color,color] disabled:bg-white/15 disabled:shadow-none disabled:text-white/30'
+              >
+                {isGuideLoading ? (
+                  <span className='h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin' />
+                ) : (
+                  <ArrowUp size={18} />
+                )}
+              </button>
+            </motion.div>
+          ) : (
+            /* 마이크 버튼 */
+            <motion.div key='mic-btn'>
+              <Button
+                onClick={handleMicPress}
+                disabled={pageState === 'submitting' || pageState === 'stopping'}
+                loading={pageState === 'submitting' || pageState === 'stopping'}
+                variant={isRecording ? 'secondary' : 'primary'}
+                className={isRecording ? 'shadow-none! translate-y-0!' : ''}
+              >
+                {pageState === 'submitting' || pageState === 'stopping' ? (
+                  <span className='text-sm font-semibold text-white'>분석 중...</span>
+                ) : isRecording ? (
+                  <>
+                    <div className='flex items-center gap-0.75'>
+                      {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
+                        <span
+                          key={i}
+                          className='w-0.75 rounded-full bg-primary animate-[wave_0.6s_ease-in-out_infinite_alternate]'
+                          style={{ height: `${h * 20}px`, animationDelay: `${i * 0.1}s` }}
+                        />
+                      ))}
+                    </div>
+                    <span className='text-sm font-semibold text-muted-foreground'>말하기가 끝나면 눌러주세요</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic size={20} className='text-white' />
+                    <span className='text-sm font-semibold text-white'>탭하여 말하기</span>
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
 
       {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
-      {showMicDeniedModal && <MicDeniedModal isNative={!!window.ReactNativeWebView} onClose={() => setShowMicDeniedModal(false)} />}
+      {showMicDeniedModal && (
+        <MicDeniedModal isNative={!!window.ReactNativeWebView} onClose={() => setShowMicDeniedModal(false)} />
+      )}
 
       {/* 초기 브리핑 오버레이 — 진입 시 덮고 있다가 fade out */}
       <AnimatePresence>
         {isBriefing && (
           <motion.div
-            className="absolute inset-0 z-50 overflow-hidden"
+            className='absolute inset-0 z-50 overflow-hidden'
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5, ease: 'easeInOut' }}
           >
-            <div className="relative flex h-full flex-col overflow-hidden">
-              <div className="absolute inset-0 bg-cover bg-top" style={{ backgroundImage: `url(${bgImageUrl})`, backgroundColor: '#a07860' }} />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0"
-                style={{ height: '72%', background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)' }} />
+            <div className='relative flex h-full flex-col overflow-hidden'>
+              <div
+                className='absolute inset-0 bg-cover bg-top'
+                style={{ backgroundImage: `url(${bgImageUrl})`, backgroundColor: '#a07860' }}
+              />
+              <div
+                className='pointer-events-none absolute inset-x-0 bottom-0'
+                style={{
+                  height: '72%',
+                  background:
+                    'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)',
+                }}
+              />
 
               {/* 뒤로가기 */}
               <motion.div
-                className="relative z-20 flex items-center px-4"
-                style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }}
+                className='relative z-20 flex items-center px-4'
+                style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.3, ease: 'easeOut' }}
               >
-                <button onClick={() => router.push('/')}
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white">
+                <button
+                  onClick={() => router.push('/')}
+                  className='flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white'
+                >
                   <ChevronLeft size={20} />
                 </button>
               </motion.div>
 
-              <div className="relative z-20 flex-1" />
+              <div className='relative z-20 flex-1' />
 
               <motion.div
-                className="relative z-20 px-5 pb-10 space-y-5"
+                className='relative z-20 px-5 pb-4 space-y-5'
                 initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div>
-                  <h2 className="text-[26px] font-bold text-white leading-tight tracking-tight mb-4">{scenarioInfo?.scenarioTitle}</h2>
-                  <p className="text-[15px] text-white/90 leading-relaxed mb-4">{scenarioInfo?.scenarioSituation}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white">목표</span>
-                    <p className="text-[13px] text-white/80 leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
+                  <h2 className='text-[26px] font-bold text-white leading-tight tracking-tight mb-4'>
+                    {scenarioInfo?.scenarioTitle}
+                  </h2>
+                  <p className='text-[15px] text-white/90 leading-relaxed mb-4'>{scenarioInfo?.scenarioSituation}</p>
+                  <div className='flex items-center gap-2'>
+                    <span className='shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white'>목표</span>
+                    <p className='text-[13px] text-white/80 leading-relaxed'>{scenarioInfo?.scenarioGoal}</p>
                   </div>
                 </div>
                 {pageState === 'loading' ? (
-                  <div className="flex w-full items-center justify-center gap-3 rounded-2xl py-4 bg-primary/60">
-                    <span className="h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-                    <span className="text-sm font-semibold text-white">준비 중...</span>
+                  <div className='flex w-full items-center justify-center gap-3 rounded-2xl py-4 bg-primary/60'>
+                    <span className='h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin' />
+                    <span className='text-sm font-semibold text-white'>준비 중...</span>
                   </div>
                 ) : (
-                  <Button variant="white" onClick={handleStartSession}>
+                  <Button variant='white' onClick={handleStartSession}>
                     도전할게요 →
                   </Button>
                 )}
@@ -820,33 +891,44 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       <AnimatePresence>
         {showBriefingSheet && (
           <motion.div
-            className="absolute inset-0 z-50 overflow-hidden"
+            className='absolute inset-0 z-50 overflow-hidden'
             initial={{ y: '-100%' }}
             animate={{ y: 0 }}
             exit={{ y: '-100%' }}
             transition={{ type: 'spring', stiffness: 320, damping: 32 }}
           >
-            <div className="relative flex h-full flex-col overflow-hidden">
-              <div className="absolute inset-0 bg-cover bg-top" style={{ backgroundImage: `url(${getScenarioImage(Number(id), 'play')})`, backgroundColor: '#a07860' }} />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0"
-                style={{ height: '72%', background: 'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)' }} />
+            <div className='relative flex h-full flex-col overflow-hidden'>
+              <div
+                className='absolute inset-0 bg-cover bg-top'
+                style={{ backgroundImage: `url(${getScenarioImage(Number(id), 'play')})`, backgroundColor: '#a07860' }}
+              />
+              <div
+                className='pointer-events-none absolute inset-x-0 bottom-0'
+                style={{
+                  height: '72%',
+                  background:
+                    'linear-gradient(to top, rgba(0,0,0,0.97) 0%, rgba(0,0,0,0.93) 20%, rgba(0,0,0,0.75) 40%, rgba(0,0,0,0.45) 58%, rgba(0,0,0,0.15) 75%, transparent 100%)',
+                }}
+              />
 
-              <div style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 16px) + 8px)' }} />
+              <div style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }} />
 
-              <div className="relative z-20 flex-1" />
+              <div className='relative z-20 flex-1' />
 
-              <div className="relative z-20 px-5 pb-10 space-y-5">
+              <div className='relative z-20 px-5 pb-4 space-y-5'>
                 <div>
-                  <h2 className="text-[26px] font-bold text-white leading-tight tracking-tight mb-4">{scenarioInfo?.scenarioTitle}</h2>
-                  <p className="text-[15px] text-white/90 leading-relaxed mb-4">{scenarioInfo?.scenarioSituation}</p>
-                  <div className="flex items-center gap-2">
-                    <span className="shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white">목표</span>
-                    <p className="text-[13px] text-white/80 leading-relaxed">{scenarioInfo?.scenarioGoal}</p>
+                  <h2 className='text-[26px] font-bold text-white leading-tight tracking-tight mb-4'>
+                    {scenarioInfo?.scenarioTitle}
+                  </h2>
+                  <p className='text-[15px] text-white/90 leading-relaxed mb-4'>{scenarioInfo?.scenarioSituation}</p>
+                  <div className='flex items-center gap-2'>
+                    <span className='shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white'>목표</span>
+                    <p className='text-[13px] text-white/80 leading-relaxed'>{scenarioInfo?.scenarioGoal}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowBriefingSheet(false)}
-                  className="w-full rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 py-3.5 text-sm font-semibold text-white"
+                  className='w-full rounded-2xl bg-white/15 backdrop-blur-sm border border-white/20 py-3.5 text-sm font-semibold text-white'
                 >
                   대화로 돌아가기
                 </button>
@@ -858,4 +940,3 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     </motion.main>
   );
 }
-
