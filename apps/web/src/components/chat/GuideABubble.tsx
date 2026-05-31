@@ -17,7 +17,7 @@ export function GuideABubble({ text }: GuideABubbleProps) {
     >
       <div className="max-w-[80%]">
         <div className="rounded-2xl rounded-bl-md bg-blue-50 px-4 py-3">
-          <p className="mb-1.5 text-[10px] font-bold tracking-widest text-blue-400">GUIDE</p>
+          <p className="mb-1.5 text-[10px] font-bold text-blue-400">답변</p>
           <p className="text-sm text-blue-900 leading-relaxed">{text}</p>
         </div>
       </div>

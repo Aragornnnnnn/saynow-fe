@@ -17,6 +17,7 @@ export function GuideQBubble({ text }: GuideQBubbleProps) {
     >
       <div className="max-w-[80%]">
         <div className="rounded-2xl rounded-br-md bg-blue-100 px-4 py-3">
+          <p className="mb-1.5 text-[10px] font-bold text-blue-400">질문</p>
           <p className="text-sm text-blue-900 leading-relaxed">{text}</p>
         </div>
       </div>
