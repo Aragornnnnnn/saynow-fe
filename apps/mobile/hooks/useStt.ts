@@ -21,7 +21,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   const isRunningRef = useRef(false);
 
   useSpeechRecognitionEvent('result', (event) => {
-    const transcript = event.results[0]?.transcript ?? '';
+    const transcript = event.results.map((r) => r[0]?.transcript ?? '').join(' ').trim();
     if (event.isFinal) {
       onFinal(transcript);
     } else {
@@ -64,6 +64,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
       lang: 'en-US',
       interimResults: true,
       continuous: true,
+      addsPunctuation: true,
       ...(contextualStrings && contextualStrings.length > 0 ? { contextualStrings } : {}),
       androidIntentOptions: {
         EXTRA_LANGUAGE_MODEL: languageModel ?? 'free_form',

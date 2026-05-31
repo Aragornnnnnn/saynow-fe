@@ -2,6 +2,7 @@
 // STT 옵션별 인식 품질 비교 테스트 페이지
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { webBridge } from '@/bridge/webBridge';
 
 type Mode = 'web' | 'native';
@@ -9,6 +10,7 @@ type Mode = 'web' | 'native';
 type Result = {
   mode: Mode;
   configLabel: string;
+  refText: string;
   transcript: string;
   latencyMs: number;
   partialCount: number;
@@ -98,9 +100,29 @@ const HINT_PRESETS = [
   },
 ];
 
+const CONTRACTIONS: [RegExp, string][] = [
+  [/i'll/g, 'i will'], [/i'm/g, 'i am'], [/i've/g, 'i have'], [/i'd/g, 'i would'],
+  [/you'll/g, 'you will'], [/you're/g, 'you are'], [/you've/g, 'you have'],
+  [/he'll/g, 'he will'], [/she'll/g, 'she will'], [/it'll/g, 'it will'],
+  [/we'll/g, 'we will'], [/we're/g, 'we are'], [/we've/g, 'we have'],
+  [/they'll/g, 'they will'], [/they're/g, 'they are'], [/they've/g, 'they have'],
+  [/that'll/g, 'that will'], [/that's/g, 'that is'],
+  [/don't/g, 'do not'], [/doesn't/g, 'does not'], [/didn't/g, 'did not'],
+  [/won't/g, 'will not'], [/can't/g, 'cannot'], [/couldn't/g, 'could not'],
+  [/wouldn't/g, 'would not'], [/shouldn't/g, 'should not'], [/isn't/g, 'is not'],
+  [/aren't/g, 'are not'], [/wasn't/g, 'was not'], [/weren't/g, 'were not'],
+  [/what's/g, 'what is'], [/where's/g, 'where is'], [/there's/g, 'there is'],
+];
+
+function expandContractions(text: string): string {
+  let t = text.toLowerCase();
+  for (const [pattern, replacement] of CONTRACTIONS) t = t.replace(pattern, replacement);
+  return t;
+}
+
 function calcWer(ref: string, hyp: string): number {
-  const r = ref.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ').filter(Boolean);
-  const h = hyp.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(' ').filter(Boolean);
+  const r = expandContractions(ref).replace(/[^a-z0-9 ]/g, '').split(' ').filter(Boolean);
+  const h = expandContractions(hyp).replace(/[^a-z0-9 ]/g, '').split(' ').filter(Boolean);
   if (r.length === 0) return 0;
   const dp = Array.from({ length: r.length + 1 }, (_, i) =>
     Array.from({ length: h.length + 1 }, (_, j) => (i === 0 ? j : j === 0 ? i : 0))
@@ -113,7 +135,7 @@ function calcWer(ref: string, hyp: string): number {
           : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
     }
   }
-  return Math.round((dp[r.length][h.length] / r.length) * 100);
+  return Math.min(100, Math.round((dp[r.length][h.length] / r.length) * 100));
 }
 
 function WerChip({ wer }: { wer: number }) {
@@ -136,6 +158,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function SttTestPage() {
+  const router = useRouter();
   const isNative = webBridge.isAvailable();
 
   const [mode, setMode] = useState<Mode>(isNative ? 'native' : 'web');
@@ -153,11 +176,27 @@ export default function SttTestPage() {
   const [transcript, setTranscript] = useState('');
   const [results, setResults] = useState<Result[]>([]);
   const [partialCount, setPartialCount] = useState(0);
+  const [captureMode, setCaptureMode] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const startTimeRef = useRef<number>(0);
   const partialCountRef = useRef(0);
   const transcriptRef = useRef('');
+  const refTextRef = useRef(refText);
+  useEffect(() => { refTextRef.current = refText; }, [refText]);
+
+  function copyResults() {
+    const header = '| # | 조건 | 정답 | 인식 결과 | WER | 레이턴시 |';
+    const divider = '|---|------|------|-----------|-----|---------|';
+    const rows = results.map((r, i) =>
+      `| ${results.length - i} | ${r.configLabel} | ${r.refText} | ${r.transcript || '(인식 없음)'} | ${r.wer !== null ? r.wer + '%' : '-'} | ${(r.latencyMs / 1000).toFixed(1)}s |`
+    );
+    navigator.clipboard.writeText([header, divider, ...rows].join('\n')).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   const currentHint = HINT_PRESETS[hintPresetIdx];
   const finalHints = [
@@ -204,9 +243,10 @@ export default function SttTestPage() {
   function saveResult(configLabel: string) {
     const latency = Date.now() - startTimeRef.current;
     const hyp = transcriptRef.current.trim();
-    const wer = refText.trim() ? calcWer(refText.trim(), hyp) : null;
+    const ref = refTextRef.current.trim();
+    const wer = ref ? calcWer(ref, hyp) : null;
     setResults((prev) => [
-      { mode, configLabel, transcript: hyp, latencyMs: latency, partialCount: partialCountRef.current, wer },
+      { mode, configLabel, refText: ref, transcript: hyp, latencyMs: latency, partialCount: partialCountRef.current, wer },
       ...prev,
     ]);
   }
@@ -222,13 +262,15 @@ export default function SttTestPage() {
     resetRecordingState();
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       let final = '', interim = '';
-      for (let i = 0; i < event.results.length; i++) {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         if (event.results[i].isFinal) final += event.results[i][0].transcript;
-        else { interim += event.results[i][0].transcript; partialCountRef.current++; setPartialCount(partialCountRef.current); }
+        else interim += event.results[i][0].transcript;
       }
-      const text = final || interim;
-      transcriptRef.current = text;
-      setTranscript(text);
+      if (interim) { partialCountRef.current++; setPartialCount(partialCountRef.current); }
+      const appended = (final || interim).trim();
+      if (!appended) return;
+      transcriptRef.current = (transcriptRef.current + ' ' + appended).trim();
+      setTranscript(transcriptRef.current);
     };
     recognition.onerror = () => setIsRecording(false);
     recognition.start();
@@ -261,9 +303,88 @@ export default function SttTestPage() {
     ? (mode === 'native' ? stopNative : stopWeb)
     : (mode === 'native' ? startNative : startWeb);
 
+  if (captureMode) {
+    return (
+      <div className="flex min-h-full flex-col bg-white">
+        <div className="px-5 pt-12 pb-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-blue-500 mb-0.5">실험실 · 캡처 모드</p>
+            <h1 className="text-xl font-bold text-zinc-900 tracking-tight">STT 인식률 결과</h1>
+          </div>
+          <div className="flex gap-3">
+            <button onClick={copyResults} className="text-sm text-blue-500 font-medium">
+              {copied ? '복사됨' : '표로 복사'}
+            </button>
+            <button onClick={() => setCaptureMode(false)} className="text-sm text-zinc-400">닫기</button>
+          </div>
+        </div>
+
+        {/* 테스트 조건 요약 */}
+        <div className="mx-5 mb-4 flex flex-wrap gap-1.5">
+          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">
+            {mode === 'web' ? 'Web' : 'Native'}
+          </span>
+          {mode === 'native' && (
+            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">{languageModel}</span>
+          )}
+          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">
+            힌트 {finalHints.length > 0 ? `${currentHint.label} ${finalHints.length}개` : '없음'}
+          </span>
+          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs text-zinc-600">{results.length}건</span>
+        </div>
+
+        <div className="flex flex-col gap-3 px-5 pb-10">
+          {results.map((r, i) => (
+            <div key={i} className="rounded-2xl border border-zinc-200 bg-white overflow-hidden">
+              <div className="px-4 pt-3 pb-1">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold text-zinc-500">{r.configLabel}</span>
+                  {r.wer !== null && <WerChip wer={r.wer} />}
+                </div>
+                <p className="text-xs text-zinc-400 mb-2">정답: {r.refText}</p>
+                <p className="text-sm text-zinc-900 leading-relaxed font-medium">
+                  {r.transcript || <span className="text-zinc-400">(인식 없음)</span>}
+                </p>
+              </div>
+              <div className="flex gap-0 border-t border-zinc-100 mt-2">
+                <div className="flex-1 py-2 text-center">
+                  <p className="text-xs text-zinc-400">레이턴시</p>
+                  <p className="text-sm font-semibold text-zinc-900">{(r.latencyMs / 1000).toFixed(1)}s</p>
+                </div>
+                <div className="w-px bg-zinc-100" />
+                <div className="flex-1 py-2 text-center">
+                  <p className="text-xs text-zinc-400">Partial</p>
+                  <p className="text-sm font-semibold text-zinc-900">{r.partialCount}회</p>
+                </div>
+                {r.wer !== null && (
+                  <>
+                    <div className="w-px bg-zinc-100" />
+                    <div className="flex-1 py-2 text-center">
+                      <p className="text-xs text-zinc-400">WER</p>
+                      <p className="text-sm font-semibold text-zinc-900">{r.wer}%</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-full flex-col bg-white">
       <div className="px-5 pt-12 pb-6">
+        <button
+          onClick={() => router.back()}
+          className="mb-4 flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          뒤로
+        </button>
         <p className="text-xs font-medium text-blue-500 mb-1">실험실</p>
         <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">STT 인식률 테스트</h1>
         <p className="mt-1.5 text-sm text-zinc-500 leading-relaxed">
@@ -456,7 +577,13 @@ export default function SttTestPage() {
           <div>
             <div className="flex items-center justify-between mb-2.5">
               <SectionLabel>결과 {results.length}건</SectionLabel>
-              <button onClick={() => setResults([])} className="text-xs text-zinc-400 -mt-2.5">초기화</button>
+              <div className="flex items-center gap-3 -mt-2.5">
+                <button onClick={copyResults} className="text-xs text-blue-500">
+                  {copied ? '복사됨' : '표로 복사'}
+                </button>
+                <button onClick={() => setCaptureMode(true)} className="text-xs text-zinc-500">캡처 모드</button>
+                <button onClick={() => setResults([])} className="text-xs text-zinc-400">초기화</button>
+              </div>
             </div>
             <div className="flex flex-col gap-3">
               {results.map((r, i) => (
@@ -480,7 +607,7 @@ export default function SttTestPage() {
                       )}
                     </div>
                     {r.transcript && (
-                      <p className="mt-2 text-xs text-zinc-400 leading-relaxed">정답: {refText}</p>
+                      <p className="mt-2 text-xs text-zinc-400 leading-relaxed">정답: {r.refText}</p>
                     )}
                   </div>
                 </div>
