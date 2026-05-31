@@ -33,13 +33,9 @@ function Home() {
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [showSurvey, setShowSurvey] = useState(() => searchParams.get('survey') === 'true');
-  const surveySessionId = showSurvey ? Number(searchParams.get('sessionId')) || null : null;
-
-  useEffect(() => {
-    if (searchParams.get('survey') === 'true') {
-      router.replace('/');
-    }
-  }, [searchParams, router]);
+  const [surveySessionId] = useState(() =>
+    searchParams.get('survey') === 'true' ? Number(searchParams.get('sessionId')) || null : null
+  );
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -197,7 +193,7 @@ function Home() {
       {/* 서베이 */}
       <AnimatePresence>
         {showSurvey && (
-          <SurveySheet sessionId={surveySessionId} onDone={() => setShowSurvey(false)} />
+          <SurveySheet sessionId={surveySessionId} onDone={() => { setShowSurvey(false); router.replace('/'); }} />
         )}
       </AnimatePresence>
 
