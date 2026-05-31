@@ -84,7 +84,7 @@ export default function MyPage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
-      <header className="flex items-center gap-3 px-4 pb-3 pt-6">
+      <header className="flex items-center gap-3 px-4 pb-3" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
         <button
           type="button"
           onClick={goHome}

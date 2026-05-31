@@ -288,7 +288,8 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
       initial={{ opacity: 0, y: 24 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: 'easeOut' }}
-      className='px-5 pt-12 pb-6 text-center'
+      className='px-5 pb-6 text-center'
+      style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}
     >
       <motion.p
         initial={{ scale: 0.5, opacity: 0 }}

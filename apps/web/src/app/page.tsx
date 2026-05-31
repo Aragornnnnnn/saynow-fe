@@ -124,7 +124,7 @@ function Home() {
       transition={{ duration: 0.25, ease: 'easeOut' }}
     >
       {/* 헤더 */}
-      <div className="px-4 pb-3 pt-6">
+      <div className="px-4 pb-3" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-foreground">SayNow</h1>
           <Link href="/me" className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
