@@ -7,8 +7,10 @@ import { ChevronLeft, Mic, Info, ArrowUp, ArrowLeftRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { startSession, submitUtterance, exitSession, createFeedback, askGuide } from '@/lib/api';
+import { ensureAccessToken } from '@/lib/api/client';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
+import { useKeyboardOffset } from '@/hooks/useKeyboardOffset';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
 import { startNativeStt, stopNativeStt, triggerHaptic } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
@@ -72,6 +74,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [isGuideMode, setIsGuideMode] = useState(false);
   const [guideInput, setGuideInput] = useState('');
   const [isGuideLoading, setIsGuideLoading] = useState(false);
+  const keyboardOffset = useKeyboardOffset();
 
   useEffect(() => {
     if (prevHeartsRef.current <= remainingHearts) {
@@ -96,6 +99,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     sessionStartedRef.current = true;
     setPageState('loading');
     try {
+      await ensureAccessToken();
       const data = await startSession(Number(id));
       setSessionId(data.sessionId);
       setRemainingHearts(data.remainingHearts);
@@ -594,7 +598,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* 하단 컨트롤 */}
-      <div className="relative z-20 px-4 pb-10 pt-2">
+      <div
+        className="relative z-20 px-4 pt-2"
+        style={{ paddingBottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : '40px' }}
+      >
         {/* STT transcript */}
         <div className="mb-3 min-h-6 text-center">
           <AnimatePresence mode="wait">
@@ -660,6 +667,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             exit={{ opacity: 0, y: 8 }}
             transition={{ duration: 0.2, ease: 'easeOut' }}
             className="relative flex items-center gap-2"
+            onAnimationComplete={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
           >
             {/* 말하기로 돌아가기 버튼 — 주황 (반대 모드 색) */}
             <button
