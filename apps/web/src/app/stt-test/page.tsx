@@ -246,8 +246,6 @@ export default function SttTestPage() {
       if (msg.type === 'STT_FINAL') {
         transcriptRef.current = msg.transcript;
         setTranscript(msg.transcript);
-        saveResult(configLabelRef.current);
-        setIsRecording(false);
       }
       if (msg.type === 'STT_ERROR' || msg.type === 'MIC_PERMISSION_DENIED') {
         setIsRecording(false);
@@ -321,6 +319,9 @@ export default function SttTestPage() {
   }
 
   function stopNative() {
+    saveResult(configLabelRef.current);
+    setIsRecording(false);
+    sessionIdRef.current += 1;
     webBridge.send({ type: 'STOP_STT' });
   }
 

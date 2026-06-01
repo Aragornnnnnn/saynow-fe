@@ -76,6 +76,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   }, [onDenied]);
 
   const stop = useCallback(() => {
+    if (!isRunningRef.current) return;
     isRunningRef.current = false;
     ExpoSpeechRecognitionModule.stop();
   }, []);
