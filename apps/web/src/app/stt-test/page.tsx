@@ -202,6 +202,7 @@ export default function SttTestPage() {
   const transcriptRef = useRef('');
   const refTextRef = useRef(refText);
   const sessionIdRef = useRef(0);
+  const configLabelRef = useRef('');
   useEffect(() => { refTextRef.current = refText; }, [refText]);
 
   function copyResults() {
@@ -228,6 +229,9 @@ export default function SttTestPage() {
     return parts.join(' · ');
   }
 
+  // configLabel을 ref에 동기화해서 effect 클로저 stale 방지
+  configLabelRef.current = buildConfigLabel();
+
   useEffect(() => {
     if (mode !== 'native') return;
     const sid = sessionIdRef.current;
@@ -242,6 +246,8 @@ export default function SttTestPage() {
       if (msg.type === 'STT_FINAL') {
         transcriptRef.current = msg.transcript;
         setTranscript(msg.transcript);
+        saveResult(configLabelRef.current);
+        setIsRecording(false);
       }
       if (msg.type === 'STT_ERROR' || msg.type === 'MIC_PERMISSION_DENIED') {
         setIsRecording(false);
@@ -279,17 +285,17 @@ export default function SttTestPage() {
     recognition.continuous = true;
     recognition.interimResults = true;
     resetRecordingState();
+    let finalAccum = '';
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      let final = '', interim = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) final += event.results[i][0].transcript;
+      let interim = '';
+      for (let i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) finalAccum += event.results[i][0].transcript;
         else interim += event.results[i][0].transcript;
       }
       if (interim) { partialCountRef.current++; setPartialCount(partialCountRef.current); }
-      const appended = (final || interim).trim();
-      if (!appended) return;
-      transcriptRef.current = (transcriptRef.current + ' ' + appended).trim();
-      setTranscript(transcriptRef.current);
+      const display = (finalAccum + (interim ? ' ' + interim : '')).trim();
+      transcriptRef.current = (finalAccum + (interim ? ' ' + interim : '')).trim();
+      setTranscript(display);
     };
     recognition.onerror = () => setIsRecording(false);
     recognition.start();
