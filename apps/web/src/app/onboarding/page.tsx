@@ -82,6 +82,7 @@ export default function OnboardingPage() {
   }, [step, firstScenario?.scenarioId]);
 
   const [soundBubbleVisible, setSoundBubbleVisible] = useState(false);
+  const [soundResetKey, setSoundResetKey] = useState(0);
 
   function playDing() {
     try {
@@ -107,6 +108,7 @@ export default function OnboardingPage() {
   }, [previewQuestion, speak]);
 
   const handleSoundPlay = useCallback(() => {
+    setSoundResetKey((k) => k + 1);
     playDing();
     if (!soundBubbleVisible) {
       setTimeout(() => {
@@ -219,6 +221,7 @@ export default function OnboardingPage() {
               translatedQuestion={previewTranslatedQuestion}
               isSpeaking={isSpeaking}
               bubbleVisible={soundBubbleVisible}
+              resetKey={soundResetKey}
               onReplay={handleSoundPlay}
               onNext={() => goToStep('mic')}
             />
@@ -526,6 +529,7 @@ function SoundStep({
   question,
   isSpeaking,
   bubbleVisible,
+  resetKey,
   onReplay,
   onNext,
 }: {
@@ -533,6 +537,7 @@ function SoundStep({
   translatedQuestion: string;
   isSpeaking: boolean;
   bubbleVisible: boolean;
+  resetKey: number;
   onReplay: () => void;
   onNext: () => void;
 }) {
@@ -541,6 +546,13 @@ function SoundStep({
   const rafRef = useRef<number | null>(null);
   const startTimeRef = useRef<number | null>(null);
   const duration = Math.max(3000, question.length * 80);
+
+  // 다시 듣기 시 진행 바 초기화
+  useEffect(() => {
+    if (resetKey === 0) return;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    setProgress(0);
+  }, [resetKey]);
 
   useEffect(() => {
     if (isSpeaking) {
@@ -602,25 +614,19 @@ function SoundStep({
               <p className="text-sm font-medium text-[var(--onboarding-muted)]">
                 {isSpeaking ? '재생 중' : ''}
               </p>
-              <button
-                type="button"
-                onClick={onReplay}
-                disabled={isSpeaking}
-                className="flex items-center gap-1.5 text-sm font-semibold text-[var(--onboarding-muted)] disabled:opacity-0 transition-opacity active:opacity-50"
-              >
-                {hasPlayed ? (
-                  <>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
-                    </svg>
-                    다시 듣기
-                  </>
-                ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '1px' }}>
-                    <path d="M8 5v14l11-7z" />
+              {hasPlayed && (
+                <button
+                  type="button"
+                  onClick={onReplay}
+                  disabled={isSpeaking}
+                  className="flex items-center gap-1.5 text-sm font-semibold text-[var(--onboarding-muted)] disabled:opacity-0 transition-opacity active:opacity-50"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
                   </svg>
-                )}
-              </button>
+                  다시 듣기
+                </button>
+              )}
             </div>
           </div>
         </div>
