@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowUp, ChevronLeft, Check, LoaderCircle, Lock, Volume2 } from 'lucide-react';
+import { ChevronLeft, Check, LoaderCircle, Lock, Volume2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { openNativeSettings, startNativeStt, stopNativeStt } from '@/bridge/commands';
@@ -360,16 +360,20 @@ function MicStep({
 
   return (
     <>
-      <div className="flex flex-1 flex-col justify-center gap-10">
+      <div className="flex flex-1 flex-col gap-10 pt-7">
         <div className="space-y-4">
-          <h1 className="text-[34px] font-black leading-[1.15] tracking-normal">
+          <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
             대화를 위해
             <br />
             마이크 권한을 설정해주세요
           </h1>
         </div>
 
-        <PermissionPreview platform={previewPlatform} />
+        <PermissionPreview
+          platform={previewPlatform}
+          isRequesting={micState === 'requesting'}
+          onAllow={onAllow}
+        />
 
         {isDenied && (
           <p className="text-center text-sm font-medium leading-relaxed text-[var(--onboarding-muted)]">
@@ -380,32 +384,43 @@ function MicStep({
         )}
       </div>
 
-      <div className="space-y-3">
-        {isDenied && isNative && (
+      {isDenied && isNative && (
+        <div className="space-y-3">
           <Button variant="ghost" onClick={onOpenSettings}>
             설정 열기
           </Button>
-        )}
-        <Button onClick={onAllow} loading={micState === 'requesting'}>
-          허용
-        </Button>
-      </div>
+        </div>
+      )}
     </>
   );
 }
 
-function PermissionPreview({ platform }: { platform: PermissionPreviewPlatform }) {
-  if (platform === 'android') return <AndroidPermissionPreview />;
-  return <IosPermissionPreview />;
+function PermissionPreview({
+  platform,
+  isRequesting,
+  onAllow,
+}: {
+  platform: PermissionPreviewPlatform;
+  isRequesting: boolean;
+  onAllow: () => void;
+}) {
+  if (platform === 'android') {
+    return <AndroidPermissionPreview isRequesting={isRequesting} onAllow={onAllow} />;
+  }
+  return <IosPermissionPreview isRequesting={isRequesting} onAllow={onAllow} />;
 }
 
-function IosPermissionPreview() {
+function IosPermissionPreview({
+  isRequesting,
+  onAllow,
+}: {
+  isRequesting: boolean;
+  onAllow: () => void;
+}) {
   return (
-    <div
-      className="relative mx-auto w-[270px] overflow-visible"
-    >
+    <div className="relative mx-auto w-[270px] overflow-visible">
       <div
-        className="overflow-hidden rounded-[14px] border shadow-[0_18px_60px_rgba(0,0,0,0.16)] backdrop-blur-xl"
+        className="overflow-hidden rounded-[14px] border bg-white backdrop-blur-xl"
         style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
       >
         <div className="px-4 pb-[17px] pt-[19px] text-center">
@@ -430,19 +445,34 @@ function IosPermissionPreview() {
           >
             허용 안 함
           </div>
-          <div className="flex items-center justify-center font-semibold text-[#007AFF]">허용</div>
+          <button
+            type="button"
+            onClick={onAllow}
+            disabled={isRequesting}
+            className="flex items-center justify-center font-semibold text-[#007AFF] disabled:opacity-50"
+          >
+            허용
+          </button>
         </div>
       </div>
-      <ArrowUp className="absolute -bottom-8 right-[56px] h-8 w-8 text-primary" strokeWidth={3} />
+      <span className="tossface pointer-events-none absolute -bottom-9 right-[55px] text-[36px] leading-none">
+        👆
+      </span>
     </div>
   );
 }
 
-function AndroidPermissionPreview() {
+function AndroidPermissionPreview({
+  isRequesting,
+  onAllow,
+}: {
+  isRequesting: boolean;
+  onAllow: () => void;
+}) {
   return (
     <div className="relative mx-auto w-full max-w-[326px]">
-      <div className="rounded-[30px] bg-white px-6 pb-5 pt-6 text-center text-[#202124] shadow-[0_18px_60px_rgba(0,0,0,0.16)]">
-        <div className="mx-auto mb-5 flex h-7 w-10 items-center justify-center rounded-md bg-[#4D72F5] shadow-sm">
+      <div className="rounded-[30px] bg-white px-6 pb-5 pt-6 text-center text-[#202124]">
+        <div className="mx-auto mb-5 flex h-7 w-10 items-center justify-center rounded-md bg-[#4D72F5]">
           <span className="h-3 w-3 rounded-full bg-white" />
           <span className="-ml-0.5 h-1.5 w-1.5 rounded-full bg-white/80" />
         </div>
@@ -452,10 +482,15 @@ function AndroidPermissionPreview() {
         </p>
 
         <div className="mt-7 space-y-1 text-[20px] font-bold leading-none">
-          <div className="relative flex h-14 items-center justify-center">
+          <button
+            type="button"
+            onClick={onAllow}
+            disabled={isRequesting}
+            className="relative flex h-14 w-full items-center justify-center disabled:opacity-50"
+          >
             앱 사용 중에만 허용
-            <ArrowUp className="absolute -bottom-4 right-1 h-8 w-8 text-primary" strokeWidth={3} />
-          </div>
+            <span className="tossface pointer-events-none absolute right-0 text-[34px] leading-none">👈</span>
+          </button>
           <div className="flex h-14 items-center justify-center">이번만 허용</div>
           <div className="flex h-14 items-center justify-center">허용 안함</div>
         </div>

@@ -81,17 +81,6 @@
   --onboarding-line: #e5e0d8;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --onboarding-bg: #171713;
-    --onboarding-fg: #f7f4ed;
-    --onboarding-muted: #b8b2a8;
-    --onboarding-panel: #24231f;
-    --onboarding-panel-soft: #2d2b26;
-    --onboarding-line: #464136;
-  }
-}
-
 @layer base {
   * {
     @apply border-border;
