@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Check, LoaderCircle, Lock, Volume2 } from 'lucide-react';
+import { ArrowUp, ChevronLeft, Check, LoaderCircle, Lock, Volume2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { openNativeSettings, startNativeStt, stopNativeStt } from '@/bridge/commands';
@@ -20,6 +20,7 @@ import { useScenarioStore } from '@/store/scenarioStore';
 
 type OnboardingStep = 'intro' | 'mic' | 'sound' | 'scenario';
 type MicPermissionState = 'idle' | 'requesting' | 'denied';
+type PermissionPreviewPlatform = 'ios' | 'android';
 
 const STEP_ORDER: OnboardingStep[] = ['intro', 'mic', 'sound', 'scenario'];
 const FALLBACK_QUESTION = 'What is your favorite food?';
@@ -349,6 +350,13 @@ function MicStep({
   isNative: boolean;
 }) {
   const isDenied = micState === 'denied';
+  const [previewPlatform, setPreviewPlatform] = useState<PermissionPreviewPlatform>('ios');
+
+  useEffect(() => {
+    if (/Android/i.test(navigator.userAgent)) {
+      setPreviewPlatform('android');
+    }
+  }, []);
 
   return (
     <>
@@ -361,35 +369,7 @@ function MicStep({
           </h1>
         </div>
 
-        <div
-          className="mx-auto w-[270px] overflow-hidden rounded-[14px] border shadow-[0_18px_60px_rgba(0,0,0,0.16)] backdrop-blur-xl"
-          style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
-        >
-          <div className="px-4 pb-[17px] pt-[19px] text-center">
-            <div className="space-y-2">
-              <p className="text-[17px] font-semibold leading-snug">
-                'SayNow'이(가)
-                <br />
-                마이크에 접근하려고 합니다.
-              </p>
-              <p className="text-[13px] leading-snug text-[var(--onboarding-muted)]">
-                음성 답변을 듣고 대화를 이어가기 위해 필요합니다.
-              </p>
-            </div>
-          </div>
-          <div
-            className="grid h-11 grid-cols-2 border-t text-[17px]"
-            style={{ borderColor: 'var(--onboarding-line)' }}
-          >
-            <div
-              className="flex items-center justify-center border-r text-[#007AFF]"
-              style={{ borderColor: 'var(--onboarding-line)' }}
-            >
-              허용 안 함
-            </div>
-            <div className="flex items-center justify-center font-semibold text-[#007AFF]">허용</div>
-          </div>
-        </div>
+        <PermissionPreview platform={previewPlatform} />
 
         {isDenied && (
           <p className="text-center text-sm font-medium leading-relaxed text-[var(--onboarding-muted)]">
@@ -411,6 +391,76 @@ function MicStep({
         </Button>
       </div>
     </>
+  );
+}
+
+function PermissionPreview({ platform }: { platform: PermissionPreviewPlatform }) {
+  if (platform === 'android') return <AndroidPermissionPreview />;
+  return <IosPermissionPreview />;
+}
+
+function IosPermissionPreview() {
+  return (
+    <div
+      className="relative mx-auto w-[270px] overflow-visible"
+    >
+      <div
+        className="overflow-hidden rounded-[14px] border shadow-[0_18px_60px_rgba(0,0,0,0.16)] backdrop-blur-xl"
+        style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
+      >
+        <div className="px-4 pb-[17px] pt-[19px] text-center">
+          <div className="space-y-2">
+            <p className="text-[17px] font-semibold leading-snug">
+              'SayNow'이(가)
+              <br />
+              마이크에 접근하려고 합니다.
+            </p>
+            <p className="text-[13px] leading-snug text-[var(--onboarding-muted)]">
+              음성 답변을 듣고 대화를 이어가기 위해 필요합니다.
+            </p>
+          </div>
+        </div>
+        <div
+          className="grid h-11 grid-cols-2 border-t text-[17px]"
+          style={{ borderColor: 'var(--onboarding-line)' }}
+        >
+          <div
+            className="flex items-center justify-center border-r text-[#007AFF]"
+            style={{ borderColor: 'var(--onboarding-line)' }}
+          >
+            허용 안 함
+          </div>
+          <div className="flex items-center justify-center font-semibold text-[#007AFF]">허용</div>
+        </div>
+      </div>
+      <ArrowUp className="absolute -bottom-8 right-[56px] h-8 w-8 text-primary" strokeWidth={3} />
+    </div>
+  );
+}
+
+function AndroidPermissionPreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-[326px]">
+      <div className="rounded-[30px] bg-white px-6 pb-5 pt-6 text-center text-[#202124] shadow-[0_18px_60px_rgba(0,0,0,0.16)]">
+        <div className="mx-auto mb-5 flex h-7 w-10 items-center justify-center rounded-md bg-[#4D72F5] shadow-sm">
+          <span className="h-3 w-3 rounded-full bg-white" />
+          <span className="-ml-0.5 h-1.5 w-1.5 rounded-full bg-white/80" />
+        </div>
+
+        <p className="mx-auto max-w-[264px] text-[16px] font-semibold leading-snug">
+          SayNow에서 오디오를 녹음하도록 허용하시겠습니까?
+        </p>
+
+        <div className="mt-7 space-y-1 text-[20px] font-bold leading-none">
+          <div className="relative flex h-14 items-center justify-center">
+            앱 사용 중에만 허용
+            <ArrowUp className="absolute -bottom-4 right-1 h-8 w-8 text-primary" strokeWidth={3} />
+          </div>
+          <div className="flex h-14 items-center justify-center">이번만 허용</div>
+          <div className="flex h-14 items-center justify-center">허용 안함</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
