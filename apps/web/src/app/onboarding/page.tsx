@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Check, LoaderCircle, Lock, Mic, Volume2 } from 'lucide-react';
+import { ChevronLeft, Check, LoaderCircle, Lock, Volume2 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { openNativeSettings, startNativeStt, stopNativeStt } from '@/bridge/commands';
@@ -355,35 +355,39 @@ function MicStep({
       <div className="flex flex-1 flex-col justify-center gap-10">
         <div className="space-y-4">
           <h1 className="text-[34px] font-black leading-[1.15] tracking-normal">
-            실제 대화 연습을 위해
+            대화를 위해
             <br />
-            마이크 권한을 허용해주세요.
+            마이크 권한을 설정해주세요
           </h1>
         </div>
 
-        <div className="mx-auto w-full max-w-[318px] overflow-hidden rounded-[28px] border shadow-[0_18px_60px_rgba(0,0,0,0.12)]"
+        <div
+          className="mx-auto w-[270px] overflow-hidden rounded-[14px] border shadow-[0_18px_60px_rgba(0,0,0,0.16)] backdrop-blur-xl"
           style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
         >
-          <div className="space-y-4 px-5 py-7 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/12 text-primary">
-              <Mic size={25} />
-            </div>
+          <div className="px-4 pb-[17px] pt-[19px] text-center">
             <div className="space-y-2">
-              <p className="text-[18px] font-extrabold leading-snug">
-                SayNow에서 마이크를
+              <p className="text-[17px] font-semibold leading-snug">
+                'SayNow'이(가)
                 <br />
-                사용하려고 합니다.
+                마이크에 접근하려고 합니다.
               </p>
-              <p className="text-[14px] leading-relaxed text-[var(--onboarding-muted)]">
-                영어 답변을 듣고 대화를 이어가기 위해 필요해요.
+              <p className="text-[13px] leading-snug text-[var(--onboarding-muted)]">
+                음성 답변을 듣고 대화를 이어가기 위해 필요합니다.
               </p>
             </div>
           </div>
-          <div className="grid grid-cols-2 border-t text-[17px] font-bold" style={{ borderColor: 'var(--onboarding-line)' }}>
-            <div className="border-r py-3.5 text-center text-[var(--onboarding-muted)]" style={{ borderColor: 'var(--onboarding-line)' }}>
+          <div
+            className="grid h-11 grid-cols-2 border-t text-[17px]"
+            style={{ borderColor: 'var(--onboarding-line)' }}
+          >
+            <div
+              className="flex items-center justify-center border-r text-[#007AFF]"
+              style={{ borderColor: 'var(--onboarding-line)' }}
+            >
               허용 안 함
             </div>
-            <div className="py-3.5 text-center text-primary">허용</div>
+            <div className="flex items-center justify-center font-semibold text-[#007AFF]">허용</div>
           </div>
         </div>
 
