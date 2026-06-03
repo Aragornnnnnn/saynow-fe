@@ -5,12 +5,11 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, UserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CategoryFilter } from '@/components/CategoryFilter';
 import { SurveySheet } from '@/components/SurveySheet';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { exitApp } from '@/bridge/commands';
-import type { ApiScenario, ApiCategory } from '@/lib/api';
+import type { ApiScenario } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
 import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
@@ -31,7 +30,6 @@ function Home() {
   const { isReady } = useRequireAuth();
   const _hasHydrated = useAuthStore((s) => s._hasHydrated);
   const refreshToken = useAuthStore((s) => s.refreshToken);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [showSurvey, setShowSurvey] = useState(() => searchParams.get('survey') === 'true');
   const [surveySessionId] = useState(() =>
     searchParams.get('survey') === 'true' ? Number(searchParams.get('sessionId')) || null : null
@@ -75,15 +73,7 @@ function Home() {
 
   const categories = data?.categories ?? [];
 
-  // 선택된 카테고리 또는 첫 번째 비잠금 카테고리
-  const activeCategory: ApiCategory | undefined =
-    selectedCategoryId !== null
-      ? categories.find((c) => c.categoryId === selectedCategoryId)
-      : categories.find((c) => !c.categoryLocked);
-
-  function handleCategoryChange(id: number | null) {
-    setSelectedCategoryId(id);
-  }
+  const activeCategory = categories.find((c) => !c.categoryLocked);
 
   function handleStart(scenario: ApiScenario) {
     if (scenario.locked) return;
@@ -117,26 +107,18 @@ function Home() {
 
   return (
     <motion.main
-      className="flex h-dvh flex-col overflow-x-hidden"
+      className="relative flex h-dvh flex-col overflow-x-hidden"
       style={{ background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
     >
-      {/* 헤더 */}
-      <div className="px-4 pb-3" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
-        <div className="mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground">SayNow</h1>
-          <Link href="/me" className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground">
-            <UserRound className="h-3.5 w-3.5" />
-            내 정보
-          </Link>
-        </div>
-        <CategoryFilter
-          categories={categories}
-          selectedId={selectedCategoryId ?? activeCategory?.categoryId ?? null}
-          onChange={handleCategoryChange}
-        />
+      {/* 내 정보 */}
+      <div className="absolute right-4 z-20" style={{ top: 'max(env(safe-area-inset-top), 16px)' }}>
+        <Link href="/me" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
+          <UserRound className="h-3.5 w-3.5" />
+          내 정보
+        </Link>
       </div>
 
       {/* 시나리오 목록 */}
