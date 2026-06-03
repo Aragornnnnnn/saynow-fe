@@ -59,6 +59,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
           <ResultHeader
             passed={passed}
             score={header.nativeScore}
+            levelLabel={header.nativeLevelLabel}
             summary={header.summary}
           />
           <div className='px-4 pb-6 space-y-6'>
@@ -253,10 +254,11 @@ function IntroCardLayout({ passed, score, scenarioId, children }: IntroCardLayou
 interface ResultHeaderProps {
   passed: boolean;
   score: number;
+  levelLabel: string;
   summary?: string;
 }
 
-function ResultHeader({ passed, score, summary }: ResultHeaderProps) {
+function ResultHeader({ passed, score, levelLabel, summary }: ResultHeaderProps) {
   const [displayScore, setDisplayScore] = useState(0);
 
   // 카운트업: 700ms 동안 0 → score (confetti/haptic은 IntroCardLayout에서 처리)
@@ -318,6 +320,7 @@ function ResultHeader({ passed, score, summary }: ResultHeaderProps) {
             {displayScore}%
           </span>
         </p>
+        <p className='mt-1 text-sm font-semibold text-foreground'>{levelLabel}</p>
         {summary && (
           <motion.p
             initial={{ opacity: 0, y: 8 }}

@@ -1,4 +1,4 @@
-// 세션 피드백 조회 API
+// 세션 완료 및 피드백 생성 API
 import { request } from './client';
 
 export interface ApiTurnFeedback {
@@ -16,13 +16,14 @@ export interface ApiTurnFeedback {
 export interface ApiFeedback {
   sessionId: number;
   nativeScore: number;
+  nativeLevelLabel: string;
   summary: string;
   turnFeedbacks: ApiTurnFeedback[];
 }
 
-export function getFeedback(sessionId: number): Promise<ApiFeedback> {
+export function createFeedback(sessionId: number): Promise<ApiFeedback> {
   return request(`/api/v1/sessions/${sessionId}/feedback`, {
-    method: 'GET',
+    method: 'POST',
   });
 }
 

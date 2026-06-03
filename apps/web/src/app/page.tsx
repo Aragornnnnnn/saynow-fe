@@ -80,9 +80,9 @@ function Home() {
     setScenario({
       scenarioId: scenario.scenarioId,
       scenarioTitle: scenario.scenarioTitle,
-      scenarioSituation: scenario.scenarioSituation,
-      scenarioGoal: scenario.scenarioGoal,
-      scenarioEmoji: scenario.scenarioEmoji,
+      briefing: scenario.briefing,
+      conversationGoal: scenario.conversationGoal,
+      scenarioEmoji: scenario.scenarioEmoji ?? null,
     });
     (['play', 'success', 'fail'] as const).forEach((type) => {
       const img = new Image();
@@ -210,11 +210,11 @@ function ScenarioBadgeList({ scenarios, newlyUnlockedIds, onStart }: ScenarioBad
 
       {/* 더 많은 시나리오 예고 */}
       {(() => {
-        const allCleared = scenarios.every((s) => s.cleared);
+        const allCompleted = scenarios.every((s) => s.completed);
         return (
           <div className="flex flex-col items-center pb-10">
-            <span className={`text-4xl transition-opacity duration-500 ${allCleared ? 'opacity-100' : 'opacity-40'}`}>☁️</span>
-            <p className={`mt-2 text-sm font-semibold transition-opacity duration-500 ${allCleared ? 'opacity-100' : 'opacity-40'}`}
+            <span className={`text-4xl transition-opacity duration-500 ${allCompleted ? 'opacity-100' : 'opacity-40'}`}>☁️</span>
+            <p className={`mt-2 text-sm font-semibold transition-opacity duration-500 ${allCompleted ? 'opacity-100' : 'opacity-40'}`}
               style={{ color: '#111111', textShadow: '0 1px 4px rgba(251,251,250,0.9), 0 0 8px rgba(251,251,250,0.7)' }}>
               더 많은 시나리오가 곧 공개돼요
             </p>
@@ -233,12 +233,12 @@ interface ScenarioBadgeItemProps {
 
 // 잠금 해제됐지만 아직 클리어 안 한 첫 번째 시나리오인지 판단하는 헬퍼
 function isNextTarget(scenario: ApiScenario): boolean {
-  return !scenario.locked && !scenario.cleared && scenario.lockReason === null;
+  return !scenario.locked && !scenario.completed && scenario.lockReason === null;
 }
 
 function ScenarioBadgeItem({ scenario, isNewlyUnlocked, onStart }: ScenarioBadgeItemProps) {
   const isLocked = scenario.locked;
-  const isCleared = scenario.cleared;
+  const isCompleted = scenario.completed;
   const isComingSoon = scenario.lockReason === 'COMING_SOON';
   const isTarget = isNextTarget(scenario);
 
@@ -263,7 +263,7 @@ function ScenarioBadgeItem({ scenario, isNewlyUnlocked, onStart }: ScenarioBadge
             ? 'bg-card shadow-md cursor-default overflow-hidden'
             : isLocked
               ? 'bg-[#E0E0DC] text-muted-foreground shadow-[0_6px_0_#9ca3af] active:shadow-[0_2px_0_#9ca3af] active:translate-y-1'
-              : isCleared
+              : isCompleted
                 ? 'bg-[#FFF4ED] ring-1 ring-primary/10 overflow-hidden shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'
                 : isTarget
                   ? 'bg-[#FFF4ED] ring-1 ring-primary/10 badge-shimmer overflow-hidden shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'

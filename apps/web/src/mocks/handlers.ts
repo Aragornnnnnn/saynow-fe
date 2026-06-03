@@ -1,9 +1,8 @@
-// MSW 핸들러 — API 명세 기반 mock 응답 정의
+// MSW 핸들러 — live Swagger 계약 기반 mock 응답
 import { http, HttpResponse } from 'msw';
 
 const BASE = '/api/v1';
 
-// GET /api/v1/scenarios
 export const scenariosHandler = http.get(`${BASE}/scenarios`, () => {
   return HttpResponse.json({
     success: true,
@@ -11,59 +10,53 @@ export const scenariosHandler = http.get(`${BASE}/scenarios`, () => {
       categories: [
         {
           categoryId: 1,
-          categoryName: 'Cafe',
+          categoryName: 'Free Talk',
           categoryLocked: false,
           categoryLockReason: null,
           scenarios: [
             {
-              scenarioId: 10,
+              scenarioId: 1,
               displayOrder: 1,
-              scenarioTitle: '아이스 아메리카노 주문',
-              scenarioGoal: '아이스 아메리카노 주문에 성공하세요.',
-              scenarioEmoji: '☕',
-              cleared: true,
+              scenarioTitle: '음식 취향 이야기하기',
+              briefing: '좋아하는 음식과 최근 먹었던 음식에 대해 이야기합니다.',
+              conversationGoal: '음식 취향과 경험을 영어로 자연스럽게 설명할 수 있다.',
+              completed: false,
               locked: false,
               lockReason: null,
+              scenarioEmoji: '🍕',
+              firstQuestionPreview: {
+                questionId: 100,
+                aiQuestion: 'What is your favorite food? Why do you like it?',
+                translatedQuestion: '가장 좋아하는 음식이 뭐예요? 왜 좋아하나요?',
+              },
             },
             {
-              scenarioId: 11,
+              scenarioId: 2,
               displayOrder: 2,
-              scenarioTitle: '커스텀 음료 주문',
-              scenarioGoal: '원하는 커스텀 옵션을 정확히 전달하세요.',
-              scenarioEmoji: '🥤',
-              cleared: false,
+              scenarioTitle: '주말 계획 말하기',
+              briefing: '다가오는 주말에 하고 싶은 일을 편하게 이야기합니다.',
+              conversationGoal: '계획과 이유를 영어로 이어서 말할 수 있다.',
+              completed: false,
               locked: false,
               lockReason: null,
+              scenarioEmoji: '🗓️',
+              firstQuestionPreview: {
+                questionId: 200,
+                aiQuestion: 'What are you planning to do this weekend?',
+                translatedQuestion: '이번 주말에 무엇을 할 계획인가요?',
+              },
             },
             {
-              scenarioId: 12,
+              scenarioId: 3,
               displayOrder: 3,
-              scenarioTitle: '주문 문제 해결',
-              scenarioGoal: '주문 실수를 직원에게 설명하고 해결하세요.',
-              scenarioEmoji: '🧾',
-              cleared: false,
+              scenarioTitle: '좋아하는 영화 소개하기',
+              briefing: '좋아하는 영화와 추천 이유를 이야기합니다.',
+              conversationGoal: '취향과 감상을 영어로 설명할 수 있다.',
+              completed: false,
               locked: true,
               lockReason: 'PREVIOUS_SCENARIO_NOT_CLEARED',
-            },
-            {
-              scenarioId: 13,
-              displayOrder: 4,
-              scenarioTitle: '포장 요청',
-              scenarioGoal: '포장을 자연스럽게 요청할 수 있다.',
-              scenarioEmoji: '☕',
-              cleared: false,
-              locked: true,
-              lockReason: 'COMING_SOON',
-            },
-            {
-              scenarioId: 14,
-              displayOrder: 5,
-              scenarioTitle: '영수증 요청',
-              scenarioGoal: '영수증을 자연스럽게 요청할 수 있다.',
-              scenarioEmoji: '☕',
-              cleared: false,
-              locked: true,
-              lockReason: 'COMING_SOON',
+              scenarioEmoji: '🎬',
+              firstQuestionPreview: null,
             },
           ],
         },
@@ -74,167 +67,133 @@ export const scenariosHandler = http.get(`${BASE}/scenarios`, () => {
           categoryLockReason: 'COMING_SOON',
           scenarios: [],
         },
-        {
-          categoryId: 3,
-          categoryName: 'Hotel',
-          categoryLocked: true,
-          categoryLockReason: 'COMING_SOON',
-          scenarios: [],
-        },
-        {
-          categoryId: 4,
-          categoryName: 'Restaurant',
-          categoryLocked: true,
-          categoryLockReason: 'COMING_SOON',
-          scenarios: [],
-        },
-        {
-          categoryId: 5,
-          categoryName: 'Taxi',
-          categoryLocked: true,
-          categoryLockReason: 'COMING_SOON',
-          scenarios: [],
-        },
       ],
     },
+    error: null,
   });
 });
 
-// POST /api/v1/scenarios/:scenarioId/sessions
 export const startSessionHandler = http.post(
   `${BASE}/scenarios/:scenarioId/sessions`,
-  () => {
+  ({ params }) => {
     return HttpResponse.json(
       {
         success: true,
         data: {
           sessionId: 42,
-          originalQuestion: 'What would you like to order?',
-          translatedQuestion: '무엇을 주문하시겠어요?',
-          remainingHearts: 3,
-          feedbackAvailable: false,
+          scenarioId: Number(params.scenarioId),
+          totalQuestionCount: 3,
+          currentTurn: {
+            turnId: 101,
+            sequence: 1,
+            aiQuestion: 'What is your favorite food? Why do you like it?',
+            translatedQuestion: '가장 좋아하는 음식이 뭐예요? 왜 좋아하나요?',
+          },
+          progress: {
+            currentSequence: 1,
+            totalQuestionCount: 3,
+            completed: false,
+          },
         },
+        error: null,
       },
       { status: 201 },
     );
   },
 );
 
-// POST /api/v1/sessions/:sessionId/utterances
 let utteranceCount = 0;
 export const submitUtteranceHandler = http.post(
   `${BASE}/sessions/:sessionId/utterances`,
   () => {
     utteranceCount += 1;
-    const isLast = utteranceCount >= 3;
+    const sequence = utteranceCount;
+    const completed = sequence >= 3;
+    const nextSequence = sequence + 1;
 
-    if (isLast) {
-      utteranceCount = 0;
-      return HttpResponse.json({
-        success: true,
-        data: {
-          sessionId: 42,
-          originalQuestion: '',
-          translatedQuestion: '',
-          remainingHearts: 3,
-          feedbackAvailable: true,
-        },
-      });
-    }
-
-    return HttpResponse.json({
+    const response = HttpResponse.json({
       success: true,
       data: {
-        sessionId: 42,
-        originalQuestion: 'What size would you like?',
-        translatedQuestion: '사이즈는요?',
-        remainingHearts: 2,
-        feedbackAvailable: false,
+        submittedTurn: {
+          turnId: 100 + sequence,
+          sequence,
+          turnFeedbackStatus: 'PREPARING',
+        },
+        nextTurn: completed
+          ? null
+          : {
+              turnId: 100 + nextSequence,
+              sequence: nextSequence,
+              aiQuestion: sequence === 1
+                ? 'Do you usually cook it yourself?'
+                : 'When did you last eat it?',
+              translatedQuestion: sequence === 1
+                ? '그 음식을 보통 직접 요리하나요?'
+                : '그 음식을 마지막으로 언제 먹었나요?',
+            },
+        progress: {
+          currentSequence: completed ? 3 : nextSequence,
+          totalQuestionCount: 3,
+          completed,
+        },
       },
+      error: null,
     });
+
+    if (completed) utteranceCount = 0;
+
+    return response;
   },
 );
 
-// POST /api/v1/sessions/:sessionId/feedback
 export const feedbackHandler = http.post(
   `${BASE}/sessions/:sessionId/feedback`,
-  () => {
+  ({ params }) => {
     return HttpResponse.json({
       success: true,
       data: {
-        sessionId: 42,
-        cleared: true,
-        comprehensionScore: 68,
-        feedbackSummary:
-          '전달하려는 의도는 충분히 전해졌어요. 하지만 "please"와 함께 간결하게 말하면 훨씬 자연스럽게 들립니다.',
-        remainingHearts: 2,
+        sessionId: Number(params.sessionId),
+        nativeScore: 82,
+        nativeLevelLabel: '유학생 수준',
+        summary: '하고 싶은 말을 끝까지 전달하는 힘이 좋았어요.',
         turnFeedbacks: [
           {
             turnId: 101,
             sequence: 1,
-            originalQuestion: 'What would you like to order?',
-            translatedQuestion: '무엇을 주문하시겠어요?',
-            userUtterance: 'Can I get an iced americano, please?',
-            feedbackRequired: false,
-            nativeUnderstanding: null,
-            nativeLanguageInterpretation: null,
+            originalQuestion: 'What is your favorite food? Why do you like it?',
+            translatedQuestion: '가장 좋아하는 음식이 뭐예요? 왜 좋아하나요?',
+            userUtterance: 'I like pizza because it is spicy.',
+            feedbackType: 'GOOD',
+            koreanAnalogy: '한국어로 비유하자면 담백하게 이유를 붙인 말처럼 들려요.',
+            feedbackDetail: '좋아하는 음식과 이유를 한 문장 안에서 분명하게 연결했기 때문이에요.',
             betterExpression: null,
           },
           {
             turnId: 102,
             sequence: 2,
-            originalQuestion: 'What size would you like?',
-            translatedQuestion: '사이즈는요?',
-            userUtterance: 'Um large size',
-            feedbackRequired: true,
-            nativeUnderstanding: '큰 사이즈를 원한다는 뜻은 알겠는데, 조금 어색하게 들려요.',
-            nativeLanguageInterpretation: '음... 큰 사이즈',
-            betterExpression: 'Large, please.',
-          },
-          {
-            turnId: 103,
-            sequence: 3,
-            originalQuestion: 'Hot or iced?',
-            translatedQuestion: '따뜻하게 드릴까요, 아이스로 드릴까요?',
-            userUtterance: 'I want cold',
-            feedbackRequired: true,
-            nativeUnderstanding: '차갑게 원한다는 건 알겠는데 "cold"만 쓰면 어색해요.',
-            nativeLanguageInterpretation: '저는 차가운 것을 원해요',
-            betterExpression: 'Iced, please.',
-          },
-          {
-            turnId: 104,
-            sequence: 4,
-            originalQuestion: 'Will that be for here or to go?',
-            translatedQuestion: '여기서 드실 건가요, 가져가실 건가요?',
-            userUtterance: 'Take out please',
-            feedbackRequired: false,
-            nativeUnderstanding: null,
-            nativeLanguageInterpretation: null,
-            betterExpression: null,
-          },
-          {
-            turnId: 105,
-            sequence: 5,
-            originalQuestion: 'That\'ll be $6.50. How would you like to pay?',
-            translatedQuestion: '6달러 50센트입니다. 결제는 어떻게 하시겠어요?',
-            userUtterance: 'Card',
-            feedbackRequired: true,
-            nativeUnderstanding: '결제 방법은 전달됐지만 너무 짧아서 약간 퉁명스럽게 들려요.',
-            nativeLanguageInterpretation: '카드',
-            betterExpression: 'By card, please.',
+            originalQuestion: 'Do you usually cook it yourself?',
+            translatedQuestion: '그 음식을 보통 직접 요리하나요?',
+            userUtterance: 'No cook. I buy outside.',
+            feedbackType: 'NEEDS_IMPROVEMENT',
+            koreanAnalogy: '뜻은 통하지만 단어만 이어 붙인 답처럼 들려요.',
+            feedbackDetail: '동사를 넣어 문장으로 연결하면 훨씬 자연스럽습니다.',
+            betterExpression: 'No, I usually buy it from a restaurant.',
           },
         ],
       },
+      error: null,
     });
   },
 );
 
-// DELETE /api/v1/sessions/:sessionId
-export const exitSessionHandler = http.delete(
-  `${BASE}/sessions/:sessionId`,
+export const abandonSessionHandler = http.patch(
+  `${BASE}/sessions/:sessionId/abandon`,
   () => {
-    return new HttpResponse(null, { status: 204 });
+    return HttpResponse.json({
+      success: true,
+      data: null,
+      error: null,
+    });
   },
 );
 
@@ -243,5 +202,5 @@ export const handlers = [
   startSessionHandler,
   submitUtteranceHandler,
   feedbackHandler,
-  exitSessionHandler,
+  abandonSessionHandler,
 ];

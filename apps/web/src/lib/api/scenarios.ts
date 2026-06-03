@@ -5,19 +5,24 @@ export interface ApiScenario {
   scenarioId: number;
   displayOrder: number;
   scenarioTitle: string;
-  scenarioGoal: string;
-  scenarioSituation: string;
-  scenarioEmoji: string | null;
-  cleared: boolean;
+  briefing: string;
+  conversationGoal: string;
+  completed: boolean;
   locked: boolean;
-  lockReason: 'PREVIOUS_SCENARIO_NOT_CLEARED' | 'COMING_SOON' | null;
+  lockReason: string | null;
+  firstQuestionPreview: {
+    questionId: number;
+    aiQuestion: string;
+    translatedQuestion: string;
+  } | null;
+  scenarioEmoji?: string | null;
 }
 
 export interface ApiCategory {
   categoryId: number;
   categoryName: string;
   categoryLocked: boolean;
-  categoryLockReason: 'COMING_SOON' | null;
+  categoryLockReason: string | null;
   scenarios: ApiScenario[];
 }
 

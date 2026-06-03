@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ChevronLeft, Mic, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { startSession, submitUtterance, abandonSession, getFeedback } from '@/lib/api';
+import { startSession, submitUtterance, abandonSession, createFeedback } from '@/lib/api';
 import { ensureAccessToken } from '@/lib/api/client';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
@@ -78,13 +78,13 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       await ensureAccessToken();
       const data = await startSession(Number(id));
       setSessionId(data.sessionId);
-      setFeedbackAvailable(data.feedbackAvailable);
+      setFeedbackAvailable(data.progress.completed);
       setMessages([
         {
           id: `ai-0`,
           role: 'ai',
-          text: data.originalQuestion,
-          translatedText: data.translatedQuestion,
+          text: data.currentTurn.aiQuestion,
+          translatedText: data.currentTurn.translatedQuestion,
         },
       ]);
       setPageState('idle');
@@ -126,7 +126,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       const result = await submitUtterance(sessionId, text);
 
       // 마지막 답변 — ... 말풍선 → 마무리 멘트 → 결과 보기 버튼
-      if (result.feedbackAvailable) {
+      if (result.progress.completed) {
         const closingLines: [string, string][] = [
           ["Great job! Let's see how you did!", '수고했어요! 결과를 확인해봐요!'],
           ['Nice work! Check out your feedback!', '잘 하셨어요! 피드백을 확인해봐요!'],
@@ -136,7 +136,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         const [closing, closingKo] = closingLines[Math.floor(Math.random() * closingLines.length)];
         queryClient.prefetchQuery({
           queryKey: feedbackQueryKeys.detail(sessionId),
-          queryFn: () => getFeedback(sessionId),
+          queryFn: () => createFeedback(sessionId),
         });
         // 피드백 페이지 진입 시 이미지 flash 방지 — 브라우저 캐시에 미리 올려둠
         (['success', 'fail'] as const).forEach((type) => {
@@ -154,14 +154,15 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         return;
       }
 
-      if (result.originalQuestion) {
+      const nextTurn = result.nextTurn;
+      if (nextTurn) {
         setMessages((prev) => [
           ...prev,
           {
             id: `ai-${Date.now()}`,
             role: 'ai',
-            text: result.originalQuestion,
-            translatedText: result.translatedQuestion,
+            text: nextTurn.aiQuestion,
+            translatedText: nextTurn.translatedQuestion,
           },
         ]);
       }
@@ -449,7 +450,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               exit={{ opacity: 0 }}
               transition={{ duration: 0.6 }}
             >
-              질문에 맞는 대답을 해야 하트가 유지돼요
+              질문에 맞는 대답을 자연스럽게 이어가 보세요
             </motion.p>
           )}
         </AnimatePresence>
@@ -651,10 +652,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   <h2 className='text-[26px] font-bold text-white leading-tight tracking-tight mb-4'>
                     {scenarioInfo?.scenarioTitle}
                   </h2>
-                  <p className='text-[15px] text-white/90 leading-relaxed mb-4'>{scenarioInfo?.scenarioSituation}</p>
+                  <p className='text-[15px] text-white/90 leading-relaxed mb-4'>{scenarioInfo?.briefing}</p>
                   <div className='flex items-center gap-2'>
                     <span className='shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white'>목표</span>
-                    <p className='text-[13px] text-white/80 leading-relaxed'>{scenarioInfo?.scenarioGoal}</p>
+                    <p className='text-[13px] text-white/80 leading-relaxed'>{scenarioInfo?.conversationGoal}</p>
                   </div>
                 </div>
                 {pageState === 'loading' ? (
@@ -706,10 +707,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   <h2 className='text-[26px] font-bold text-white leading-tight tracking-tight mb-4'>
                     {scenarioInfo?.scenarioTitle}
                   </h2>
-                  <p className='text-[15px] text-white/90 leading-relaxed mb-4'>{scenarioInfo?.scenarioSituation}</p>
+                  <p className='text-[15px] text-white/90 leading-relaxed mb-4'>{scenarioInfo?.briefing}</p>
                   <div className='flex items-center gap-2'>
                     <span className='shrink-0 rounded-md bg-primary px-2 py-0.5 text-[11px] font-bold text-white'>목표</span>
-                    <p className='text-[13px] text-white/80 leading-relaxed'>{scenarioInfo?.scenarioGoal}</p>
+                    <p className='text-[13px] text-white/80 leading-relaxed'>{scenarioInfo?.conversationGoal}</p>
                   </div>
                 </div>
                 <button

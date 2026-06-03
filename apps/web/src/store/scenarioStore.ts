@@ -4,8 +4,8 @@ import { create } from 'zustand';
 export interface ScenarioInfo {
   scenarioId: number;
   scenarioTitle: string;
-  scenarioSituation: string;
-  scenarioGoal: string;
+  briefing: string;
+  conversationGoal: string;
   scenarioEmoji: string | null;
 }
 

@@ -1,18 +1,37 @@
 // 대화 세션 시작/응답 제출/종료 API
 import { request } from './client';
 
+export interface ApiSessionTurn {
+  turnId: number;
+  sequence: number;
+  aiQuestion: string;
+  translatedQuestion: string;
+}
+
+export interface ApiSessionProgress {
+  currentSequence: number;
+  totalQuestionCount: number;
+  completed: boolean;
+}
+
 export interface ApiSessionStarted {
   sessionId: number;
-  originalQuestion: string;
-  translatedQuestion: string;
-  feedbackAvailable: boolean;
+  scenarioId: number;
+  totalQuestionCount: number;
+  currentTurn: ApiSessionTurn;
+  progress: ApiSessionProgress;
+}
+
+export interface ApiSubmittedTurn {
+  turnId: number;
+  sequence: number;
+  turnFeedbackStatus: string;
 }
 
 export interface ApiUtteranceResult {
-  sessionId: number;
-  originalQuestion: string;
-  translatedQuestion: string;
-  feedbackAvailable: boolean;
+  submittedTurn: ApiSubmittedTurn;
+  nextTurn: ApiSessionTurn | null;
+  progress: ApiSessionProgress;
 }
 
 let _pendingSession: Promise<ApiSessionStarted> | null = null;
