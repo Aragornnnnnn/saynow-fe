@@ -22,9 +22,9 @@ type OnboardingStep = 'intro' | 'mic' | 'sound' | 'scenario';
 type MicPermissionState = 'idle' | 'requesting' | 'denied';
 type PermissionPreviewPlatform = 'ios' | 'android';
 
-const STEP_ORDER: OnboardingStep[] = ['intro', 'mic', 'sound', 'scenario'];
-const FALLBACK_QUESTION = 'What is your favorite food?';
-const FALLBACK_TRANSLATED_QUESTION = '가장 좋아하는 음식이 뭐예요?';
+const STEP_ORDER: OnboardingStep[] = ['intro', 'sound', 'mic', 'scenario'];
+const FALLBACK_QUESTION = 'Hey! Can you hear me alright?';
+const FALLBACK_TRANSLATED_QUESTION = '잘 들려요?';
 const CHAT_PREVIEW_MESSAGES = [
   { role: 'ai', text: 'What food do you like?' },
   { role: 'user', text: 'I like pizza.' },
@@ -50,9 +50,8 @@ export default function OnboardingPage() {
     return data?.categories.flatMap((category) => category.scenarios).find((scenario) => !scenario.locked) ?? null;
   }, [data]);
 
-  const previewQuestion = firstScenario?.firstQuestionPreview?.aiQuestion ?? FALLBACK_QUESTION;
-  const previewTranslatedQuestion =
-    firstScenario?.firstQuestionPreview?.translatedQuestion ?? FALLBACK_TRANSLATED_QUESTION;
+  const previewQuestion = FALLBACK_QUESTION;
+  const previewTranslatedQuestion = FALLBACK_TRANSLATED_QUESTION;
 
   const goToStep = useCallback((nextStep: OnboardingStep) => {
     setStep(nextStep);
@@ -82,6 +81,24 @@ export default function OnboardingPage() {
     return () => clearTimeout(timer);
   }, [step, firstScenario?.scenarioId]);
 
+  const [soundBubbleVisible, setSoundBubbleVisible] = useState(false);
+
+  function playDing() {
+    try {
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.6);
+    } catch {}
+  }
+
   const playQuestion = useCallback(() => {
     speak(previewQuestion, null, {
       onStart: () => setIsSpeaking(true),
@@ -89,16 +106,28 @@ export default function OnboardingPage() {
     });
   }, [previewQuestion, speak]);
 
+  const handleSoundPlay = useCallback(() => {
+    playDing();
+    if (!soundBubbleVisible) {
+      setTimeout(() => {
+        setSoundBubbleVisible(true);
+        setTimeout(() => playQuestion(), 400);
+      }, 300);
+    } else {
+      setTimeout(() => playQuestion(), 300);
+    }
+  }, [soundBubbleVisible, playQuestion]);
+
   useEffect(() => {
     if (step !== 'sound') return;
-
-    const timer = setTimeout(() => playQuestion(), 250);
+    const timer = setTimeout(() => handleSoundPlay(), 600);
     return () => {
       clearTimeout(timer);
       stop();
       setIsSpeaking(false);
     };
-  }, [playQuestion, step, stop]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   useBridgeEvent(
     'MIC_PERMISSION_DENIED',
@@ -168,7 +197,7 @@ export default function OnboardingPage() {
       <AnimatePresence mode="wait">
         {step === 'intro' && (
           <StepMotion key="intro">
-            <IntroStep onNext={() => goToStep('mic')} />
+            <IntroStep onNext={() => goToStep('sound')} />
           </StepMotion>
         )}
 
@@ -189,8 +218,9 @@ export default function OnboardingPage() {
               question={previewQuestion}
               translatedQuestion={previewTranslatedQuestion}
               isSpeaking={isSpeaking}
-              onReplay={playQuestion}
-              onNext={() => goToStep('scenario')}
+              bubbleVisible={soundBubbleVisible}
+              onReplay={handleSoundPlay}
+              onNext={() => goToStep('mic')}
             />
           </StepMotion>
         )}
@@ -275,21 +305,16 @@ function StepMotion({ children }: { children: ReactNode }) {
 function IntroStep({ onNext }: { onNext: () => void }) {
   return (
     <>
-      <div className="flex flex-1 flex-col gap-10 pt-7">
-        <div className="space-y-4">
-          <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
-            영어 질문에 답하며
-            <br />
-            대화를 진행해보세요.
-          </h1>
-          <p className="text-[18px] font-medium leading-relaxed text-[var(--onboarding-muted)]">
-            내 영어가 얼마나 전달되는지
-            <br />
-            확인할 수 있어요.
-          </p>
-        </div>
+      <div className="flex flex-1 flex-col pt-7">
+        <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
+          내 영어,
+          <br />
+          외국인에게 통할까요?
+        </h1>
 
-        <ChatPreview />
+        <div className="flex flex-1 items-center">
+          <ChatPreview />
+        </div>
       </div>
 
       <Button onClick={onNext}>계속하기</Button>
@@ -298,42 +323,42 @@ function IntroStep({ onNext }: { onNext: () => void }) {
 }
 
 function ChatPreview() {
-  const [visibleCount, setVisibleCount] = useState(1);
+  const [visibleCount, setVisibleCount] = useState(0);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setVisibleCount((current) => (current % CHAT_PREVIEW_MESSAGES.length) + 1);
-    }, 1150);
-
-    return () => clearInterval(timer);
+    const timers = CHAT_PREVIEW_MESSAGES.map((_, i) =>
+      setTimeout(() => setVisibleCount(i + 1), i * 1000 + 300)
+    );
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   return (
     <div className="mx-auto flex w-full max-w-[330px] flex-col gap-3">
-      {CHAT_PREVIEW_MESSAGES.map((message, index) => {
-        const isVisible = index < visibleCount;
-        const isUser = message.role === 'user';
-
-        return (
-          <motion.div
-            key={message.text}
-            className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
-            animate={{ opacity: isVisible ? 1 : 0.22, y: isVisible ? 0 : 6 }}
-            transition={{ duration: 0.22 }}
-          >
-            <div
-              className={`max-w-[78%] rounded-[22px] px-4 py-3 text-[15px] font-semibold leading-snug shadow-sm ${
-                isUser
-                  ? 'rounded-br-md bg-primary text-white'
-                  : 'rounded-bl-md text-[var(--onboarding-fg)]'
-              }`}
-              style={isUser ? undefined : { backgroundColor: 'var(--onboarding-panel)' }}
+      <AnimatePresence>
+        {CHAT_PREVIEW_MESSAGES.slice(0, visibleCount).map((message) => {
+          const isUser = message.role === 'user';
+          return (
+            <motion.div
+              key={message.text}
+              className={`flex ${isUser ? 'justify-end' : 'justify-start'}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             >
-              {message.text}
-            </div>
-          </motion.div>
-        );
-      })}
+              <div
+                className={`max-w-[78%] rounded-[22px] px-4 py-3 text-[15px] font-semibold leading-snug ${
+                  isUser
+                    ? 'rounded-br-md bg-primary text-white'
+                    : 'rounded-bl-md text-[var(--onboarding-fg)]'
+                }`}
+                style={isUser ? undefined : { backgroundColor: 'var(--onboarding-panel)' }}
+              >
+                {message.text}
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
     </div>
   );
 }
@@ -360,36 +385,34 @@ function MicStep({
 
   return (
     <>
-      <div className="flex flex-1 flex-col gap-10 pt-7">
-        <div className="space-y-4">
-          <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
-            대화를 위해
-            <br />
-            마이크 권한을 설정해주세요
-          </h1>
+      <div className="flex flex-1 flex-col pt-7">
+        <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
+          이번엔 마이크를 켜서
+          <br />
+          제가 들을 수 있게 해주세요
+        </h1>
+
+        <div className="flex flex-1 flex-col items-center justify-center gap-6 pb-8">
+          <PermissionPreview
+            platform={previewPlatform}
+            isRequesting={micState === 'requesting'}
+            onAllow={onAllow}
+          />
+
+          {isDenied && (
+            <p className="text-center text-sm font-medium leading-relaxed text-[var(--onboarding-muted)]">
+              마이크 권한이 꺼져 있어요.
+              <br />
+              설정에서 권한을 켠 뒤 계속할 수 있어요.
+            </p>
+          )}
         </div>
-
-        <PermissionPreview
-          platform={previewPlatform}
-          isRequesting={micState === 'requesting'}
-          onAllow={onAllow}
-        />
-
-        {isDenied && (
-          <p className="text-center text-sm font-medium leading-relaxed text-[var(--onboarding-muted)]">
-            마이크 권한이 꺼져 있어요.
-            <br />
-            설정에서 권한을 켠 뒤 계속할 수 있어요.
-          </p>
-        )}
       </div>
 
       {isDenied && isNative && (
-        <div className="space-y-3">
-          <Button variant="ghost" onClick={onOpenSettings}>
-            설정 열기
-          </Button>
-        </div>
+        <Button variant="ghost" onClick={onOpenSettings}>
+          설정 열기
+        </Button>
       )}
     </>
   );
@@ -418,29 +441,29 @@ function IosPermissionPreview({
   onAllow: () => void;
 }) {
   return (
-    <div className="relative mx-auto w-[270px] overflow-visible">
+    <div className="relative mx-auto w-[310px] overflow-visible">
       <div
-        className="overflow-hidden rounded-[14px] border bg-white backdrop-blur-xl"
+        className="overflow-hidden rounded-[16px] border bg-white backdrop-blur-xl"
         style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
       >
-        <div className="px-4 pb-[17px] pt-[19px] text-center">
+        <div className="px-5 pb-5 pt-6 text-center">
           <div className="space-y-2">
-            <p className="text-[17px] font-semibold leading-snug">
+            <p className="text-[19px] font-semibold leading-snug">
               'SayNow'이(가)
               <br />
               마이크에 접근하려고 합니다.
             </p>
-            <p className="text-[13px] leading-snug text-[var(--onboarding-muted)]">
+            <p className="text-[14px] leading-snug text-[var(--onboarding-muted)]">
               음성 답변을 듣고 대화를 이어가기 위해 필요합니다.
             </p>
           </div>
         </div>
         <div
-          className="grid h-11 grid-cols-2 border-t text-[17px]"
+          className="grid h-13 grid-cols-2 border-t text-[18px]"
           style={{ borderColor: 'var(--onboarding-line)' }}
         >
           <div
-            className="flex items-center justify-center border-r text-[#007AFF]"
+            className="flex items-center justify-center border-r text-[18px] text-[#007AFF] opacity-60"
             style={{ borderColor: 'var(--onboarding-line)' }}
           >
             허용 안 함
@@ -455,7 +478,7 @@ function IosPermissionPreview({
           </button>
         </div>
       </div>
-      <span className="tossface pointer-events-none absolute -bottom-9 right-[55px] text-[36px] leading-none">
+      <span className="tossface pointer-events-none absolute -bottom-9 right-[45px] text-[40px] leading-none">
         👆
       </span>
     </div>
@@ -501,46 +524,111 @@ function AndroidPermissionPreview({
 
 function SoundStep({
   question,
-  translatedQuestion,
   isSpeaking,
+  bubbleVisible,
   onReplay,
   onNext,
 }: {
   question: string;
   translatedQuestion: string;
   isSpeaking: boolean;
+  bubbleVisible: boolean;
   onReplay: () => void;
   onNext: () => void;
 }) {
+  const [progress, setProgress] = useState(0);
+  const [hasPlayed, setHasPlayed] = useState(false);
+  const rafRef = useRef<number | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const duration = Math.max(3000, question.length * 80);
+
+  useEffect(() => {
+    if (isSpeaking) {
+      setHasPlayed(true);
+      startTimeRef.current = Date.now();
+      const tick = () => {
+        const elapsed = Date.now() - (startTimeRef.current ?? Date.now());
+        const p = Math.min((elapsed / duration) * 100, 98);
+        setProgress(p);
+        if (p < 98) rafRef.current = requestAnimationFrame(tick);
+      };
+      rafRef.current = requestAnimationFrame(tick);
+    } else {
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (hasPlayed) setProgress(100);
+    }
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSpeaking]);
+
   return (
     <>
-      <div className="flex flex-1 flex-col gap-10 pt-7">
-        <div className="space-y-4">
-          <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
-            질문을 들어보고
-            <br />
-            소리를 확인해요
-          </h1>
-        </div>
+      <div className="flex flex-1 flex-col pt-7">
+        <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
+          대화를 위해 제가
+          <br />
+          이렇게 말을 걸게요
+        </h1>
 
-        <div
-          className="mx-auto w-full max-w-[326px] rounded-[24px] border bg-white p-5"
-          style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
-        >
-          <p className="text-[17px] font-extrabold leading-snug">{question}</p>
-          <p className="mt-2 text-sm leading-snug text-[var(--onboarding-muted)]">{translatedQuestion}</p>
+        <div className="flex flex-1 flex-col justify-center gap-8">
+          {/* 채팅 말풍선 */}
+          <div className="min-h-[56px] flex flex-col justify-end">
+            <AnimatePresence>
+              {bubbleVisible && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.97 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                  className="self-start max-w-[85%] rounded-[20px] rounded-tl-md px-4 py-3"
+                  style={{ backgroundColor: 'var(--onboarding-panel)' }}
+                >
+                  <p className="text-[17px] font-semibold leading-snug">{question}</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-          <button
-            type="button"
-            onClick={onReplay}
-            className="mt-5 text-sm font-bold text-primary active:opacity-70"
-          >
-            {isSpeaking ? '재생 중' : '한 번 더 듣기'}
-          </button>
+          {/* 진행 바 + 컨트롤 */}
+          <div className="space-y-4">
+            <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--onboarding-line)' }}>
+              <motion.div
+                className="h-full rounded-full bg-primary"
+                style={{ width: `${progress}%` }}
+                transition={{ ease: 'linear', duration: 0.1 }}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-[var(--onboarding-muted)]">
+                {isSpeaking ? '재생 중' : hasPlayed ? '' : '볼륨을 올리고 들어보세요 🔊'}
+              </p>
+              <button
+                type="button"
+                onClick={onReplay}
+                disabled={isSpeaking}
+                className="flex items-center gap-1.5 text-sm font-semibold text-[var(--onboarding-muted)] disabled:opacity-0 transition-opacity active:opacity-50"
+              >
+                {hasPlayed ? (
+                  <>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/>
+                    </svg>
+                    다시 듣기
+                  </>
+                ) : (
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ marginLeft: '1px' }}>
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <Button onClick={onNext}>잘 들려요</Button>
+      <Button onClick={onNext} disabled={!hasPlayed}>
+        잘 들려요
+      </Button>
     </>
   );
 }
@@ -567,9 +655,9 @@ function ScenarioStep({
       <div className="flex flex-1 flex-col gap-10 pt-7">
         <div className="space-y-4">
           <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
-            첫 대화를
+            준비됐어요,
             <br />
-            시작해볼까요?
+            바로 시작해봐요
           </h1>
         </div>
 
