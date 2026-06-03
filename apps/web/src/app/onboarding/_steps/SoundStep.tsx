@@ -87,7 +87,7 @@ export function SoundStep({
             </div>
 
             <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-[var(--onboarding-muted)]">
+              <p className="h-5 text-sm font-medium text-[var(--onboarding-muted)]">
                 {isSpeaking ? '재생 중' : ''}
               </p>
               {hasPlayed && (
