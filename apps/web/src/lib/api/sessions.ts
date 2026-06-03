@@ -5,7 +5,6 @@ export interface ApiSessionStarted {
   sessionId: number;
   originalQuestion: string;
   translatedQuestion: string;
-  remainingHearts: number;
   feedbackAvailable: boolean;
 }
 
@@ -13,7 +12,6 @@ export interface ApiUtteranceResult {
   sessionId: number;
   originalQuestion: string;
   translatedQuestion: string;
-  remainingHearts: number;
   feedbackAvailable: boolean;
 }
 

@@ -48,18 +48,19 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
     );
   }
 
+  const passed = header.comprehensionScore >= 70;
+
   return (
     <IntroCardLayout
-      cleared={header.cleared}
+      passed={passed}
       score={header.comprehensionScore}
       scenarioId={scenarioId}
     >
       <main className='flex h-full flex-col bg-background'>
         <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain'>
           <ResultHeader
-            cleared={header.cleared}
+            passed={passed}
             score={header.comprehensionScore}
-            remainingHearts={header.remainingHearts}
             summary={header.feedbackSummary}
           />
           <div className='px-4 pb-6 space-y-6'>
@@ -164,19 +165,19 @@ function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDo
 // ─── IntroCardLayout ──────────────────────────────────────────────────────────
 
 interface IntroCardLayoutProps {
-  cleared: boolean;
+  passed: boolean;
   score: number;
   scenarioId: number;
   children: React.ReactNode;
 }
 
-function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayoutProps) {
+function IntroCardLayout({ passed, score, scenarioId, children }: IntroCardLayoutProps) {
   const [slidUp, setSlidUp] = useState(false);
   const [dragY, setDragY] = useState(0);
-  const imageUrl = getScenarioImage(scenarioId, cleared ? 'success' : 'fail');
+  const imageUrl = getScenarioImage(scenarioId, passed ? 'success' : 'fail');
 
   useEffect(() => {
-    if (cleared) {
+    if (passed) {
       triggerHaptic('heavy');
       confetti({
         particleCount: 140,
@@ -185,7 +186,7 @@ function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayo
         colors: ['#E07A3A', '#FFF4ED', '#f59e0b', '#ffffff', '#fbbf24'],
       });
     }
-  }, [cleared]);
+  }, [passed]);
 
   return (
     <div className='relative h-full overflow-hidden'>
@@ -212,7 +213,7 @@ function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayo
         {/* 배경 이미지 */}
         <div
           className='absolute inset-0 bg-cover bg-center'
-          style={{ backgroundImage: `url(${imageUrl})`, backgroundColor: cleared ? '#5a9e6f' : '#9e5a5a' }}
+          style={{ backgroundImage: `url(${imageUrl})`, backgroundColor: passed ? '#5a9e6f' : '#9e5a5a' }}
         />
         <div
           className='absolute inset-0'
@@ -226,9 +227,9 @@ function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayo
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
         >
-          <span className='text-5xl leading-none'>{cleared ? '🎉' : '😅'}</span>
+          <span className='text-5xl leading-none'>{passed ? '🎉' : '😅'}</span>
           <p className='mt-2 text-4xl font-extrabold tracking-tight text-white'>
-            {cleared ? '클리어!' : '아쉬워요'}
+            {passed ? '클리어!' : '아쉬워요'}
           </p>
           <p className='text-lg font-semibold text-white/75'>이해도 {score}%</p>
 
@@ -252,13 +253,12 @@ function IntroCardLayout({ cleared, score, scenarioId, children }: IntroCardLayo
 // ─── ResultHeader ─────────────────────────────────────────────────────────────
 
 interface ResultHeaderProps {
-  cleared: boolean;
+  passed: boolean;
   score: number;
-  remainingHearts: number;
   summary?: string;
 }
 
-function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeaderProps) {
+function ResultHeader({ passed, score, summary }: ResultHeaderProps) {
   const [displayScore, setDisplayScore] = useState(0);
 
   // 카운트업: 700ms 동안 0 → score (confetti/haptic은 IntroCardLayout에서 처리)
@@ -297,7 +297,7 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
         transition={{ delay: 0.1, duration: 0.4, type: 'spring', stiffness: 260, damping: 16 }}
         className='mb-1 text-5xl'
       >
-        {cleared ? '🎉' : '😅'}
+        {passed ? '🎉' : '😅'}
       </motion.p>
 
       <motion.h1
@@ -306,7 +306,7 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
         transition={{ delay: 0.25, duration: 0.3 }}
         className='text-xl font-bold text-foreground'
       >
-        {cleared ? '클리어!' : '아쉬워요'}
+        {passed ? '클리어!' : '아쉬워요'}
       </motion.h1>
 
       <motion.div
@@ -316,23 +316,10 @@ function ResultHeader({ cleared, score, remainingHearts, summary }: ResultHeader
       >
         <p className='mt-2 text-sm text-muted-foreground'>
           총 이해도{' '}
-          <span className={`text-3xl font-bold tabular-nums ${cleared ? 'text-green-600' : comprehensionStyle(score)}`}>
+          <span className={`text-3xl font-bold tabular-nums ${passed ? 'text-green-600' : comprehensionStyle(score)}`}>
             {displayScore}%
           </span>
         </p>
-        <div className='mt-2 flex justify-center gap-0.5'>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <motion.span
-              key={i}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{ scale: 1, opacity: i < remainingHearts ? 1 : 0.2 }}
-              transition={{ delay: 0.45 + i * 0.08, type: 'spring', stiffness: 300, damping: 18 }}
-              className='text-base'
-            >
-              ❤️
-            </motion.span>
-          ))}
-        </div>
         {summary && (
           <motion.p
             initial={{ opacity: 0, y: 8 }}

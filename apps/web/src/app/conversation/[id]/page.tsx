@@ -3,7 +3,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic, Info, ArrowUp, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, Mic, Info, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { startSession, submitUtterance, exitSession, createFeedback, askGuide } from '@/lib/api';
@@ -12,7 +12,7 @@ import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useKeyboardOffset } from '@/hooks/useKeyboardOffset';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
-import { startNativeStt, stopNativeStt, triggerHaptic } from '@/bridge/commands';
+import { startNativeStt, stopNativeStt } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import { getScenarioImage } from '@/lib/scenarioImages';
@@ -31,7 +31,6 @@ interface ChatMessage {
   role: 'ai' | 'user' | 'guide-q' | 'guide-a';
   text: string;
   translatedText?: string;
-  feedback?: string;
 }
 
 type PageState = 'briefing' | 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
@@ -43,7 +42,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [pageState, setPageState] = useState<PageState>('briefing');
   const [error, setError] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<number | null>(null);
-  const [remainingHearts, setRemainingHearts] = useState(3);
   const [feedbackAvailable, setFeedbackAvailable] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [transcript, setTranscript] = useState('');
@@ -65,12 +63,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const bottomRef = useRef<HTMLDivElement>(null);
   const stoppingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRecording = pageState === 'recording';
-  const prevHeartsRef = useRef(3);
-  const [heartShake, setHeartShake] = useState(false);
   const [emptyToast, setEmptyToast] = useState(false);
-  const [redFlash, setRedFlash] = useState(false);
-  const [showSituationHint, setShowSituationHint] = useState(false);
-  const situationHintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isGuideMode, setIsGuideMode] = useState(false);
   const [guideInput, setGuideInput] = useState('');
   const [isGuideLoading, setIsGuideLoading] = useState(false);
@@ -82,27 +75,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     }
   }, [keyboardOffset]);
 
-  useEffect(() => {
-    if (prevHeartsRef.current <= remainingHearts) {
-      prevHeartsRef.current = remainingHearts;
-      return;
-    }
-    prevHeartsRef.current = remainingHearts;
-    setHeartShake(true);
-    setRedFlash(true);
-    triggerHaptic('medium');
-    const t1 = setTimeout(() => setHeartShake(false), 1000);
-    const t2 = setTimeout(() => setRedFlash(false), 400);
-    // 하트 깎이면 상황 힌트 버튼 4초간 표시
-    if (situationHintTimerRef.current) clearTimeout(situationHintTimerRef.current);
-    setShowSituationHint(true);
-    situationHintTimerRef.current = setTimeout(() => setShowSituationHint(false), 4000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
-  }, [remainingHearts]);
-
   async function handleStartSession() {
     if (sessionStartedRef.current) return;
     sessionStartedRef.current = true;
@@ -111,7 +83,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       await ensureAccessToken();
       const data = await startSession(Number(id));
       setSessionId(data.sessionId);
-      setRemainingHearts(data.remainingHearts);
       setFeedbackAvailable(data.feedbackAvailable);
       setMessages([
         {
@@ -159,9 +130,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     try {
       const result = await submitUtterance(sessionId, text);
 
-      // 하트 깎임 효과
-      setRemainingHearts(result.remainingHearts);
-
       // 마지막 답변 — ... 말풍선 → 마무리 멘트 → 결과 보기 버튼
       if (result.feedbackAvailable) {
         const closingLines: [string, string][] = [
@@ -191,16 +159,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         return;
       }
 
-      // 하트 깎임 시 1000ms 대기 후 다음 질문
-      const heartsLost = prevHeartsRef.current > result.remainingHearts;
-      if (heartsLost) await new Promise((r) => setTimeout(r, 1000));
-
       if (result.originalQuestion) {
-        const feedbackText = heartsLost
-          ? result.remainingHearts === 0
-            ? '하트를 모두 잃었어요 😢'
-            : '조금 더 질문에 맞게 답해보세요 😊'
-          : undefined;
         setMessages((prev) => [
           ...prev,
           {
@@ -208,7 +167,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             role: 'ai',
             text: result.originalQuestion,
             translatedText: result.translatedQuestion,
-            feedback: feedbackText,
           },
         ]);
       }
@@ -487,7 +445,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {/* 상단 헤더 */}
       <div
-        className='relative z-20 flex items-center justify-between px-4 pb-2'
+        className='relative z-20 flex items-center px-4 pb-2'
         style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}
       >
         <div className='flex items-center gap-2'>
@@ -497,87 +455,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           >
             <ChevronLeft size={20} />
           </button>
-          <div className='relative'>
-            {/* pulse 링 — 하트 깎일 때 */}
-            <AnimatePresence>
-              {showSituationHint && !feedbackAvailable && (
-                <motion.span
-                  className='absolute inset-0 rounded-full border-2 border-primary pointer-events-none'
-                  initial={{ opacity: 0.8, scale: 1 }}
-                  animate={{ opacity: 0, scale: 1.5 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 1.2, ease: 'easeOut', repeat: Infinity, repeatDelay: 0.6 }}
-                />
-              )}
-            </AnimatePresence>
-            <button
-              onClick={() => setShowBriefingSheet(true)}
-              className='flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors'
-            >
-              <Info size={18} />
-            </button>
-            {/* 하트 깎일 때 말풍선 유도 */}
-            <AnimatePresence>
-              {showSituationHint && !feedbackAvailable && (
-                <motion.button
-                  onClick={() => {
-                    setShowSituationHint(false);
-                    setShowBriefingSheet(true);
-                  }}
-                  initial={{ opacity: 0, x: -6, scale: 0.9 }}
-                  animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -6, scale: 0.9 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                  className='absolute left-11 top-1/2 -translate-y-1/2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-foreground shadow-md'
-                >
-                  상황 보고 다시 말해봐요
-                  <svg
-                    className='absolute top-1/2 -translate-y-1/2'
-                    style={{ left: '-4px' }}
-                    width='7'
-                    height='12'
-                    viewBox='0 0 7 12'
-                    fill='none'
-                  >
-                    <path d='M7 0 L0 6 L7 12 Z' fill='white' />
-                  </svg>
-                </motion.button>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
-        <div className='relative flex flex-col items-end'>
-          <motion.div
-            animate={heartShake ? { x: [0, -6, 6, -4, 4, 0] } : {}}
-            transition={{ duration: 0.4 }}
-            className='flex gap-0.5'
+          <button
+            onClick={() => setShowBriefingSheet(true)}
+            className='flex h-9 w-9 items-center justify-center rounded-full bg-black/30 backdrop-blur-sm border border-white/20 text-white active:bg-black/50 transition-colors'
           >
-            {Array.from({ length: 3 }).map((_, i) => (
-              <span
-                key={i}
-                className={`text-lg drop-shadow-md transition-opacity duration-300 ${i < 3 - remainingHearts ? 'opacity-20' : 'opacity-100'}`}
-              >
-                ❤️
-              </span>
-            ))}
-          </motion.div>
+            <Info size={18} />
+          </button>
         </div>
       </div>
-
-
-      {/* 그라데이션 테두리 플래시 */}
-      <AnimatePresence>
-        {redFlash && (
-          <motion.div
-            initial={{ opacity: 0.9 }}
-            animate={{ opacity: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-            className='pointer-events-none absolute inset-0 z-30'
-            style={{ boxShadow: 'inset 0 0 40px 8px rgba(239,68,68,0.5), inset 0 0 80px 20px rgba(251,146,60,0.3)' }}
-          />
-        )}
-      </AnimatePresence>
 
       {/* 채팅 메시지 영역 */}
       <div className='no-scrollbar relative z-20 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3'>
@@ -615,18 +500,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   }
                 }}
               />
-              {msg.feedback && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className='mt-1.5 flex items-start gap-2'
-                >
-                  <div className='rounded-2xl rounded-tl-md bg-muted px-3 py-2 text-xs font-medium text-muted-foreground'>
-                    {msg.feedback}
-                  </div>
-                </motion.div>
-              )}
             </div>
           ) : msg.role === 'guide-q' ? (
             <GuideQBubble key={msg.id} text={msg.text} />

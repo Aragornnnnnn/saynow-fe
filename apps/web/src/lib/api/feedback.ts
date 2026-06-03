@@ -15,10 +15,8 @@ export interface ApiTurnFeedback {
 
 export interface ApiFeedback {
   sessionId: number;
-  cleared: boolean;
   comprehensionScore: number;
   feedbackSummary: string;
-  remainingHearts: number;
   turnFeedbacks: ApiTurnFeedback[];
 }
 
