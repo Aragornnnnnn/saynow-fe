@@ -3,10 +3,10 @@
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic, Info, ArrowUp } from 'lucide-react';
+import { ChevronLeft, Mic, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
-import { startSession, submitUtterance, exitSession, createFeedback, askGuide } from '@/lib/api';
+import { startSession, submitUtterance, abandonSession, getFeedback } from '@/lib/api';
 import { ensureAccessToken } from '@/lib/api/client';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
@@ -21,14 +21,12 @@ import ExitConfirmModal from './ExitConfirmModal';
 import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
-import { GuideQBubble } from '@/components/chat/GuideQBubble';
-import { GuideABubble } from '@/components/chat/GuideABubble';
 import { TypingDots } from '@/components/chat/TypingDots';
 import { Button } from '@/components/ui/Button';
 
 interface ChatMessage {
   id: string;
-  role: 'ai' | 'user' | 'guide-q' | 'guide-a';
+  role: 'ai' | 'user';
   text: string;
   translatedText?: string;
 }
@@ -64,9 +62,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const stoppingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRecording = pageState === 'recording';
   const [emptyToast, setEmptyToast] = useState(false);
-  const [isGuideMode, setIsGuideMode] = useState(false);
-  const [guideInput, setGuideInput] = useState('');
-  const [isGuideLoading, setIsGuideLoading] = useState(false);
   const keyboardOffset = useKeyboardOffset();
 
   useEffect(() => {
@@ -141,7 +136,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         const [closing, closingKo] = closingLines[Math.floor(Math.random() * closingLines.length)];
         queryClient.prefetchQuery({
           queryKey: feedbackQueryKeys.detail(sessionId),
-          queryFn: () => createFeedback(sessionId),
+          queryFn: () => getFeedback(sessionId),
         });
         // 피드백 페이지 진입 시 이미지 flash 방지 — 브라우저 캐시에 미리 올려둠
         (['success', 'fail'] as const).forEach((type) => {
@@ -324,27 +319,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     recognitionRef.current = null;
   }
 
-  async function handleGuideSubmit() {
-    const question = guideInput.trim();
-    if (!question || !sessionId || isGuideLoading) return;
-
-    setIsGuideLoading(true);
-    setGuideInput('');
-
-    const qId = crypto.randomUUID();
-    setMessages((prev) => [...prev, { id: qId, role: 'guide-q', text: question }]);
-    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-
-    try {
-      const result = await askGuide(sessionId, question);
-      setMessages((prev) => [...prev, { id: crypto.randomUUID(), role: 'guide-a', text: result.answer }]);
-    } catch {
-      setMessages((prev) => prev.filter((m) => m.id !== qId));
-    } finally {
-      setIsGuideLoading(false);
-    }
-  }
-
   async function handleMicPress() {
     setEmptyToast(false);
     if (isRecording) {
@@ -387,7 +361,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   async function handleExit() {
-    if (sessionId) await exitSession(sessionId).catch(() => {});
+    if (sessionId) await abandonSession(sessionId).catch(() => {});
     router.push('/');
   }
 
@@ -501,10 +475,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 }}
               />
             </div>
-          ) : msg.role === 'guide-q' ? (
-            <GuideQBubble key={msg.id} text={msg.text} />
-          ) : msg.role === 'guide-a' ? (
-            <GuideABubble key={msg.id} text={msg.text} />
           ) : (
             <UserBubble key={msg.id} text={msg.text} />
           ),
@@ -515,16 +485,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           <div className='flex items-end gap-2'>
             <div className='max-w-[72%] rounded-2xl rounded-bl-md bg-[#EFEFEF] px-4 py-3'>
               <TypingDots />
-            </div>
-          </div>
-        )}
-
-        {/* 가이드 답변 타이핑 중 */}
-        {isGuideLoading && (
-          <div className='flex flex-col items-start gap-1'>
-            <div className='rounded-2xl rounded-bl-md bg-blue-50 px-4 py-3'>
-              <p className='mb-1.5 text-[10px] font-bold text-blue-400'>답변</p>
-              <TypingDots color='blue' />
             </div>
           </div>
         )}
@@ -549,19 +509,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             </motion.p>
           )}
         </AnimatePresence>
-
-        {/* 모드 전환 버튼 */}
-        {!feedbackAvailable && (
-          <div className='mb-2 text-right'>
-            <button
-              onClick={() => { setIsGuideMode(!isGuideMode); setGuideInput(''); }}
-              disabled={pageState === 'submitting' || pageState === 'stopping' || pageState === 'recording' || isGuideLoading}
-              className='inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-semibold text-white shadow-[0_3px_0_rgba(255,255,255,0.08)] active:shadow-none active:translate-y-0.5 transition-transform duration-75 disabled:opacity-40 disabled:pointer-events-none'
-            >
-              {isGuideMode ? <><Mic size={12} />말하기로 돌아가기</> : <><span>💬</span>대화 중 질문하기</>}
-            </button>
-          </div>
-        )}
 
         {/* 빈 음성 말풍선 */}
         <AnimatePresence>
@@ -611,40 +558,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 '결과 보기'
               )}
             </motion.button>
-          ) : isGuideMode ? (
-            /* 가이드 입력 모드 */
-            <motion.div
-              key='guide-input'
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15, ease: 'easeOut' }}
-              className='flex min-w-0 items-center gap-2'
-              onAnimationComplete={() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })}
-            >
-              <input
-                autoFocus
-                type='text'
-                value={guideInput}
-                onChange={(e) => setGuideInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') handleGuideSubmit();
-                }}
-                placeholder='모르는 표현, 한국어로 물어보세요'
-                className='min-w-0 flex-1 rounded-full bg-white/8 border border-white/15 px-5 h-14 text-sm text-white placeholder:text-white/35 outline-none focus:border-white/25 transition-colors'
-              />
-              <button
-                onClick={handleGuideSubmit}
-                disabled={!guideInput.trim() || isGuideLoading}
-                className='flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-500 shadow-[0_5px_0_#1d4ed8] text-white transition-[background-color,color] disabled:bg-white/15 disabled:shadow-none disabled:text-white/30'
-              >
-                {isGuideLoading ? (
-                  <span className='h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin' />
-                ) : (
-                  <ArrowUp size={18} />
-                )}
-              </button>
-            </motion.div>
           ) : (
             /* 마이크 버튼 */
             <motion.div key='mic-btn'>

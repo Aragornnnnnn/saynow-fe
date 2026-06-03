@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import type { ApiTurnFeedback } from '@/lib/api';
-import { useFeedbackQuery, useFeedbackStream } from '@/queries/feedback';
+import { useFeedbackQuery } from '@/queries/feedback';
 import { triggerHaptic } from '@/bridge/commands';
 import { getScenarioImage } from '@/lib/scenarioImages';
 import { AiBubble } from '@/components/chat/AiBubble';
@@ -19,9 +19,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   const router = useRouter();
   const searchParams = useSearchParams();
   const scenarioId = Number(searchParams.get('scenarioId') ?? 1);
-  // 훅 한 줄만 바꾸면 POST ↔ SSE 전환
   const { header, turnFeedbacks, isDone, error } = useFeedbackQuery(Number(id));
-  // const { header, turnFeedbacks, isDone, error } = useFeedbackStream(Number(id));
 
   // prefetch로 이미 데이터가 있으면 로딩 스크린 건너뜀
   const [loadingDone, setLoadingDone] = useState(isDone && header !== null);
@@ -48,20 +46,20 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  const passed = header.comprehensionScore >= 70;
+  const passed = header.nativeScore >= 70;
 
   return (
     <IntroCardLayout
       passed={passed}
-      score={header.comprehensionScore}
+      score={header.nativeScore}
       scenarioId={scenarioId}
     >
       <main className='flex h-full flex-col bg-background'>
         <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain'>
           <ResultHeader
             passed={passed}
-            score={header.comprehensionScore}
-            summary={header.feedbackSummary}
+            score={header.nativeScore}
+            summary={header.summary}
           />
           <div className='px-4 pb-6 space-y-6'>
             {turnFeedbacks.map((turn, index) => (
@@ -343,7 +341,7 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
   const [hintDismissed, setHintDismissed] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
-  const isGood = !turn.feedbackRequired;
+  const isGood = !requiresTurnFeedback(turn.feedbackType);
   const { speak, stop } = useTts();
   const feedbackRef = useRef<HTMLDivElement>(null);
 
@@ -405,14 +403,14 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
             transition={{ duration: 0.18, ease: 'easeOut' }}
             className='flex flex-col items-end gap-2'
           >
-            {(turn.nativeLanguageInterpretation || turn.nativeUnderstanding) && (
+            {(turn.feedbackDetail || turn.koreanAnalogy) && (
               <div className='rounded-2xl rounded-tr-none bg-zinc-100 px-4 py-3 max-w-[85%] space-y-1'>
                 <p className='text-[11px] font-semibold text-muted-foreground tracking-wide'>🎧 외국인 귀에는</p>
-                {turn.nativeLanguageInterpretation && (
-                  <p className='text-sm font-semibold text-foreground leading-snug'>&ldquo;{turn.nativeLanguageInterpretation}&rdquo;</p>
+                {turn.feedbackDetail && (
+                  <p className='text-sm font-semibold text-foreground leading-snug'>&ldquo;{turn.feedbackDetail}&rdquo;</p>
                 )}
-                {turn.nativeUnderstanding && (
-                  <p className='text-xs text-muted-foreground leading-relaxed'>{turn.nativeUnderstanding}</p>
+                {turn.koreanAnalogy && (
+                  <p className='text-xs text-muted-foreground leading-relaxed'>{turn.koreanAnalogy}</p>
                 )}
               </div>
             )}
@@ -445,4 +443,9 @@ function comprehensionStyle(score: number): string {
   if (score >= 70) return 'text-green-600';
   if (score >= 40) return 'text-orange-500';
   return 'text-red-500';
+}
+
+function requiresTurnFeedback(feedbackType: string): boolean {
+  const normalized = feedbackType.trim().toUpperCase();
+  return !['NONE', 'GOOD', 'PASS', 'CORRECT', 'NO_FEEDBACK'].includes(normalized);
 }
