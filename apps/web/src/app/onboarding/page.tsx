@@ -275,9 +275,9 @@ function StepMotion({ children }: { children: ReactNode }) {
 function IntroStep({ onNext }: { onNext: () => void }) {
   return (
     <>
-      <div className="flex flex-1 flex-col justify-center gap-9">
+      <div className="flex flex-1 flex-col gap-10 pt-7">
         <div className="space-y-4">
-          <h1 className="text-[34px] font-black leading-[1.15] tracking-normal">
+          <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
             영어 질문에 답하며
             <br />
             대화를 진행해보세요.
@@ -514,9 +514,9 @@ function SoundStep({
 }) {
   return (
     <>
-      <div className="flex flex-1 flex-col justify-center gap-10">
+      <div className="flex flex-1 flex-col gap-10 pt-7">
         <div className="space-y-4">
-          <h1 className="text-[34px] font-black leading-[1.15] tracking-normal">
+          <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
             이렇게 영어 질문을 듣게 돼요.
             <br />
             소리를 확인해주세요.
@@ -586,9 +586,9 @@ function ScenarioStep({
 
   return (
     <>
-      <div className="flex flex-1 flex-col justify-center gap-8">
+      <div className="flex flex-1 flex-col gap-10 pt-7">
         <div className="space-y-4">
-          <h1 className="text-[34px] font-black leading-[1.15] tracking-normal">
+          <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
             첫 대화를
             <br />
             시작해볼까요?
