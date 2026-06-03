@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Check, LoaderCircle, Lock, Volume2 } from 'lucide-react';
+import { ChevronLeft, Check, LoaderCircle, Lock } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { openNativeSettings, startNativeStt, stopNativeStt } from '@/bridge/commands';
@@ -517,47 +517,25 @@ function SoundStep({
       <div className="flex flex-1 flex-col gap-10 pt-7">
         <div className="space-y-4">
           <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
-            이렇게 영어 질문을 듣게 돼요.
+            질문을 들어보고
             <br />
-            소리를 확인해주세요.
+            소리를 확인해요
           </h1>
         </div>
 
-        <div className="mx-auto w-full max-w-[326px] space-y-5 rounded-[28px] border p-5 shadow-[0_18px_60px_rgba(0,0,0,0.10)]"
+        <div
+          className="mx-auto w-full max-w-[326px] rounded-[24px] border bg-white p-5"
           style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
         >
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary text-white">
-              <Volume2 size={23} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-[17px] font-extrabold leading-snug">{question}</p>
-              <p className="mt-1 text-sm leading-snug text-[var(--onboarding-muted)]">{translatedQuestion}</p>
-            </div>
-          </div>
-
-          <div className="flex h-16 items-center justify-center gap-1.5 rounded-2xl" style={{ backgroundColor: 'var(--onboarding-panel-soft)' }}>
-            {[16, 28, 42, 30, 20, 34, 24].map((height, index) => (
-              <span
-                key={`${height}-${index}`}
-                className="w-1.5 rounded-full bg-primary"
-                style={{
-                  height,
-                  animation: isSpeaking ? 'wave 0.58s ease-in-out infinite alternate' : undefined,
-                  animationDelay: `${index * 0.07}s`,
-                  opacity: isSpeaking ? 1 : 0.45,
-                }}
-              />
-            ))}
-          </div>
+          <p className="text-[17px] font-extrabold leading-snug">{question}</p>
+          <p className="mt-2 text-sm leading-snug text-[var(--onboarding-muted)]">{translatedQuestion}</p>
 
           <button
             type="button"
             onClick={onReplay}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-bold text-primary active:bg-primary/10"
+            className="mt-5 text-sm font-bold text-primary active:opacity-70"
           >
-            <Volume2 size={18} />
-            다시 듣기
+            {isSpeaking ? '재생 중' : '한 번 더 듣기'}
           </button>
         </div>
       </div>
