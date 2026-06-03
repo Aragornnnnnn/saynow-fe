@@ -15,6 +15,7 @@ import { prefetchSession } from '@/lib/api';
 import { getScenarioImage } from '@/lib/scenarioImages';
 import { useScenarioStore } from '@/store/scenarioStore';
 import { useAuthStore } from '@/store/authStore';
+import { shouldShowOnboarding } from '@/lib/onboarding';
 
 export default function Page() {
   return (
@@ -30,6 +31,8 @@ function Home() {
   const { isReady } = useRequireAuth();
   const _hasHydrated = useAuthStore((s) => s._hasHydrated);
   const refreshToken = useAuthStore((s) => s.refreshToken);
+  const member = useAuthStore((s) => s.member);
+  const [isRedirectingToOnboarding, setIsRedirectingToOnboarding] = useState(false);
   const [showSurvey, setShowSurvey] = useState(() => searchParams.get('survey') === 'true');
   const [surveySessionId] = useState(() =>
     searchParams.get('survey') === 'true' ? Number(searchParams.get('sessionId')) || null : null
@@ -69,7 +72,13 @@ function Home() {
 
   useBackButtonBridge(() => exitApp());
 
-  if (!isReady) return null;
+  useEffect(() => {
+    if (!isReady || !shouldShowOnboarding(member)) return;
+    setIsRedirectingToOnboarding(true);
+    router.replace('/onboarding');
+  }, [isReady, member, router]);
+
+  if (!isReady || isRedirectingToOnboarding) return null;
 
   const categories = data?.categories ?? [];
 
