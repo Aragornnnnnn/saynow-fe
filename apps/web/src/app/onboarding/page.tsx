@@ -600,7 +600,7 @@ function SoundStep({
 
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-[var(--onboarding-muted)]">
-                {isSpeaking ? '재생 중' : hasPlayed ? '' : bubbleVisible ? '볼륨을 올리고 들어보세요 🔊' : ''}
+                {isSpeaking ? '재생 중' : ''}
               </p>
               <button
                 type="button"
