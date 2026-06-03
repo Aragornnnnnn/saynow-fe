@@ -19,19 +19,26 @@ export interface ApiUtteranceResult {
 
 let _pendingSession: Promise<ApiSessionStarted> | null = null;
 let _pendingScenarioId: number | null = null;
+let _pendingFailed = false;
 
 export function prefetchSession(scenarioId: number) {
   _pendingScenarioId = scenarioId;
-  _pendingSession = request(`/api/v1/scenarios/${scenarioId}/sessions`, { method: 'POST' });
+  _pendingFailed = false;
+  _pendingSession = request<ApiSessionStarted>(`/api/v1/scenarios/${scenarioId}/sessions`, { method: 'POST' });
+  _pendingSession.catch(() => { _pendingFailed = true; });
 }
 
 export function startSession(scenarioId: number): Promise<ApiSessionStarted> {
-  if (_pendingSession && _pendingScenarioId === scenarioId) {
+  if (_pendingSession && _pendingScenarioId === scenarioId && !_pendingFailed) {
     const cached = _pendingSession;
     _pendingSession = null;
     _pendingScenarioId = null;
+    _pendingFailed = false;
     return cached;
   }
+  _pendingSession = null;
+  _pendingScenarioId = null;
+  _pendingFailed = false;
   return request(`/api/v1/scenarios/${scenarioId}/sessions`, { method: 'POST' });
 }
 
