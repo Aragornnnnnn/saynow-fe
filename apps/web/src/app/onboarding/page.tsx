@@ -148,7 +148,7 @@ export default function OnboardingPage() {
         stopNativeStt();
         if (!micDeniedRef.current) {
           setMicState('idle');
-          goToStep('sound');
+          goToStep('scenario');
         }
       }, 700);
       return;
@@ -158,7 +158,7 @@ export default function OnboardingPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
       setMicState('idle');
-      goToStep('sound');
+      goToStep('scenario');
     } catch {
       setMicState('denied');
     }
@@ -600,7 +600,7 @@ function SoundStep({
 
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium text-[var(--onboarding-muted)]">
-                {isSpeaking ? '재생 중' : hasPlayed ? '' : '볼륨을 올리고 들어보세요 🔊'}
+                {isSpeaking ? '재생 중' : hasPlayed ? '' : bubbleVisible ? '볼륨을 올리고 들어보세요 🔊' : ''}
               </p>
               <button
                 type="button"
