@@ -52,6 +52,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef('');
+  const sessionIdRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const stoppingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRecording = pageState === 'recording';
@@ -70,6 +71,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       await ensureAccessToken();
       const data = await startSession(Number(id));
       setSessionId(data.sessionId);
+      sessionIdRef.current = data.sessionId;
       setFeedbackAvailable(data.progress.completed);
       setMessages([
         {
@@ -298,14 +300,15 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     };
 
     recognition.onend = () => {
-      const text = transcriptRef.current.trim();
       recognitionRef.current = null;
-      if (text && sessionId) {
+      const text = transcriptRef.current.trim();
+      const sid = sessionIdRef.current;
+      if (text && sid) {
         submitUserUtterance(text);
       } else {
         setPageState((prev) => {
           if (prev === 'recording') {
-            setEmptyToast(true);
+            if (!text) setEmptyToast(true);
             return 'idle';
           }
           return prev;
@@ -327,7 +330,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   function stopWebStt() {
     recognitionRef.current?.stop();
-    recognitionRef.current = null;
   }
 
   function startStt() {
