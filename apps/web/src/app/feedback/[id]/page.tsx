@@ -2,6 +2,7 @@
 'use client';
 
 import { use, useEffect, useRef, useState } from 'react';
+
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
@@ -11,7 +12,6 @@ import { triggerHaptic } from '@/bridge/commands';
 import { getScenarioImage } from '@/lib/scenarioImages';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
-import { useTts } from '@/hooks/useTts';
 import { Button } from '@/components/ui/Button';
 
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
@@ -342,10 +342,7 @@ function ResultHeader({ passed, score, levelLabel, summary }: ResultHeaderProps)
 function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
   const [expanded, setExpanded] = useState(false);
   const [hintDismissed, setHintDismissed] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [showTranslation, setShowTranslation] = useState(false);
   const isGood = !requiresTurnFeedback(turn.feedbackType);
-  const { speak, stop } = useTts();
   const feedbackRef = useRef<HTMLDivElement>(null);
 
   function handleUserBubblePress() {
@@ -360,18 +357,6 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
     }
   }
 
-  function handleSpeak() {
-    if (isSpeaking) {
-      stop();
-      setIsSpeaking(false);
-      return;
-    }
-    speak(turn.originalQuestion, null, {
-      onStart: () => setIsSpeaking(true),
-      onEnd: () => setIsSpeaking(false),
-    });
-  }
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -382,10 +367,6 @@ function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number 
       <AiBubble
         text={turn.originalQuestion}
         translatedText={turn.translatedQuestion}
-        showTranslation={showTranslation}
-        isSpeaking={isSpeaking}
-        onSpeak={handleSpeak}
-        onToggleTranslation={() => setShowTranslation((v) => !v)}
       />
 
       <UserBubble text={turn.userUtterance} onPress={isGood ? undefined : handleUserBubblePress}>

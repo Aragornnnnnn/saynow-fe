@@ -45,8 +45,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [showExitModal, setShowExitModal] = useState(false);
   const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
   const [bgBlurred, setBgBlurred] = useState(false);
-  const [translatingId, setTranslatingId] = useState<string | null>(null);
-  const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   const { speak, stop } = useTts();
   const queryClient = useQueryClient();
@@ -101,10 +99,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'ai' && lastMsg.text !== '...') {
       setBgBlurred(true);
-      speak(lastMsg.text, null, {
-        onStart: () => setSpeakingId(lastMsg.id),
-        onEnd: () => setSpeakingId(null),
-      });
+      speak(lastMsg.text, null);
     }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [messages, speak]);
@@ -341,10 +336,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         await submitUserUtterance(text);
       }
     } else {
-      if (speakingId) {
-        stop();
-        setSpeakingId(null);
-      }
+      stop();
       if (isNative) {
         transcriptRef.current = '';
         setTranscript('');
@@ -366,10 +358,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   async function handleExit() {
     if (sessionId) await abandonSession(sessionId).catch(() => {});
     router.push('/');
-  }
-
-  function toggleTranslation(msgId: string) {
-    setTranslatingId((prev) => (prev === msgId ? null : msgId));
   }
 
   if (pageState === 'error') {
@@ -449,26 +437,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         </AnimatePresence>
         {messages.map((msg) =>
           msg.role === 'ai' ? (
-            <div key={msg.id}>
-              <AiBubble
-                text={msg.text}
-                translatedText={msg.translatedText}
-                showTranslation={translatingId === msg.id}
-                isSpeaking={speakingId === msg.id}
-                onToggleTranslation={() => toggleTranslation(msg.id)}
-                onSpeak={() => {
-                  if (speakingId === msg.id) {
-                    stop();
-                    setSpeakingId(null);
-                  } else {
-                    speak(msg.text, null, {
-                      onStart: () => setSpeakingId(msg.id),
-                      onEnd: () => setSpeakingId(null),
-                    });
-                  }
-                }}
-              />
-            </div>
+            <AiBubble
+              key={msg.id}
+              text={msg.text}
+              translatedText={msg.translatedText}
+            />
           ) : (
             <UserBubble key={msg.id} text={msg.text} />
           ),
