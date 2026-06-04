@@ -30,6 +30,7 @@ interface ChatMessage {
 }
 
 type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
+type SttMode = 'auto' | 'auto-stop' | 'manual';
 
 export default function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -44,6 +45,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [showExitModal, setShowExitModal] = useState(false);
   const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
   const [bgBlurred, setBgBlurred] = useState(false);
+  const [sttMode, setSttMode] = useState<SttMode>('manual');
 
   const { speak, stop } = useTts();
   const queryClient = useQueryClient();
@@ -91,10 +93,17 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     const lastMsg = messages[messages.length - 1];
     if (lastMsg?.role === 'ai' && lastMsg.text !== '...') {
       setBgBlurred(true);
-      speak(lastMsg.text, null);
+      speak(lastMsg.text, null, {
+        onEnd: () => {
+          if (sttMode === 'auto') {
+            setTimeout(() => startStt(), 300);
+          }
+        },
+      });
     }
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [messages, speak]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
 
   useBackButtonBridge(() => {
     if (showExitModal) {
@@ -194,16 +203,20 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             }
           }
           if (prev === 'recording') {
-            // silence detection 자동 재시작 — 이전 transcript에 누적
             const accumulated = (transcriptRef.current + ' ' + msg.transcript).trim();
             transcriptRef.current = accumulated;
             setTranscript(accumulated);
+            // auto / auto-stop 모드 — silence detection 시 자동 제출
+            if ((sttMode === 'auto' || sttMode === 'auto-stop') && accumulated && sessionId) {
+              setTimeout(() => submitUserUtterance(accumulated), 0);
+              return 'submitting';
+            }
           }
           return prev;
         });
         // eslint-disable-next-line react-hooks/exhaustive-deps
       },
-      [sessionId],
+      [sessionId, sttMode],
     ),
   );
 
@@ -310,35 +323,42 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     recognitionRef.current = null;
   }
 
+  function startStt() {
+    stop();
+    if (isNative) {
+      transcriptRef.current = '';
+      setTranscript('');
+      startNativeStt();
+      setPageState('recording');
+      setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+    } else {
+      startWebStt();
+    }
+  }
+
+  function stopStt() {
+    if (isNative) {
+      setPageState('stopping');
+      stopNativeStt();
+      startStoppingTimeout();
+    } else {
+      stopWebStt();
+      const text = transcriptRef.current.trim();
+      if (!text || !sessionId) {
+        setPageState('idle');
+        setEmptyToast(true);
+        return;
+      }
+      submitUserUtterance(text);
+    }
+  }
+
   async function handleMicPress() {
     setEmptyToast(false);
     if (isRecording) {
-      if (isNative) {
-        // STT_FINAL 이벤트에서 최종 transcript 받은 후 제출
-        setPageState('stopping');
-        stopNativeStt();
-        startStoppingTimeout();
-      } else {
-        stopWebStt();
-        const text = transcriptRef.current.trim();
-        if (!text || !sessionId) {
-          setPageState('idle');
-          setEmptyToast(true);
-          return;
-        }
-        await submitUserUtterance(text);
-      }
+      stopStt();
     } else {
-      stop();
-      if (isNative) {
-        transcriptRef.current = '';
-        setTranscript('');
-        startNativeStt();
-        setPageState('recording');
-        setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-      } else {
-        await startWebStt();
-      }
+      startStt();
     }
   }
 
@@ -440,7 +460,27 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* 하단 컨트롤 */}
-      <div className='relative z-30 px-5 pt-2 pb-4'>
+      <div className='relative z-30 px-5 pt-2 pb-4 space-y-2'>
+        {/* UT 모드 선택 탭 */}
+        {!feedbackAvailable && pageState !== 'submitting' && (
+          <div className='flex justify-center'>
+            <div className='flex gap-1 rounded-full bg-black/30 p-1 backdrop-blur-sm'>
+              {(['auto', 'auto-stop', 'manual'] as SttMode[]).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setSttMode(mode)}
+                  className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-colors ${
+                    sttMode === mode ? 'bg-white text-foreground' : 'text-white/70'
+                  }`}
+                >
+                  {mode === 'auto' ? '자동' : mode === 'auto-stop' ? '자동종료' : '수동'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+      <div className='relative z-30 px-5 pb-4'>
         {/* STT transcript */}
         <AnimatePresence>
           {isRecording && (
@@ -505,8 +545,27 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 '결과 보기'
               )}
             </motion.button>
+          ) : sttMode === 'auto' ? (
+            /* 자동 모드 — 상태 표시만 */
+            <motion.div key='auto-status' className='flex h-14 items-center justify-center'>
+              {pageState === 'submitting' || pageState === 'stopping' ? (
+                <span className='text-sm font-semibold text-white/70'>분석 중...</span>
+              ) : isRecording ? (
+                <div className='flex items-center gap-2'>
+                  <div className='flex items-center gap-[3px]'>
+                    {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
+                      <span key={i} className='w-[3px] rounded-full bg-white animate-[wave_0.6s_ease-in-out_infinite_alternate]'
+                        style={{ height: `${h * 18}px`, animationDelay: `${i * 0.1}s` }} />
+                    ))}
+                  </div>
+                  <span className='text-sm text-white/70'>듣고 있어요</span>
+                </div>
+              ) : (
+                <span className='text-sm text-white/50'>TTS 재생 후 자동 시작돼요</span>
+              )}
+            </motion.div>
           ) : (
-            /* 마이크 버튼 */
+            /* auto-stop / manual — 마이크 버튼 */
             <motion.div key='mic-btn'>
               <Button
                 onClick={handleMicPress}
@@ -521,14 +580,16 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   <>
                     <div className='flex items-center gap-0.75'>
                       {[0.4, 0.7, 1, 0.7, 0.4].map((h, i) => (
-                        <span
-                          key={i}
-                          className='w-0.75 rounded-full bg-primary animate-[wave_0.6s_ease-in-out_infinite_alternate]'
-                          style={{ height: `${h * 20}px`, animationDelay: `${i * 0.1}s` }}
-                        />
+                        <span key={i} className='w-0.75 rounded-full bg-primary animate-[wave_0.6s_ease-in-out_infinite_alternate]'
+                          style={{ height: `${h * 20}px`, animationDelay: `${i * 0.1}s` }} />
                       ))}
                     </div>
-                    <span className='text-sm font-semibold text-muted-foreground'>말하기가 끝나면 눌러주세요</span>
+                    {sttMode === 'manual' && (
+                      <span className='text-sm font-semibold text-muted-foreground'>말하기가 끝나면 눌러주세요</span>
+                    )}
+                    {sttMode === 'auto-stop' && (
+                      <span className='text-sm font-semibold text-muted-foreground'>말하면 자동으로 제출돼요</span>
+                    )}
                   </>
                 ) : (
                   <>
