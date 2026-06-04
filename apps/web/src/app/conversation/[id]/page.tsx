@@ -422,19 +422,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {/* 채팅 메시지 영역 */}
       <div className='no-scrollbar relative z-20 flex-1 overflow-y-auto overscroll-y-contain px-4 py-3 space-y-3'>
-        <AnimatePresence>
-          {bgBlurred && (
-            <motion.p
-              className='pointer-events-none text-center text-xs text-white/70'
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6 }}
-            >
-              질문에 맞는 대답을 자연스럽게 이어가 보세요
-            </motion.p>
-          )}
-        </AnimatePresence>
         {messages.map((msg) =>
           msg.role === 'ai' ? (
             <AiBubble
