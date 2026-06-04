@@ -27,7 +27,7 @@ export function AiBubble({ text, translatedText }: AiBubbleProps) {
             <>
               <p className="text-sm text-foreground leading-relaxed">{text}</p>
               {translatedText && (
-                <p className="mt-2 border-t border-black/5 pt-2 text-xs text-muted-foreground leading-relaxed">
+                <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                   {translatedText}
                 </p>
               )}

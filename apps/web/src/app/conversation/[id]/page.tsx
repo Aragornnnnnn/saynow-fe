@@ -10,7 +10,6 @@ import { startSession, submitUtterance, abandonSession, createFeedback } from '@
 import { ensureAccessToken } from '@/lib/api/client';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
-import { useKeyboardOffset } from '@/hooks/useKeyboardOffset';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
 import { startNativeStt, stopNativeStt } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
@@ -57,13 +56,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const stoppingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRecording = pageState === 'recording';
   const [emptyToast, setEmptyToast] = useState(false);
-  const keyboardOffset = useKeyboardOffset();
-
-  useEffect(() => {
-    if (keyboardOffset > 0) {
-      bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [keyboardOffset]);
 
   useEffect(() => {
     handleStartSession();
@@ -447,7 +439,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       </div>
 
       {/* 하단 컨트롤 */}
-      <div className='relative z-30 px-5 pt-2' style={{ paddingBottom: keyboardOffset > 0 ? `${keyboardOffset + 8}px` : '16px' }}>
+      <div className='relative z-30 px-5 pt-2 pb-4'>
         {/* STT transcript */}
         <AnimatePresence>
           {isRecording && (
