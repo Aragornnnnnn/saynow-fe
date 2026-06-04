@@ -277,7 +277,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
     const recognition = new SR();
     recognition.lang = 'en-US';
-    recognition.continuous = true;
+    recognition.continuous = false;
     recognition.interimResults = true;
 
     transcriptRef.current = '';
@@ -295,6 +295,22 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       const text = final || interim;
       transcriptRef.current = text;
       setTranscript(text);
+    };
+
+    recognition.onend = () => {
+      const text = transcriptRef.current.trim();
+      recognitionRef.current = null;
+      if (text && sessionId) {
+        submitUserUtterance(text);
+      } else {
+        setPageState((prev) => {
+          if (prev === 'recording') {
+            setEmptyToast(true);
+            return 'idle';
+          }
+          return prev;
+        });
+      }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
