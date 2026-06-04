@@ -24,7 +24,7 @@ export function MicStep({
         <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
           다음으로 마이크를 켜서
           <br />
-          제가 들을 수 있게 해주세요
+          제가 들을 수 있게 해주세요 <span className="tossface">🎙️</span>
         </h1>
 
         <div className="flex flex-1 flex-col items-center justify-center gap-6 pb-8">
