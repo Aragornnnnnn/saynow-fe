@@ -1,16 +1,10 @@
-// iOS / Android 마이크 권한 요청 UI 모킹 컴포넌트
+// iOS / Android 마이크 권한 요청 UI 미리보기 (인터랙션 없음)
 'use client';
 
 import { useEffect, useState } from 'react';
 import { type PermissionPreviewPlatform } from '../_types';
 
-export function PermissionPreview({
-  isRequesting,
-  onAllow,
-}: {
-  isRequesting: boolean;
-  onAllow: () => void;
-}) {
+export function PermissionPreview() {
   const [platform, setPlatform] = useState<PermissionPreviewPlatform>('ios');
 
   useEffect(() => {
@@ -19,17 +13,15 @@ export function PermissionPreview({
     }
   }, []);
 
-  if (platform === 'android') {
-    return <AndroidPermissionPreview isRequesting={isRequesting} onAllow={onAllow} />;
-  }
-  return <IosPermissionPreview isRequesting={isRequesting} onAllow={onAllow} />;
+  if (platform === 'android') return <AndroidPermissionPreview />;
+  return <IosPermissionPreview />;
 }
 
-function IosPermissionPreview({ isRequesting, onAllow }: { isRequesting: boolean; onAllow: () => void }) {
+function IosPermissionPreview() {
   return (
     <div className="relative mx-auto w-[310px] overflow-visible">
       <div
-        className="overflow-hidden rounded-[16px] border bg-white backdrop-blur-xl"
+        className="overflow-hidden rounded-[16px] border"
         style={{ backgroundColor: 'var(--onboarding-panel)', borderColor: 'var(--onboarding-line)' }}
       >
         <div className="px-5 pb-5 pt-6 text-center">
@@ -49,19 +41,14 @@ function IosPermissionPreview({ isRequesting, onAllow }: { isRequesting: boolean
           style={{ borderColor: 'var(--onboarding-line)' }}
         >
           <div
-            className="flex items-center justify-center border-r text-[18px] text-[#007AFF] opacity-60"
+            className="flex items-center justify-center border-r text-[#007AFF] opacity-60"
             style={{ borderColor: 'var(--onboarding-line)' }}
           >
             허용 안 함
           </div>
-          <button
-            type="button"
-            onClick={onAllow}
-            disabled={isRequesting}
-            className="flex items-center justify-center font-semibold text-[#007AFF] disabled:opacity-50"
-          >
+          <div className="flex items-center justify-center font-semibold text-[#007AFF]">
             허용
-          </button>
+          </div>
         </div>
       </div>
       <span className="tossface pointer-events-none absolute -bottom-9 right-[45px] text-[40px] leading-none">
@@ -71,7 +58,7 @@ function IosPermissionPreview({ isRequesting, onAllow }: { isRequesting: boolean
   );
 }
 
-function AndroidPermissionPreview({ isRequesting, onAllow }: { isRequesting: boolean; onAllow: () => void }) {
+function AndroidPermissionPreview() {
   return (
     <div className="relative mx-auto w-full max-w-[326px]">
       <div className="rounded-[30px] bg-white px-6 pb-5 pt-6 text-center text-[#202124]">
@@ -83,17 +70,12 @@ function AndroidPermissionPreview({ isRequesting, onAllow }: { isRequesting: boo
           SayNow에서 오디오를 녹음하도록 허용하시겠습니까?
         </p>
         <div className="mt-7 space-y-1 text-[20px] font-bold leading-none">
-          <button
-            type="button"
-            onClick={onAllow}
-            disabled={isRequesting}
-            className="relative flex h-14 w-full items-center justify-center disabled:opacity-50"
-          >
+          <div className="relative flex h-14 w-full items-center justify-center">
             앱 사용 중에만 허용
             <span className="tossface pointer-events-none absolute right-0 text-[34px] leading-none">👈</span>
-          </button>
-          <div className="flex h-14 items-center justify-center">이번만 허용</div>
-          <div className="flex h-14 items-center justify-center">허용 안함</div>
+          </div>
+          <div className="flex h-14 items-center justify-center opacity-40">이번만 허용</div>
+          <div className="flex h-14 items-center justify-center opacity-40">허용 안함</div>
         </div>
       </div>
     </div>

@@ -22,16 +22,13 @@ export function MicStep({
     <>
       <div className="flex flex-1 flex-col pt-7">
         <h1 className="text-[30px] font-black leading-[1.18] tracking-normal">
-          이번엔 마이크를 켜서
+          다음으로 마이크를 켜서
           <br />
           제가 들을 수 있게 해주세요
         </h1>
 
         <div className="flex flex-1 flex-col items-center justify-center gap-6 pb-8">
-          <PermissionPreview
-            isRequesting={micState === 'requesting'}
-            onAllow={onAllow}
-          />
+          <PermissionPreview />
 
           {isDenied && (
             <p className="text-center text-sm font-medium leading-relaxed text-[var(--onboarding-muted)]">
@@ -43,9 +40,15 @@ export function MicStep({
         </div>
       </div>
 
-      {isDenied && isNative && (
-        <Button variant="ghost" onClick={onOpenSettings}>
-          설정 열기
+      {isDenied ? (
+        isNative && (
+          <Button variant="ghost" onClick={onOpenSettings}>
+            설정 열기
+          </Button>
+        )
+      ) : (
+        <Button onClick={onAllow} loading={micState === 'requesting'}>
+          마이크 켤게요!
         </Button>
       )}
     </>
