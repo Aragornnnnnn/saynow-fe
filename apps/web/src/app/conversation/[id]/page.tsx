@@ -16,7 +16,6 @@ import { startNativeStt, stopNativeStt } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import { getScenarioImage } from '@/lib/scenarioImages';
-import { useScenarioStore } from '@/store/scenarioStore';
 import ExitConfirmModal from './ExitConfirmModal';
 import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
@@ -31,7 +30,7 @@ interface ChatMessage {
   translatedText?: string;
 }
 
-type PageState = 'briefing' | 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
+type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
 
 export default function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -49,7 +48,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [translatingId, setTranslatingId] = useState<string | null>(null);
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
-  const scenarioInfo = useScenarioStore((s) => s.current);
   const { speak, stop } = useTts();
   const queryClient = useQueryClient();
   const isNative = webBridge.isAvailable();
