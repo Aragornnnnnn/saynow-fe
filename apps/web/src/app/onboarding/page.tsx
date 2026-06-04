@@ -184,7 +184,7 @@ export default function OnboardingPage() {
       <AnimatePresence mode="wait">
         {step === 'intro' && (
           <StepMotion key="intro">
-            <IntroStep onNext={() => goToStep('sound')} />
+            <IntroStep nickname={member?.nickname ?? ''} onNext={() => goToStep('sound')} />
           </StepMotion>
         )}
 
