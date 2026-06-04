@@ -108,7 +108,7 @@ export function SoundStep({
         </div>
       </div>
 
-      <Button onClick={onNext} disabled={!hasPlayed}>
+      <Button onClick={onNext}>
         잘 들려요!
       </Button>
     </>
