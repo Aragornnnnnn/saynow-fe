@@ -21,6 +21,7 @@ import { webBridge } from '@/bridge/webBridge';
 import { useAuthStore } from '@/store/authStore';
 import type { SocialProvider } from '@/lib/api';
 import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
+import { shouldShowOnboarding } from '@/lib/onboarding';
 
 const LAST_LOGIN_KEY = 'saynow-last-login';
 
@@ -95,7 +96,7 @@ function LoginPageContent() {
     localStorage.setItem(LAST_LOGIN_KEY, member.provider as SocialProvider);
     setAuth(accessToken, refreshToken, member);
     updateNativeAuthSession(accessToken, refreshToken, member);
-    router.replace('/');
+    router.replace(shouldShowOnboarding(member) ? '/onboarding' : '/');
   }
 
   useBridgeEvent('NATIVE_LOGIN_SUCCESS', (msg) => {

@@ -9,6 +9,7 @@ import {
 } from '@/lib/webSocialLogin';
 import { useAuthStore } from '@/store/authStore';
 import { updateNativeAuthSession } from '@/bridge/commands';
+import { shouldShowOnboarding } from '@/lib/onboarding';
 
 export default function SocialCallbackPage({
   params,
@@ -87,7 +88,7 @@ function SocialCallbackContent({ provider }: { provider: string }) {
         clearPendingSocialLogin();
         setAuth(data.accessToken, data.refreshToken, data.user);
         updateNativeAuthSession(data.accessToken, data.refreshToken, data.user);
-        router.replace('/');
+        router.replace(shouldShowOnboarding(data.user) ? '/onboarding' : '/');
       } catch (error) {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : '로그인에 실패했습니다.';
