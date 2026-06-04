@@ -194,9 +194,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             }
           }
           if (prev === 'recording') {
-            // silence detection 자동 종료 — transcript만 업데이트 (useStt에서 자동 재시작)
-            transcriptRef.current = msg.transcript;
-            setTranscript(msg.transcript);
+            // silence detection 자동 재시작 — 이전 transcript에 누적
+            const accumulated = (transcriptRef.current + ' ' + msg.transcript).trim();
+            transcriptRef.current = accumulated;
+            setTranscript(accumulated);
           }
           return prev;
         });
