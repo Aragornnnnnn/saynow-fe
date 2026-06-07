@@ -8,8 +8,8 @@ export const FALLBACK_QUESTION = 'Hey! Can you hear me alright?';
 export const FALLBACK_TRANSLATED_QUESTION = '잘 들려요?';
 export const SOUND_QUESTIONS = [
   'Hey! Can you hear me alright?',
-  'Hi there! How\'s it going?',
-  'Hey, is the volume okay for you?',
+  "Hi there! How's it going?",
+  'Greetings! How are you doing today?',
   'Hello! Can you hear me clearly?',
   'Hi! Is my voice coming through okay?',
 ];
