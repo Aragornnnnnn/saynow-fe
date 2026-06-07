@@ -7,7 +7,7 @@ import { LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { type ApiScenario } from '@/lib/api';
 
-const FALLBACK_IMAGE = '/images/scenarios/scenario-4-play.webp';
+const FALLBACK_IMAGE = '/images/scenarios/scenario-1.png';
 
 export function ScenarioStep({
   scenario,

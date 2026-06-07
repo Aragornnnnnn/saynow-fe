@@ -11,7 +11,6 @@ import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { useTts } from '@/hooks/useTts';
 import { prefetchSession, type ApiScenario } from '@/lib/api';
-import { getScenarioImage } from '@/lib/scenarioImages';
 import { markOnboardingComplete } from '@/lib/onboarding';
 import { useScenariosQuery } from '@/queries/scenarios';
 import { useAuthStore } from '@/store/authStore';
@@ -199,11 +198,6 @@ export default function OnboardingPage() {
       briefing: firstScenario.briefing,
       conversationGoal: firstScenario.conversationGoal,
       scenarioEmoji: firstScenario.scenarioEmoji ?? null,
-    });
-
-    (['play', 'success', 'fail'] as const).forEach((type) => {
-      const image = new Image();
-      image.src = getScenarioImage(firstScenario.scenarioId, type);
     });
 
     markOnboardingComplete(member.userId);
