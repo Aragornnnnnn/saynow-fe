@@ -1,15 +1,12 @@
-// 피드백 페이지 — 대화 결과 이해도 및 발화별 말풍선 피드백
+// 피드백 페이지 — 총평 카드 + 질문별 피드백을 페이지 단위로 표시
 'use client';
 
-import { use, useEffect, useRef, useState } from 'react';
-
-import { useRouter, useSearchParams } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
-import confetti from 'canvas-confetti';
+import { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { AnimatePresence, motion, useMotionValue } from 'framer-motion';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { useFeedbackQuery } from '@/queries/feedback';
-import { triggerHaptic } from '@/bridge/commands';
-import { getScenarioImage } from '@/lib/scenarioImages';
+import { useScenarioStore } from '@/store/scenarioStore';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { Button } from '@/components/ui/Button';
@@ -17,20 +14,26 @@ import { Button } from '@/components/ui/Button';
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const scenarioId = Number(searchParams.get('scenarioId') ?? 1);
+  const scenario = useScenarioStore((s) => s.current);
   const { header, turnFeedbacks, isDone, error } = useFeedbackQuery(Number(id));
 
-  // prefetch로 이미 데이터가 있으면 로딩 스크린 건너뜀
-  const [loadingDone, setLoadingDone] = useState(isDone && header !== null);
+  const [page, setPage] = useState(0);
+  const totalPages = 1 + turnFeedbacks.length;
 
-  if (!loadingDone) {
-    return (
-      <FeedbackLoadingScreen
-        dataReady={header !== null}
-        onDone={() => setLoadingDone(true)}
-      />
-    );
+  if (!isDone || !header) {
+    if (error) {
+      return (
+        <main className='flex h-full items-center justify-center bg-background px-6'>
+          <div className='space-y-4 text-center'>
+            <p className='text-muted-foreground'>{error.message}</p>
+            <button onClick={() => router.replace('/')} className='text-sm font-medium text-primary'>
+              돌아가기
+            </button>
+          </div>
+        </main>
+      );
+    }
+    return <SummarySkeleton />;
   }
 
   if (error || !header) {
@@ -47,389 +50,390 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
   }
 
   const passed = header.nativeScore >= 70;
+  const goodTurns = turnFeedbacks.filter((t) => t.feedbackType === 'GOOD').length;
+
+  function goNext() {
+    if (page < totalPages - 1) setPage((p) => p + 1);
+    else router.replace(`/?survey=true&sessionId=${header!.sessionId}`);
+  }
+
+  function goPrev() {
+    if (page > 0) setPage((p) => p - 1);
+  }
 
   return (
-    <IntroCardLayout
-      passed={passed}
-      score={header.nativeScore}
-      scenarioId={scenarioId}
-    >
-      <main className='flex h-full flex-col bg-background'>
-        <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain'>
-          <ResultHeader
-            passed={passed}
-            score={header.nativeScore}
-            levelLabel={header.nativeLevelLabel}
-            summary={header.summary}
-          />
-          <div className='px-4 pb-6 space-y-6'>
-            {turnFeedbacks.map((turn, index) => (
-              <TurnBubblePair key={turn.turnId} turn={turn} index={index} />
-            ))}
+    <PagedView page={page} totalPages={totalPages} onNext={goNext} onPrev={goPrev}>
+      {page === 0 ? (
+        <SummaryPage
+          score={header.nativeScore}
+          passed={passed}
+          highlightMessage={header.highlightMessage}
+          totalTurns={turnFeedbacks.length}
+          goodTurns={goodTurns}
+          scenarioTitle={scenario?.scenarioTitle ?? null}
+          onNext={goNext}
+        />
+      ) : (
+        <TurnPage
+          turn={turnFeedbacks[page - 1]}
+          index={page - 1}
+          totalTurns={turnFeedbacks.length}
+          onNext={goNext}
+          isLast={page === totalPages - 1}
+        />
+      )}
+    </PagedView>
+  );
+}
+
+// ─── SummarySkeleton ─────────────────────────────────────────────────────────
+
+function Bone({ className }: { className?: string }) {
+  return <div className={`animate-pulse rounded-lg bg-zinc-200 ${className ?? ''}`} />;
+}
+
+function SummarySkeleton() {
+  return (
+    <div className='flex h-full flex-col bg-background' style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
+      {/* 네비게이션 헤더 */}
+      <div className='flex items-center justify-center px-4 pt-4 pb-2'>
+        <Bone className='h-5 w-24' />
+      </div>
+
+      <div className='flex flex-1 flex-col px-6 pt-2'>
+        {/* 점수 */}
+        <div className='mt-3 space-y-2'>
+          <Bone className='h-4 w-24' />
+          <Bone className='h-10 w-52' />
+        </div>
+
+        {/* 러너 트랙 — 캐릭터 공간(104px) + 트랙 바 */}
+        <div style={{ marginTop: 104 }}>
+          <Bone className='h-5 w-full rounded-full' />
+          <div className='flex justify-between mt-2.5'>
+            <Bone className='h-4 w-28' />
+            <Bone className='h-4 w-24' />
           </div>
         </div>
 
-        <HomeButton onNavigate={() => router.replace(`/?survey=true&sessionId=${header.sessionId}`)} />
-      </main>
-    </IntroCardLayout>
+        {/* 이번 대화에서 섹션 */}
+        <div className='mt-10 mb-4'>
+          <Bone className='h-6 w-28 mb-3' />
+          <div className='rounded-2xl bg-zinc-100 overflow-hidden divide-y divide-zinc-200'>
+            <div className='px-5 py-4 space-y-2'>
+              <Bone className='h-3 w-16' />
+              <Bone className='h-5 w-48' />
+            </div>
+            <div className='px-5 py-4 space-y-2'>
+              <Bone className='h-3 w-20' />
+              <Bone className='h-5 w-40' />
+            </div>
+            <div className='px-5 py-4 space-y-2'>
+              <Bone className='h-3 w-20' />
+              <Bone className='h-5 w-56' />
+            </div>
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className='mt-auto' style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)', paddingTop: '32px' }}>
+          <Bone className='h-14 w-full rounded-2xl' />
+        </div>
+      </div>
+    </div>
   );
 }
 
-// ─── FeedbackLoadingScreen ────────────────────────────────────────────────────
+// ─── PagedView ────────────────────────────────────────────────────────────────
 
-const LOADING_MESSAGES = [
-  '대화 내용 분석 중...',
-  '외국인 관점 파악 중...',
-  '이해도 계산 중...',
-  '피드백 정리 중...',
-];
+function PagedView({
+  page, totalPages, onNext, onPrev, children,
+}: {
+  page: number; totalPages: number; onNext: () => void; onPrev: () => void; children: React.ReactNode;
+}) {
+  const dragX = useMotionValue(0);
 
-function FeedbackLoadingScreen({ dataReady, onDone }: { dataReady: boolean; onDone: () => void }) {
-  const [progress, setProgress] = useState(0);
-  const [msgIndex, setMsgIndex] = useState(0);
-  const dataReadyRef = useRef(dataReady);
-  dataReadyRef.current = dataReady;
-  const doneCalledRef = useRef(false);
-
-  function callDone() {
-    if (doneCalledRef.current) return;
-    doneCalledRef.current = true;
-    setTimeout(onDone, 300);
+  function handleDragEnd(_: unknown, info: { offset: { x: number }; velocity: { x: number } }) {
+    if (info.offset.x < -60 || info.velocity.x < -300) onNext();
+    else if (info.offset.x > 60 || info.velocity.x > 300) onPrev();
+    dragX.set(0);
   }
 
-  useEffect(() => {
-    const start = Date.now();
-    const duration = 2800;
-    let raf: number;
-    function tick() {
-      const elapsed = Date.now() - start;
-      const t = Math.min(elapsed / duration, 1);
-      const natural = t * t * (3 - 2 * t) * 92;
-      if (dataReadyRef.current) {
-        setProgress(100);
-        callDone();
-        return;
-      }
-      setProgress(natural);
-      if (t < 1) raf = requestAnimationFrame(tick);
-    }
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 루프 종료 후 데이터 도착 감지
-  useEffect(() => {
-    if (dataReady) {
-      setProgress(100);
-      callDone();
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataReady]);
-
-  // 1.2초마다 메시지 순환 (데이터 도착 전까지)
-  useEffect(() => {
-    if (dataReady) return;
-    const id = setInterval(() => {
-      setMsgIndex((i) => (i + 1) % LOADING_MESSAGES.length);
-    }, 1200);
-    return () => clearInterval(id);
-  }, [dataReady]);
-
   return (
-    <main className='flex h-full flex-col items-center justify-center bg-background px-8 gap-5'>
-      <AnimatePresence mode='wait'>
-        <motion.p
-          key={msgIndex}
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.25 }}
-          className='text-sm font-medium text-muted-foreground'
-        >
-          {LOADING_MESSAGES[msgIndex]}
-        </motion.p>
-      </AnimatePresence>
-      <div className='w-full max-w-xs h-1.5 rounded-full bg-muted overflow-hidden'>
-        <motion.div
-          className='h-full rounded-full bg-primary'
-          style={{ width: `${progress}%` }}
-          transition={{ ease: 'linear' }}
-        />
-      </div>
-    </main>
+    <div className='flex h-full flex-col bg-background'>
+      <motion.div className='flex-1 overflow-hidden' drag='x' dragConstraints={{ left: 0, right: 0 }} dragElastic={0.12} onDragEnd={handleDragEnd} style={{ x: dragX }}>
+        <AnimatePresence mode='wait' initial={false}>
+          <motion.div
+            key={page}
+            className='h-full'
+            initial={{ opacity: 0, x: 32 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -32 }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      </motion.div>
+    </div>
   );
 }
 
-// ─── IntroCardLayout ──────────────────────────────────────────────────────────
+// ─── SummaryPage ──────────────────────────────────────────────────────────────
 
-interface IntroCardLayoutProps {
-  passed: boolean;
-  score: number;
-  scenarioId: number;
-  children: React.ReactNode;
+// delay(ms) 후 duration(ms)동안 0→target 카운트업, ease는 게이지와 동일한 cubic
+function useCountUp(target: number, delay: number, duration: number) {
+  const [value, setValue] = useState(0);
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      const start = Date.now();
+      function tick() {
+        const t = Math.min((Date.now() - start) / duration, 1);
+        // [0.25, 0.46, 0.45, 0.94] cubic-bezier 근사 — 게이지와 동일
+        const eased = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+        setValue(Math.round(eased * target));
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }, delay);
+    return () => clearTimeout(timeout);
+  }, [target, delay, duration]);
+  return value;
 }
 
-function IntroCardLayout({ passed, score, scenarioId, children }: IntroCardLayoutProps) {
-  const [slidUp, setSlidUp] = useState(false);
-  const [dragY, setDragY] = useState(0);
-  const imageUrl = getScenarioImage(scenarioId, passed ? 'success' : 'fail');
+function getScoreInterpretation(score: number): string {
+  if (score >= 90) return '외국인이 모든 말을 이해했어요';
+  if (score >= 70) return '외국인이 대부분 이해했어요';
+  if (score >= 50) return '외국인이 절반 이상 이해했어요';
+  if (score >= 30) return '외국인이 맥락을 파악했어요';
+  return '외국인이 상황을 감지했어요';
+}
 
-  useEffect(() => {
-    if (passed) {
-      triggerHaptic('heavy');
-      confetti({
-        particleCount: 140,
-        spread: 85,
-        origin: { y: 0.4 },
-        colors: ['#E07A3A', '#FFF4ED', '#f59e0b', '#ffffff', '#fbbf24'],
-      });
-    }
-  }, [passed]);
+// RunnerTrack과 동일: delay 400ms, duration 1800ms
+const TRACK_DELAY = 400;
+const TRACK_DURATION = 1800;
+
+function SummaryPage({
+  score, passed, highlightMessage, totalTurns, goodTurns, scenarioTitle, onNext,
+}: {
+  score: number; passed: boolean; highlightMessage: string;
+  totalTurns: number; goodTurns: number; scenarioTitle: string | null; onNext: () => void;
+}) {
+  const interpretation = getScoreInterpretation(score);
+  const displayScore = useCountUp(score, TRACK_DELAY, TRACK_DURATION);
+  const trackEndSec = (TRACK_DELAY + TRACK_DURATION) / 1000;
+
+  const turnStat = goodTurns > 0
+    ? `${totalTurns}번 대화 중 ${goodTurns}번 잘 통했어요`
+    : `${totalTurns}번 모두 끝까지 도전했어요`;
 
   return (
-    <div className='relative h-full overflow-hidden'>
-      {/* 피드백 콘텐츠 — 뒤에 깔림 */}
-      <div className='absolute inset-0'>{children}</div>
+    <div className='flex h-full flex-col bg-background' style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
+      {/* 네비게이션 헤더 */}
+      <div className='flex items-center justify-center px-4 pt-4 pb-2'>
+        <p className='text-base font-semibold text-zinc-800'>{scenarioTitle ?? '피드백'}</p>
+      </div>
 
-      {/* 인트로 카드 — 위로 슬라이드 아웃 */}
-      <motion.div
-        className='absolute inset-0 flex flex-col cursor-pointer'
-        drag={slidUp ? false : 'y'}
-        dragConstraints={{ top: -window.innerHeight, bottom: 0 }}
-        dragElastic={{ top: 0.3, bottom: 0 }}
-        onDrag={(_, info) => setDragY(info.offset.y)}
-        onDragEnd={(_, info) => {
-          if (info.offset.y < -60 || info.velocity.y < -300) {
-            setSlidUp(true);
-          }
-          setDragY(0);
-        }}
-        onClick={() => { if (Math.abs(dragY) < 5) setSlidUp(true); }}
-        animate={{ y: slidUp ? '-100%' : 0 }}
-        transition={slidUp ? { duration: 0.5, ease: [0.4, 0, 0.2, 1] } : { type: 'spring', stiffness: 400, damping: 40 }}
-      >
-        {/* 배경 이미지 */}
-        <div
-          className='absolute inset-0 bg-cover bg-center'
-          style={{ backgroundImage: `url(${imageUrl})`, backgroundColor: passed ? '#5a9e6f' : '#9e5a5a' }}
-        />
-        <div
-          className='absolute inset-0'
-          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.08) 20%, rgba(0,0,0,0.78) 100%)' }}
-        />
-
-        {/* 콘텐츠 */}
+      <div className='flex flex-1 flex-col px-6 pt-2'>
         <motion.div
-          className='relative z-10 mt-auto flex flex-col items-center gap-2 pb-16 px-7'
-          initial={{ opacity: 0, y: 24 }}
+          className='mt-3'
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.15, ease: 'easeOut' }}
+          transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <span className='text-5xl leading-none'>{passed ? '🎉' : '😅'}</span>
-          <p className='mt-2 text-4xl font-extrabold tracking-tight text-white'>
-            {passed ? '클리어!' : '아쉬워요'}
+          <p className='text-base text-zinc-500 mb-1'>한국인 평균보다</p>
+          <p className='text-4xl font-black tracking-tight leading-tight'>
+            <span className='text-[#E07A3A]'>{displayScore}%</span>
+            <span className='text-zinc-800'> 더 잘 전달했어요</span>
           </p>
-          <p className='text-lg font-semibold text-white/75'>이해도 {score}%</p>
+        </motion.div>
 
-          {/* 깜빡이는 화살표 힌트 */}
-          <div className='mt-6 flex flex-col items-center gap-1 pointer-events-none'>
-            <motion.span
-              className='text-2xl text-white/50'
-              animate={{ y: [0, 7, 0] }}
-              transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              ↓
-            </motion.span>
-            <span className='text-xs text-white/45'>탭하거나 위로 스와이프</span>
+        {/* 러너 트랙 */}
+        <RunnerTrack targetPos={score} passed={passed} />
+
+        {/* 이번 대화에서 섹션 */}
+        <motion.div
+          className='mt-10 mb-4'
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: trackEndSec + 0.2 }}
+        >
+          <p className='text-xl font-bold text-zinc-800 mb-3'>이번 대화에서</p>
+          <div className='rounded-2xl bg-[#FFF4EC] divide-y divide-[#F0D9C8]'>
+
+            {/* 전달력 */}
+            <div className='px-5 py-4'>
+              <p className='text-xs font-semibold text-zinc-500 mb-1'>전달력</p>
+              <p className='text-base font-semibold text-zinc-800 leading-snug'>{interpretation}</p>
+            </div>
+
+            {/* 대화 성공률 */}
+            <div className='px-5 py-4'>
+              <p className='text-xs font-semibold text-zinc-500 mb-1'>대화 성공률</p>
+              <p className='text-base font-semibold text-zinc-800 leading-snug'>
+                {goodTurns > 0
+                  ? <>{totalTurns}번 중 <span className='text-[#E07A3A]'>{goodTurns}번</span> 잘 통했어요</>
+                  : turnStat
+                }
+              </p>
+            </div>
+
+            {/* 발견한 강점 */}
+            {highlightMessage && (
+              <div className='px-5 py-4'>
+                <p className='text-xs font-semibold text-zinc-500 mb-1'>발견한 강점</p>
+                <p className='text-base font-semibold text-zinc-800 leading-snug'>{highlightMessage}</p>
+              </div>
+            )}
           </div>
         </motion.div>
-      </motion.div>
-    </div>
-  );
-}
 
-// ─── ResultHeader ─────────────────────────────────────────────────────────────
-
-interface ResultHeaderProps {
-  passed: boolean;
-  score: number;
-  levelLabel: string;
-  summary?: string;
-}
-
-function ResultHeader({ passed, score, levelLabel, summary }: ResultHeaderProps) {
-  const [displayScore, setDisplayScore] = useState(0);
-
-  // 카운트업: 700ms 동안 0 → score (confetti/haptic은 IntroCardLayout에서 처리)
-  useEffect(() => {
-    // 카운트업: 700ms 동안 0 → score
-    const duration = 700;
-    const frameRate = 60;
-    const totalFrames = Math.round((duration / 1000) * frameRate);
-    let frame = 0;
-    const timer = setInterval(() => {
-      frame += 1;
-      const progress = frame / totalFrames;
-      // easeOut 커브
-      setDisplayScore(Math.round(score * (1 - Math.pow(1 - progress, 3))));
-      if (frame >= totalFrames) {
-        setDisplayScore(score);
-        clearInterval(timer);
-      }
-    }, 1000 / frameRate);
-
-    return () => clearInterval(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.45, ease: 'easeOut' }}
-      className='px-5 pb-6 text-center'
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 48px)' }}
-    >
-      <motion.p
-        initial={{ scale: 0.5, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ delay: 0.1, duration: 0.4, type: 'spring', stiffness: 260, damping: 16 }}
-        className='mb-1 text-5xl'
-      >
-        {passed ? '🎉' : '😅'}
-      </motion.p>
-
-      <motion.h1
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25, duration: 0.3 }}
-        className='text-xl font-bold text-foreground'
-      >
-        {passed ? '클리어!' : '아쉬워요'}
-      </motion.h1>
-
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.35, duration: 0.3 }}
-      >
-        <p className='mt-2 text-sm text-muted-foreground'>
-          총 이해도{' '}
-          <span className={`text-3xl font-bold tabular-nums ${passed ? 'text-green-600' : comprehensionStyle(score)}`}>
-            {displayScore}%
-          </span>
-        </p>
-        <p className='mt-1 text-sm font-semibold text-foreground'>{levelLabel}</p>
-        {summary && (
-          <motion.p
+        {/* CTA */}
+        <div className='mt-auto' style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)', paddingTop: '32px' }}>
+          {(totalTurns - goodTurns) > 0 && (
+            <motion.div
+              className='text-center mb-3'
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.4, delay: trackEndSec + 0.6 }}
+            >
+              <p
+                className='text-base font-medium text-zinc-800'
+                style={{ animation: `runnerBounce 1.2s ease-in-out ${trackEndSec}s infinite` }}
+              >
+                조금만 다듬으면 바로 통하는 표현이 있어요 <span className='tossface'>👇</span>
+              </p>
+            </motion.div>
+          )}
+          <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.35 }}
-            className='mt-3 text-sm text-muted-foreground leading-relaxed'
+            transition={{ duration: 0.3, delay: trackEndSec + 0.4 }}
           >
-            {summary}
-          </motion.p>
-        )}
-      </motion.div>
-    </motion.div>
-  );
-}
-
-
-// ─── TurnBubblePair ───────────────────────────────────────────────────────────
-
-function TurnBubblePair({ turn, index }: { turn: ApiTurnFeedback; index: number }) {
-  const [expanded, setExpanded] = useState(false);
-  const [hintDismissed, setHintDismissed] = useState(false);
-  const isGood = !requiresTurnFeedback(turn.feedbackType);
-  const feedbackRef = useRef<HTMLDivElement>(null);
-
-  function handleUserBubblePress() {
-    if (isGood) return;
-    const opening = !expanded;
-    setExpanded(opening);
-    setHintDismissed(true);
-    if (opening) {
-      setTimeout(() => {
-        feedbackRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }, 50);
-    }
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.6 + index * 0.12, duration: 0.35, ease: 'easeOut' }}
-      className='space-y-2'
-    >
-      <AiBubble
-        text={turn.originalQuestion}
-        translatedText={turn.translatedQuestion}
-      />
-
-      <UserBubble text={turn.userUtterance} onPress={isGood ? undefined : handleUserBubblePress}>
-        {isGood && <p className='text-xs font-semibold text-green-600'>✓ 잘했어요</p>}
-        {!isGood && !hintDismissed && (
-          <p className='text-xs text-muted-foreground'>탭해서 피드백 보기</p>
-        )}
-      </UserBubble>
-
-      <AnimatePresence initial={false}>
-        {!isGood && expanded && (
-          <motion.div
-            ref={feedbackRef}
-            key='feedback'
-            initial={{ opacity: 0, y: -4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.18, ease: 'easeOut' }}
-            className='flex flex-col items-end gap-2'
-          >
-            {(turn.feedbackDetail || turn.koreanAnalogy) && (
-              <div className='rounded-2xl rounded-tr-none bg-zinc-100 px-4 py-3 max-w-[85%] space-y-1'>
-                <p className='text-[11px] font-semibold text-muted-foreground tracking-wide'>🎧 외국인 귀에는</p>
-                {turn.feedbackDetail && (
-                  <p className='text-sm font-semibold text-foreground leading-snug'>&ldquo;{turn.feedbackDetail}&rdquo;</p>
-                )}
-                {turn.koreanAnalogy && (
-                  <p className='text-xs text-muted-foreground leading-relaxed'>{turn.koreanAnalogy}</p>
-                )}
-              </div>
-            )}
-            {turn.betterExpression && (
-              <div className='rounded-2xl rounded-tr-none bg-green-50 border border-green-200 px-4 py-3 max-w-[85%] space-y-1'>
-                <p className='text-[11px] font-semibold text-green-600 tracking-wide'>✨ 이렇게 말하면 더 자연스러워요</p>
-                <p className='text-sm font-bold text-green-700 leading-snug'>{turn.betterExpression}</p>
-              </div>
-            )}
+            <Button onClick={onNext}>상세 분석 보러 갈게요</Button>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
-// ─── HomeButton ───────────────────────────────────────────────────────────────
-
-function HomeButton({ onNavigate }: { onNavigate: () => void }) {
-  return (
-    <div className='px-4 pb-3 pt-3 border-t border-border'>
-      <Button onClick={onNavigate}>홈으로 가기</Button>
+        </div>
+      </div>
     </div>
   );
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
+// ─── RunnerTrack ──────────────────────────────────────────────────────────────
 
-function comprehensionStyle(score: number): string {
-  if (score >= 70) return 'text-green-600';
-  if (score >= 40) return 'text-orange-500';
-  return 'text-red-500';
+// 왼쪽=평균 한국인(0%), 오른쪽=원어민(100%)
+// 캐릭터가 왼쪽(0%)에서 출발해 targetPos(%)까지 달려가며 바를 채움
+function RunnerTrack({ targetPos, passed }: { targetPos: number; passed: boolean }) {
+  const [pos, setPos] = useState(0);
+  const trackColor = '#E07A3A';
+  useEffect(() => {
+    const t1 = setTimeout(() => setPos(targetPos), TRACK_DELAY);
+    return () => clearTimeout(t1);
+  }, [targetPos]);
+
+  return (
+    <div className='select-none'>
+
+      {/* 트랙 바 */}
+      <div className='relative rounded-full bg-zinc-200 overflow-visible' style={{ marginTop: 104, height: 20 }}>
+        {/* 채워지는 바 */}
+        <motion.div
+          className='absolute left-0 top-0 h-full rounded-full'
+          style={{ backgroundColor: trackColor }}
+          initial={{ width: '0%' }}
+          animate={{ width: `${pos}%` }}
+          transition={{ duration: TRACK_DURATION / 1000, delay: TRACK_DELAY / 1000, ease: [0.25, 0.46, 0.45, 0.94] }}
+        />
+        {/* 왼쪽 끝 동그라미 */}
+        <div className='absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full' style={{ backgroundColor: '#B8651A' }} />
+        {/* 오른쪽 끝 동그라미 */}
+        <div className='absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full' style={{ backgroundColor: '#C4C4C4' }} />
+
+        {/* 캐릭터 — 채워진 바 위에 오른쪽 끝 기준으로 올라탐 */}
+        <motion.div
+          className='absolute top-0 h-full'
+          style={{ left: 0, zIndex: 10 }}
+          animate={{ width: `${pos}%` }}
+          transition={{ duration: TRACK_DURATION / 1000, delay: TRACK_DELAY / 1000, ease: [0.25, 0.46, 0.45, 0.94] }}
+        >
+          <div className='absolute' style={{ right: -44, bottom: '100%' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src='/runner.png'
+              alt='runner'
+              style={{ width: 88, height: 88, objectFit: 'contain', animation: `runnerBounce 1.2s ease-in-out ${(TRACK_DELAY + TRACK_DURATION) / 1000}s infinite` }}
+            />
+          </div>
+        </motion.div>
+      </div>
+
+      {/* 양끝 라벨 */}
+      <div className='flex justify-between mt-2.5'>
+        <p className='text-base font-semibold text-zinc-700'><span className='tossface'>🇰🇷</span> 아직은 한국인</p>
+        <p className='text-base font-semibold text-zinc-700'>사실상 원어민 <span className='tossface'>🌍</span></p>
+      </div>
+    </div>
+  );
 }
 
-function requiresTurnFeedback(feedbackType: string): boolean {
-  const normalized = feedbackType.trim().toUpperCase();
-  return !['NONE', 'GOOD', 'PASS', 'CORRECT', 'NO_FEEDBACK'].includes(normalized);
+// ─── TurnPage ─────────────────────────────────────────────────────────────────
+
+function TurnPage({
+  turn, index, totalTurns, onNext, isLast,
+}: {
+  turn: ApiTurnFeedback; index: number; totalTurns: number; onNext: () => void; isLast: boolean;
+}) {
+  const isGood = turn.feedbackType === 'GOOD';
+
+  return (
+    <div className='flex h-full flex-col'>
+      <div className='no-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 space-y-3'>
+        <p className='text-xs text-muted-foreground font-medium'>{index + 1} / {totalTurns}</p>
+
+        <AiBubble text={turn.originalQuestion} translatedText={turn.translatedQuestion} />
+
+        <UserBubble text={turn.userUtterance}>
+          {isGood && <p className='text-xs font-semibold text-green-600'>✓ 잘했어요</p>}
+        </UserBubble>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: 0.1 }}
+          className='flex flex-col items-end gap-2'
+        >
+          {/* 외국인 귀에는 / 개선 포인트 */}
+          {turn.feedbackDetail && (
+            <div className={`rounded-2xl rounded-tr-none px-4 py-3 max-w-[88%] space-y-1 ${isGood ? 'bg-green-50 border border-green-200' : 'bg-zinc-100'}`}>
+              <p className={`text-[11px] font-semibold tracking-wide ${isGood ? 'text-green-600' : 'text-muted-foreground'}`}>
+                {isGood ? '✨ 잘한 이유' : '🎧 외국인 귀에는'}
+              </p>
+              <p className='text-sm font-semibold text-foreground leading-snug'>{turn.feedbackDetail}</p>
+              {turn.koreanAnalogy && (
+                <p className='text-xs text-muted-foreground leading-relaxed'>{turn.koreanAnalogy}</p>
+              )}
+            </div>
+          )}
+
+          {/* NEEDS_IMPROVEMENT의 잘한 포인트 */}
+          {!isGood && turn.positiveFeedback && (
+            <div className='rounded-2xl rounded-tr-none bg-green-50 border border-green-200 px-4 py-3 max-w-[88%] space-y-1'>
+              <p className='text-[11px] font-semibold text-green-600 tracking-wide'>👍 잘한 점</p>
+              <p className='text-sm text-green-700 leading-snug'>{turn.positiveFeedback}</p>
+            </div>
+          )}
+
+          {/* benchmarkMessage */}
+          {turn.benchmarkMessage && (
+            <div className='rounded-2xl rounded-tr-none bg-blue-50 border border-blue-200 px-4 py-3 max-w-[88%]'>
+              <p className='text-xs font-semibold text-blue-600 leading-snug'>{turn.benchmarkMessage}</p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      <div className='px-4 pt-3 border-t border-border' style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}>
+        <Button onClick={onNext}>{isLast ? '홈으로 가기' : '다음 보기'}</Button>
+      </div>
+    </div>
+  );
 }
