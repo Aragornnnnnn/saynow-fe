@@ -178,16 +178,16 @@ function Home() {
       {/* 시나리오 목록 */}
       <div className="relative flex-1 overflow-hidden">
         {isPending ? (
-          <div className="flex flex-col gap-4 px-5 pt-16">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="w-full rounded-[20px] overflow-hidden bg-card shadow-sm">
-                <div className="skeleton w-full bg-border" style={{ aspectRatio: '4/3' }} />
-                <div className="px-4 py-4 space-y-2">
-                  <div className="skeleton h-5 w-40 rounded bg-border" />
-                  <div className="skeleton h-4 w-full rounded bg-border" />
-                </div>
+          <div style={{ height: 'calc(100% - 80px)', marginTop: 40, padding: '14px 20px', boxSizing: 'border-box' }}>
+            <div className="w-full h-full rounded-[20px] overflow-hidden bg-card shadow-md flex flex-col">
+              <div className="skeleton bg-border" style={{ flex: 2, minHeight: 0 }} />
+              <div className="px-5 pt-5 pb-5 flex flex-col gap-3" style={{ flex: 1, minHeight: 0 }}>
+                <div className="skeleton h-7 w-48 rounded-lg bg-border" />
+                <div className="skeleton h-5 w-full rounded-lg bg-border" />
+                <div className="skeleton h-5 w-2/3 rounded-lg bg-border" />
+                <div className="skeleton h-14 w-full rounded-2xl bg-border mt-auto" />
               </div>
-            ))}
+            </div>
           </div>
         ) : activeCategory ? (
           <Swiper
