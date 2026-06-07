@@ -3,12 +3,17 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Lock, UserRound } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Lock, ArrowRight } from 'lucide-react';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import type { Swiper as SwiperType } from 'swiper';
+import 'swiper/css';
 import { SurveySheet } from '@/components/SurveySheet';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { exitApp } from '@/bridge/commands';
+import { Button } from '@/components/ui/Button';
+import { toast } from '@/components/ui/Toast';
 import type { ApiScenario } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
 import { prefetchSession } from '@/lib/api';
@@ -38,39 +43,23 @@ function Home() {
     searchParams.get('survey') === 'true' ? Number(searchParams.get('sessionId')) || null : null
   );
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // hydration 완료 + refreshToken 확인 즉시 쿼리 시작 — isReady(accessToken 발급 완료)까지 기다리지 않음
+  const [activeIndex, setActiveIndex] = useState(0);
+  const swiperInstanceRef = useRef<SwiperType | null>(null);
+  const isUnlockMode = searchParams.get('unlocked') === 'true';
+  const [unlockedCardIndex, setUnlockedCardIndex] = useState<number | null>(null);
   const { data, isPending, error, refetch } = useScenariosQuery(_hasHydrated && !!refreshToken);
   const setScenario = useScenarioStore((s) => s.setScenario);
 
-  // 이전 데이터와 비교해서 새로 unlock된 시나리오 ID 세트 계산
-  const prevDataRef = useRef(data);
-  const [newlyUnlockedIds, setNewlyUnlockedIds] = useState<Set<number>>(new Set());
-  useEffect(() => {
-    const prev = prevDataRef.current;
-    prevDataRef.current = data;
-    if (!prev || !data) return;
-    const prevLocked = new Set(
-      prev.categories.flatMap((c) => c.scenarios.filter((s) => s.locked).map((s) => s.scenarioId))
-    );
-    const nowUnlocked = data.categories
-      .flatMap((c) => c.scenarios)
-      .filter((s) => !s.locked && prevLocked.has(s.scenarioId))
-      .map((s) => s.scenarioId);
-    if (nowUnlocked.length > 0) {
-      setNewlyUnlockedIds(new Set(nowUnlocked));
-      setTimeout(() => setNewlyUnlockedIds(new Set()), 2000);
-    }
-  }, [data]);
-
-  useEffect(() => {
-    return () => {
-      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    };
-  }, []);
-
   useBackButtonBridge(() => exitApp());
+
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowDown') swiperInstanceRef.current?.slideNext();
+      if (e.key === 'ArrowUp') swiperInstanceRef.current?.slidePrev();
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   useEffect(() => {
     if (!isReady || !shouldShowOnboarding(member)) return;
@@ -78,10 +67,26 @@ function Home() {
     router.replace('/onboarding');
   }, [isReady, member, router]);
 
+  useEffect(() => {
+    if (!isUnlockMode || isPending || !data) return;
+    const scenarios = data.categories.find((c) => !c.categoryLocked)?.scenarios.slice(0, 3) ?? [];
+    const newlyUnlocked = scenarios.findIndex((s) => !s.locked);
+    if (newlyUnlocked <= 0) return;
+    // 1번 카드(index 0)에서 시작
+    swiperInstanceRef.current?.slideTo(0, 0);
+    setActiveIndex(0);
+    // 잠금 해제 카드 표시 (컬러 전환)
+    setUnlockedCardIndex(newlyUnlocked);
+    // 잠시 후 해당 카드로 슬라이드
+    const timer = setTimeout(() => {
+      swiperInstanceRef.current?.slideTo(newlyUnlocked, 600);
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [isUnlockMode, isPending, data]);
+
   if (!isReady || isRedirectingToOnboarding) return null;
 
   const categories = data?.categories ?? [];
-
   const activeCategory = categories.find((c) => !c.categoryLocked);
 
   function handleStart(scenario: ApiScenario) {
@@ -92,10 +97,6 @@ function Home() {
       briefing: scenario.briefing,
       conversationGoal: scenario.conversationGoal,
       scenarioEmoji: scenario.scenarioEmoji ?? null,
-    });
-    (['play', 'success', 'fail'] as const).forEach((type) => {
-      const img = new Image();
-      img.src = getScenarioImage(scenario.scenarioId, type);
     });
     prefetchSession(scenario.scenarioId);
     router.push(`/conversation/${scenario.scenarioId}`);
@@ -114,71 +115,128 @@ function Home() {
     );
   }
 
+  const scenarios = activeCategory?.scenarios.slice(0, 3) ?? [];
+  const allCompleted = scenarios.length > 0 && scenarios.every((s) => s.completed);
+  const totalDots = scenarios.length + 1;
+
   return (
     <motion.main
-      className="relative flex h-dvh flex-col overflow-x-hidden"
-      style={{ background: 'linear-gradient(to bottom, #FAFAF8 50%, #E8DDD0 100%)' }}
+      className="relative flex h-dvh flex-col overflow-hidden"
+      style={{ background: '#F2F2F7' }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: 'easeOut' }}
     >
-      {/* 내 정보 */}
-      <div className="absolute right-4 z-20" style={{ top: 'max(env(safe-area-inset-top), 16px)' }}>
-        <Link href="/me" className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
-          <UserRound className="h-3.5 w-3.5" />
-          내 정보
+      {/* 헤더 */}
+      <div
+        className="flex items-center justify-between px-5 z-20 flex-shrink-0 bg-background"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 8, borderBottom: '1px solid #ebebeb' }}
+      >
+        <div className="flex items-center gap-2">
+          <span className="tossface text-[22px] leading-none">🗂️</span>
+          <span className="text-[17px] font-semibold" style={{ color: '#111' }}>대화 목록</span>
+        </div>
+        <Link href="/me" className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-3 transition-all active:scale-90 active:bg-zinc-100">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+          <span className="text-[10px] font-medium" style={{ color: '#888' }}>내 정보</span>
         </Link>
       </div>
 
+      {/* 수직 인디케이터 */}
+      {!isPending && scenarios.length > 0 && (
+        <div className="absolute right-1.5 top-1/2 z-20 flex flex-col items-center gap-1.5 -translate-y-1/2">
+          {Array.from({ length: totalDots }).map((_, i) => {
+            const isLast = i === totalDots - 1;
+            const isActive = i === activeIndex;
+            const lockColor = isActive ? '#111' : '#ccc';
+            if (isLast && !allCompleted) {
+              return (
+                <svg key={i} width="10" height="12" viewBox="0 0 10 12" fill="none">
+                  <rect x="1" y="4.5" width="8" height="7" rx="1.5" fill={lockColor} />
+                  <path d="M3 4.5V3a2 2 0 1 1 4 0v1.5" stroke={lockColor} strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              );
+            }
+            return (
+              <div
+                key={i}
+                className="rounded-full transition-all duration-300"
+                style={{
+                  width: 6,
+                  height: isActive ? 20 : 6,
+                  background: isActive ? '#111' : '#ccc',
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
       {/* 시나리오 목록 */}
       <div className="relative flex-1 overflow-hidden">
-        {/* 공항 배경 이미지 */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          backgroundImage: 'url(/background1.png)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center 20%',
-          opacity: 0.32,
-          filter: 'sepia(8%) brightness(1.02)',
-          pointerEvents: 'none',
-        }} />
-        <div
-          ref={scrollRef}
-          className="no-scrollbar relative z-10 h-full overflow-y-auto overscroll-y-contain"
-          style={{ scrollBehavior: 'smooth' }}
-          onScroll={() => {
-            if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-            scrollTimerRef.current = setTimeout(() => {}, 150);
-          }}
-        >
-          {isPending ? (
-            <div className="mt-6 flex flex-col items-center px-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex w-full flex-col items-center">
-                  <div className="relative">
-                    <div className="h-22 w-22 skeleton rounded-full bg-card" />
-                    <div className="absolute -bottom-1 -right-1 h-5 w-5 skeleton rounded-full bg-card" />
-                  </div>
-                  <div className="mt-2 h-4 w-28 skeleton rounded bg-card" />
-                  {i < 2 && (
-                    <div className="my-3 flex flex-col items-center gap-1">
-                      {Array.from({ length: 3 }).map((_, j) => (
-                        <div key={j} className="h-1.5 w-1.5 rounded-full bg-border" />
-                      ))}
-                    </div>
-                  )}
+        {isPending ? (
+          <div className="flex flex-col gap-4 px-5 pt-16">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="w-full rounded-[20px] overflow-hidden bg-card shadow-sm">
+                <div className="skeleton w-full bg-border" style={{ aspectRatio: '4/3' }} />
+                <div className="px-4 py-4 space-y-2">
+                  <div className="skeleton h-5 w-40 rounded bg-border" />
+                  <div className="skeleton h-4 w-full rounded bg-border" />
                 </div>
-              ))}
-            </div>
-          ) : activeCategory ? (
-            <ScenarioBadgeList
-              scenarios={activeCategory.scenarios.slice(0, 3)}
-              newlyUnlockedIds={newlyUnlockedIds}
-              onStart={handleStart}
-            />
-          ) : null}
-        </div>
+              </div>
+            ))}
+          </div>
+        ) : activeCategory ? (
+          <Swiper
+            direction="vertical"
+            slidesPerView={1}
+            spaceBetween={0}
+
+            style={{ height: 'calc(100% - 80px)', marginTop: 40, overflow: 'visible' }}
+            onSwiper={(swiper) => { swiperInstanceRef.current = swiper; }}
+            onSlideChange={(swiper: SwiperType) => setActiveIndex(swiper.activeIndex)}
+          >
+            {scenarios.map((scenario, index) => (
+              <SwiperSlide key={scenario.scenarioId}>
+                <div style={{ padding: '14px 20px', height: '100%', boxSizing: 'border-box' }}>
+                  <motion.div
+                    style={{ height: '100%' }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.08, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                  >
+                    <ScenarioCard scenario={scenario} onStart={handleStart} isUnlocking={unlockedCardIndex === index} />
+                  </motion.div>
+                </div>
+              </SwiperSlide>
+            ))}
+
+            <SwiperSlide style={{ height: 'calc(100% + 80px)' }}>
+              <div className="flex flex-col items-center justify-center h-full gap-4">
+                {allCompleted ? (
+                  <>
+                    <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/1f389/512.gif" alt="🎉" style={{ width: 120, height: 120 }} />
+                    <div className="text-center px-6">
+                      <p className="text-[26px] font-extrabold leading-snug" style={{ color: '#222' }}>세 상황을 모두 해보셨네요!</p>
+                      <p className="text-[18px] font-medium mt-3" style={{ color: '#888' }}>더 많은 상황으로 곧 찾아올게요!</p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <img src="https://fonts.gstatic.com/s/e/notoemoji/latest/2753/512.gif" alt="❓" style={{ width: 120, height: 120 }} />
+                    <div className="text-center px-6">
+                      <p className="text-[26px] font-extrabold leading-snug" style={{ color: '#222' }}>다음 상황이 기다리고 있어요</p>
+                      <p className="text-[18px] font-medium mt-3" style={{ color: '#888' }}>먼저 세 개의 대화를 모두 끝내보세요!</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </SwiperSlide>
+          </Swiper>
+        ) : null}
       </div>
 
       {/* 서베이 */}
@@ -192,136 +250,75 @@ function Home() {
   );
 }
 
-interface ScenarioBadgeListProps {
-  scenarios: ApiScenario[];
-  newlyUnlockedIds: Set<number>;
-  onStart: (scenario: ApiScenario) => void;
-}
-
-function ScenarioBadgeList({ scenarios, newlyUnlockedIds, onStart }: ScenarioBadgeListProps) {
-  return (
-    <div className="relative mt-16 flex flex-col items-center px-4">
-      {scenarios.map((scenario, index) => (
-        <motion.div
-          key={scenario.scenarioId}
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.12, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-          className="flex w-full flex-col items-center"
-        >
-          <ScenarioBadgeItem
-            scenario={scenario}
-            isNewlyUnlocked={newlyUnlockedIds.has(scenario.scenarioId)}
-            onStart={onStart}
-          />
-        </motion.div>
-      ))}
-
-      {/* 더 많은 시나리오 예고 */}
-      {(() => {
-        const allCompleted = scenarios.every((s) => s.completed);
-        return (
-          <div className="flex flex-col items-center pb-10">
-            <span className={`text-4xl transition-opacity duration-500 ${allCompleted ? 'opacity-100' : 'opacity-40'}`}>☁️</span>
-            <p className={`mt-2 text-sm font-semibold transition-opacity duration-500 ${allCompleted ? 'opacity-100' : 'opacity-40'}`}
-              style={{ color: '#111111', textShadow: '0 1px 4px rgba(251,251,250,0.9), 0 0 8px rgba(251,251,250,0.7)' }}>
-              더 많은 시나리오가 곧 공개돼요
-            </p>
-          </div>
-        );
-      })()}
-    </div>
-  );
-}
-
-interface ScenarioBadgeItemProps {
-  scenario: ApiScenario;
-  isNewlyUnlocked: boolean;
-  onStart: (scenario: ApiScenario) => void;
-}
-
-// 잠금 해제됐지만 아직 클리어 안 한 첫 번째 시나리오인지 판단하는 헬퍼
-function isNextTarget(scenario: ApiScenario): boolean {
-  return !scenario.locked && !scenario.completed && scenario.lockReason === null;
-}
-
-function ScenarioBadgeItem({ scenario, isNewlyUnlocked, onStart }: ScenarioBadgeItemProps) {
+function ScenarioCard({ scenario, onStart, isUnlocking = false }: { scenario: ApiScenario; onStart: (s: ApiScenario) => void; isUnlocking?: boolean }) {
   const isLocked = scenario.locked;
-  const isCompleted = scenario.completed;
   const isComingSoon = scenario.lockReason === 'COMING_SOON';
-  const isTarget = isNextTarget(scenario);
-
-  // unlock 애니메이션: 자물쇠가 열리면 잠깐 lock 아이콘을 보여주다가 이모지로 전환
-  const [showUnlockAnim, setShowUnlockAnim] = useState(false);
+  const isCompleted = scenario.completed;
+  // 해금 애니메이션: isUnlocking이면 잠긴 상태(흑백)로 시작해서 컬러로 전환
+  const [showAsUnlocked, setShowAsUnlocked] = useState(false);
   useEffect(() => {
-    if (isNewlyUnlocked) {
-      setShowUnlockAnim(true);
-      const t = setTimeout(() => setShowUnlockAnim(false), 1800);
-      return () => clearTimeout(t);
-    }
-  }, [isNewlyUnlocked]);
+    if (!isUnlocking) return;
+    const t = setTimeout(() => setShowAsUnlocked(true), 300);
+    return () => clearTimeout(t);
+  }, [isUnlocking]);
+  const appearLocked = isLocked && !(isUnlocking && showAsUnlocked);
 
   return (
-    <>
-      {/* 뱃지 버튼 */}
-      <button
-        onClick={() => onStart(scenario)}
-        style={{ width: 88, height: 88 }}
-        className={`relative flex items-center justify-center rounded-full transition-all duration-150 ${
-          isComingSoon
-            ? 'bg-card shadow-md cursor-default overflow-hidden'
-            : isLocked
-              ? 'bg-[#E0E0DC] text-muted-foreground shadow-[0_6px_0_#9ca3af] active:shadow-[0_2px_0_#9ca3af] active:translate-y-1'
-              : isCompleted
-                ? 'bg-[#FFF4ED] ring-1 ring-primary/10 overflow-hidden shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'
-                : isTarget
-                  ? 'bg-[#FFF4ED] ring-1 ring-primary/10 badge-shimmer overflow-hidden shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'
-                  : 'bg-[#FFF4ED] ring-1 ring-primary/10 shadow-[0_6px_0_#e8b48e] active:shadow-[0_2px_0_#e8b48e] active:translate-y-1'
-        }`}
-      >
-        {isComingSoon ? (
-          <>
-            <span className="tossface text-3xl opacity-20 blur-[2px]">{scenario.scenarioEmoji ?? '🗣️'}</span>
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5 bg-card/60">
-              <span className="text-xl leading-none">☁️</span>
-              <span className="text-[9px] font-bold text-muted-foreground/70">준비 중</span>
-            </div>
-          </>
-        ) : isLocked && !showUnlockAnim ? (
-          <>
-            <span className="tossface text-3xl opacity-40">{scenario.scenarioEmoji ?? '🗣️'}</span>
-            <div className="absolute inset-0 flex items-center justify-center rounded-full bg-card/60">
-              <Lock size={22} className="text-muted-foreground" />
-            </div>
-          </>
-        ) : showUnlockAnim ? (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key="unlock"
-              className="flex flex-col items-center justify-center"
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: [0.4, 1.3, 1], opacity: 1 }}
-              transition={{ duration: 0.55, times: [0, 0.6, 1], ease: 'easeOut' }}
-            >
-              <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
-            </motion.div>
-          </AnimatePresence>
-        ) : (
-          <span className="tossface text-3xl">{scenario.scenarioEmoji ?? '🗣️'}</span>
+    <div className="w-full h-full flex flex-col rounded-[20px] overflow-hidden bg-card shadow-md">
+      {/* 이미지 섹션 */}
+      <div className="relative overflow-hidden" style={{ flex: 3, minHeight: 0, background: '#2a2a2a' }}>
+        <img
+          src={getScenarioImage(scenario.scenarioId)}
+          alt={scenario.scenarioTitle}
+          className="w-full h-full object-cover"
+          style={{ filter: appearLocked ? 'grayscale(100%) brightness(0.7)' : 'grayscale(0%) brightness(1)', transition: isUnlocking ? 'filter 1s ease' : 'filter 0.5s ease' }}
+        />
+        {isCompleted && (
+          <div className="absolute top-3 right-3 rounded-full p-1.5" style={{ background: '#22c55e' }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2.5 7L5.5 10L11.5 4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
         )}
-      </button>
-
-      {/* 제목 */}
-      <p className={`mt-2 text-sm font-semibold ${isComingSoon ? 'text-muted-foreground/50' : isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
-        {isComingSoon ? '???' : scenario.scenarioTitle}
-      </p>
-
-      {/* 점선 커넥터 */}
-      <div className="my-3 flex flex-col items-center gap-1">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-1.5 w-1.5 rounded-full bg-border" />
-        ))}
+        {isComingSoon && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/40">
+            <span className="text-3xl">☁️</span>
+            <span className="text-sm font-bold text-white">준비 중이에요</span>
+          </div>
+        )}
       </div>
-    </>
+
+      {/* 텍스트 + CTA */}
+      <div className="flex flex-col px-5 pt-5 pb-5" style={{ flex: 1, minHeight: 0 }}>
+        <div>
+          <p className={`text-[24px] font-extrabold leading-snug ${isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
+            {isComingSoon ? '???' : scenario.scenarioTitle}
+          </p>
+          {!isComingSoon && scenario.briefing && (
+            <p className="mt-2 text-[16px] font-medium text-muted-foreground leading-relaxed line-clamp-2">
+              {scenario.briefing}
+            </p>
+          )}
+        </div>
+        <div className="mt-auto">
+          {isLocked ? (
+            <div
+              onClick={() => toast('앞선 시나리오를 먼저 클리어해봐요!')}
+              className="flex w-full h-14 items-center justify-center gap-1.5 rounded-2xl text-base font-bold cursor-pointer"
+              style={{ background: '#EBEBEA', color: '#AAAAAA' }}
+            >
+              잠겨있어요&nbsp;<Lock size={16} />
+            </div>
+          ) : (
+            <Button
+              onClick={() => onStart(scenario)}
+              variant={isCompleted ? 'secondary' : 'primary'}
+            >
+              {isCompleted ? <>다시 해볼게요&nbsp;<ArrowRight size={16} /></> : <>시작할게요&nbsp;<ArrowRight size={16} /></>}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
