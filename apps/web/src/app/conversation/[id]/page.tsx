@@ -2,8 +2,8 @@
 'use client';
 
 import { use, useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ChevronLeft, Mic } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { ChevronLeft, Mic, Send } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { startSession, submitUtterance, abandonSession, createFeedback } from '@/lib/api';
@@ -44,6 +44,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [showExitModal, setShowExitModal] = useState(false);
   const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
   const [bgBlurred, setBgBlurred] = useState(false);
+
+  const searchParams = useSearchParams();
+  // ── DEBUG ONLY: ?debug=1 일 때만 텍스트 입력 활성화 (테스트용, 제거 쉽게 분리) ──
+  const isDebug = searchParams.get('debug') === '1';
+  const [debugText, setDebugText] = useState('');
+  // ── END DEBUG ──
 
   const { speak, stop } = useTts();
   const queryClient = useQueryClient();
@@ -395,7 +401,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     );
   }
 
-  const bgImageUrl = getScenarioImage(Number(id), 'play');
+  const bgImageUrl = getScenarioImage(Number(id));
 
   return (
     <motion.main
@@ -406,10 +412,10 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     >
       {/* 배경 이미지 */}
       <div
-        className='absolute inset-0 bg-cover bg-center transition-[filter] duration-[800ms] ease-in-out'
+        className='absolute inset-0 bg-cover bg-center'
         style={{
           backgroundImage: `url(${bgImageUrl})`,
-          filter: bgBlurred ? 'blur(14px) brightness(0.35) saturate(0.8)' : 'none',
+          filter: bgBlurred ? 'blur(40px) brightness(0.35) saturate(0.8)' : 'blur(3px) brightness(0.3)',
           transform: bgBlurred ? 'scale(1.06)' : 'scale(1)',
           transition: 'filter 800ms ease, transform 800ms ease',
           backgroundColor: '#a07860',
@@ -554,8 +560,37 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               </button>
             </motion.div>
           ) : (
-            /* idle — 말하기 버튼 */
-            <motion.div key='idle'>
+            /* idle — 말하기 버튼 (+ debug 텍스트 입력) */
+            <motion.div key='idle' className='space-y-2'>
+              {/* ── DEBUG ONLY: 텍스트로 제출 (제거 시 이 블록만 삭제) ── */}
+              {isDebug && (
+                <div className='flex gap-2'>
+                  <input
+                    className='flex-1 rounded-xl bg-white/90 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none'
+                    placeholder='텍스트로 입력 (debug)'
+                    value={debugText}
+                    onChange={(e) => setDebugText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && debugText.trim()) {
+                        submitUserUtterance(debugText.trim());
+                        setDebugText('');
+                      }
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      if (debugText.trim()) {
+                        submitUserUtterance(debugText.trim());
+                        setDebugText('');
+                      }
+                    }}
+                    className='flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white'
+                  >
+                    <Send size={16} />
+                  </button>
+                </div>
+              )}
+              {/* ── END DEBUG ── */}
               <Button onClick={handleMicPress}>
                 <Mic size={20} className='text-white' />
                 <span className='text-sm font-semibold text-white'>말하기</span>
