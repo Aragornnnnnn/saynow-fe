@@ -115,12 +115,10 @@ function LoginPageContent() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
-      <div className="w-full">
-        <span className="text-lg font-bold text-primary tracking-tight">SayNow</span>
-      </div>
+      <div className="w-full" />
       <div className="flex-1 flex flex-col items-center justify-center gap-6">
         <div className="text-center space-y-3">
-          <h1 className="text-2xl font-bold text-foreground leading-snug">
+          <h1 className="text-3xl font-bold text-foreground leading-snug">
             외국인한테<br />내 영어가 통할지 알려드려요
           </h1>
           <p className="text-lg text-muted-foreground h-7">
