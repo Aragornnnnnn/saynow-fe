@@ -1,20 +1,12 @@
 'use client';
 
+// 내 정보 페이지 — 프로필 헤더 + 메뉴 목록
+
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import {
-  ArrowLeft,
-  ChevronRight,
-  FileText,
-  FlaskConical,
-  LogOut,
-  ShieldCheck,
-  UserRound,
-  UserX,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { clearNativeAuthSession } from '@/bridge/commands';
 import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
@@ -35,9 +27,8 @@ export default function MyPage() {
 
   if (!isReady) return null;
 
-  const displayName = member?.nickname?.trim() || member?.email || 'SayNow 사용자';
-  const emailText = member?.email ?? '이메일 정보 없음';
-  const providerText = getProviderLabel(member?.provider);
+  const displayName = member?.nickname?.trim() || 'SayNow 사용자';
+  const emailText = member?.email ?? '';
 
   function finishSignedOut() {
     clearAuth();
@@ -47,12 +38,9 @@ export default function MyPage() {
 
   async function handleLogout() {
     if (isLoggingOut) return;
-
     setIsLoggingOut(true);
     try {
-      if (refreshToken) {
-        await requestLogout(refreshToken);
-      }
+      if (refreshToken) await requestLogout(refreshToken);
     } catch (error) {
       console.warn('[Auth] logout failed:', error);
     } finally {
@@ -63,7 +51,6 @@ export default function MyPage() {
 
   async function handleDeleteAccount() {
     if (isDeletingAccount) return;
-
     setIsDeletingAccount(true);
     setDeleteErrorMessage(null);
     try {
@@ -84,92 +71,99 @@ export default function MyPage() {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
     >
-      <header className="flex items-center gap-3 px-4 pb-3" style={{ paddingTop: 'max(env(safe-area-inset-top), 24px)' }}>
+      {/* 헤더 */}
+      <header
+        className="relative flex items-center px-4"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 8, borderBottom: '1px solid #ebebeb' }}
+      >
         <button
           type="button"
           onClick={goHome}
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors active:bg-secondary"
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-all active:scale-90 active:bg-zinc-200"
+          style={{ color: '#444', marginLeft: -4 }}
           aria-label="뒤로 가기"
         >
-          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+          <ChevronLeft size={22} strokeWidth={2} />
         </button>
-        <h1 className="text-xl font-bold text-foreground">내 정보</h1>
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold" style={{ color: '#111' }}>
+          내 정보
+        </h1>
       </header>
 
-      <div className="no-scrollbar flex-1 overflow-y-auto px-4 pb-6">
-        <section className="mb-6 rounded-xl border border-border bg-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-secondary text-primary">
-              <UserRound className="h-6 w-6" aria-hidden="true" />
+      <div className="no-scrollbar flex-1 overflow-y-auto" style={{ background: '#F2F2F7' }}>
+        {/* 프로필 섹션 */}
+        <div className="px-5 pb-5 pt-6">
+          <div className="flex items-center gap-4">
+            {/* 아바타 */}
+            <div
+              className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full text-4xl"
+              style={{ background: '#E8F4E8' }}
+            >
+              🐨
             </div>
+
+            {/* 이름 + 이메일 */}
             <div className="min-w-0">
-              <p className="truncate text-base font-semibold text-foreground">{displayName}</p>
-              <p className="truncate text-sm text-muted-foreground">{emailText}</p>
+              <p className="text-[22px] font-bold leading-tight" style={{ color: '#111' }}>
+                {displayName}
+              </p>
+              {emailText ? (
+                <p className="mt-0.5 truncate text-[14px]" style={{ color: '#888' }}>
+                  {emailText}
+                </p>
+              ) : null}
             </div>
           </div>
-          <dl className="mt-4 grid grid-cols-2 gap-2 text-sm">
-            <div className="rounded-lg bg-secondary px-3 py-2">
-              <dt className="text-xs text-muted-foreground">로그인 방식</dt>
-              <dd className="mt-0.5 font-medium text-foreground">{providerText}</dd>
-            </div>
-            <div className="rounded-lg bg-secondary px-3 py-2">
-              <dt className="text-xs text-muted-foreground">회원 ID</dt>
-              <dd className="mt-0.5 truncate font-medium text-foreground">
-                {member?.userId ?? '-'}
-              </dd>
-            </div>
-          </dl>
-        </section>
 
-        <section className="overflow-hidden rounded-xl border border-border bg-card">
-          <MenuLink
-            href="/me/privacy"
-            icon={ShieldCheck}
-            title="개인정보 처리방침"
-          />
-          <MenuLink
-            href="/me/terms"
-            icon={FileText}
-            title="서비스 이용약관"
-          />
-        </section>
+          {/* 통계 칩 */}
+          <div className="mt-4 flex gap-2">
+            <StatChip label="연습 횟수" value={`${member?.userId ? '-' : '0'}회`} />
+            <StatChip label="로그인" value={getProviderLabel(member?.provider)} />
+          </div>
+        </div>
 
-        <section className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-          <MenuLink
-            href="/stt-test"
-            icon={FlaskConical}
-            title="실험실 — STT 인식률 테스트"
-          />
-        </section>
+        {/* 메뉴 그룹 */}
+        <div className="px-4 pb-8 space-y-3">
+          {/* 약관 그룹 */}
+          <MenuGroup>
+            <MenuLink href="/me/privacy" title="개인정보 처리방침" />
+            <MenuLink href="/me/terms" title="서비스 이용약관" />
+          </MenuGroup>
 
-        <section className="mt-4 overflow-hidden rounded-xl border border-border bg-card">
-          <MenuButton
-            icon={UserX}
-            title="회원탈퇴"
-            tone="danger"
-            onClick={() => {
-              setDeleteErrorMessage(null);
-              setIsDeleteDialogOpen(true);
-            }}
-          />
-          <MenuButton
-            icon={LogOut}
-            title={isLoggingOut ? '로그아웃 중' : '로그아웃'}
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-          />
-        </section>
+          {/* 실험실 */}
+          <MenuGroup>
+            <MenuLink href="/stt-test" title="실험실 — STT 인식률 테스트" />
+          </MenuGroup>
+
+          {/* 계정 관리 */}
+          <MenuGroup>
+            <MenuButton
+              title={isLoggingOut ? '로그아웃 중...' : '로그아웃'}
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+            />
+            <MenuButton
+              title="회원탈퇴"
+              tone="danger"
+              onClick={() => {
+                setDeleteErrorMessage(null);
+                setIsDeleteDialogOpen(true);
+              }}
+            />
+          </MenuGroup>
+        </div>
       </div>
 
+      {/* 회원탈퇴 확인 바텀시트 */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 z-50 flex items-end bg-black/40 px-4 pb-4">
-          <div className="w-full rounded-xl bg-card p-5 shadow-lg">
-            <h2 className="text-lg font-bold text-foreground">회원탈퇴</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+          <div className="w-full rounded-2xl bg-white p-5 shadow-lg">
+            <h2 className="text-[17px] font-bold" style={{ color: '#111' }}>회원탈퇴</h2>
+            <p className="mt-2 text-[14px] leading-6" style={{ color: '#666' }}>
               계정과 이용 기록이 삭제됩니다. 계속 진행할까요?
             </p>
             {deleteErrorMessage && (
-              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">
                 {deleteErrorMessage}
               </p>
             )}
@@ -181,7 +175,7 @@ export default function MyPage() {
                 onClick={() => setIsDeleteDialogOpen(false)}
                 disabled={isDeletingAccount}
               >
-                취소
+                닫기
               </Button>
               <Button
                 type="button"
@@ -191,7 +185,7 @@ export default function MyPage() {
                 loading={isDeletingAccount}
                 disabled={isDeletingAccount}
               >
-                {isDeletingAccount ? '처리 중' : '탈퇴하기'}
+                {isDeletingAccount ? '처리 중' : '탈퇴할게요'}
               </Button>
             </div>
           </div>
@@ -201,62 +195,73 @@ export default function MyPage() {
   );
 }
 
-function MenuLink({
-  href,
-  icon: Icon,
-  title,
-}: {
-  href: string;
-  icon: LucideIcon;
-  title: string;
-}) {
+function StatChip({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      className="flex flex-col rounded-xl px-3.5 py-2.5"
+      style={{ background: '#fff', minWidth: 80 }}
+    >
+      <span className="text-[11px]" style={{ color: '#999' }}>{label}</span>
+      <span className="mt-0.5 text-[15px] font-semibold" style={{ color: '#111' }}>{value}</span>
+    </div>
+  );
+}
+
+function MenuGroup({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="overflow-hidden rounded-xl" style={{ background: '#fff' }}>
+      {children}
+    </div>
+  );
+}
+
+function MenuLink({ href, title }: { href: string; title: string }) {
   return (
     <Link
       href={href}
-      className="flex min-h-14 items-center gap-3 border-b border-border px-4 text-left last:border-b-0 active:bg-secondary"
+      className="flex min-h-[52px] items-center justify-between border-b px-4 last:border-b-0 active:bg-gray-50"
+      style={{ borderColor: '#F2F2F7' }}
     >
-      <Icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
-      <span className="flex-1 text-sm font-medium text-foreground">{title}</span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+      <span className="text-[15px]" style={{ color: '#111' }}>{title}</span>
+      <ChevronRight className="h-4 w-4 shrink-0" style={{ color: '#C7C7CC' }} aria-hidden="true" />
     </Link>
   );
 }
 
 function MenuButton({
-  icon: Icon,
   title,
   tone = 'default',
   disabled,
   onClick,
 }: {
-  icon: LucideIcon;
   title: string;
   tone?: 'default' | 'danger';
   disabled?: boolean;
   onClick: () => void;
 }) {
-  const textColor = tone === 'danger' ? 'text-red-600' : 'text-foreground';
-
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex min-h-14 w-full items-center gap-3 border-b border-border px-4 text-left last:border-b-0 active:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
+      className="flex min-h-[52px] w-full items-center justify-between border-b px-4 last:border-b-0 active:bg-gray-50 disabled:opacity-50"
+      style={{ borderColor: '#F2F2F7' }}
     >
-      <Icon className={`h-5 w-5 shrink-0 ${tone === 'danger' ? 'text-red-500' : 'text-muted-foreground'}`} aria-hidden="true" />
-      <span className={`flex-1 text-sm font-medium ${textColor}`}>{title}</span>
+      <span
+        className="text-[15px]"
+        style={{ color: tone === 'danger' ? '#FF3B30' : '#111' }}
+      >
+        {title}
+      </span>
+      <ChevronRight className="h-4 w-4 shrink-0" style={{ color: '#C7C7CC' }} aria-hidden="true" />
     </button>
   );
 }
 
 function getProviderLabel(provider?: string) {
   switch (provider) {
-    case 'GOOGLE':
-      return '구글';
-    case 'KAKAO':
-      return '카카오';
-    default:
-      return '알 수 없음';
+    case 'GOOGLE': return '구글';
+    case 'KAKAO': return '카카오';
+    default: return '-';
   }
 }
