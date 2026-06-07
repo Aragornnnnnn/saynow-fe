@@ -22,7 +22,7 @@ import { IntroStep } from './_steps/IntroStep';
 import { SoundStep } from './_steps/SoundStep';
 import { MicStep } from './_steps/MicStep';
 import { ScenarioStep } from './_steps/ScenarioStep';
-import { STEP_ORDER, FALLBACK_QUESTION, type OnboardingStep, type MicPermissionState } from './_types';
+import { STEP_ORDER, FALLBACK_QUESTION, SOUND_QUESTIONS, type OnboardingStep, type MicPermissionState } from './_types';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -37,7 +37,8 @@ export default function OnboardingPage() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [scenarioUnlocked, setScenarioUnlocked] = useState(false);
   const [soundBubbleVisible, setSoundBubbleVisible] = useState(false);
-  const [soundResetKey, setSoundResetKey] = useState(0);
+  const [soundQuestion, setSoundQuestion] = useState(FALLBACK_QUESTION);
+  const lastQuestionIndexRef = useRef(0);
   const micTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const micDeniedRef = useRef(false);
 
@@ -85,15 +86,51 @@ export default function OnboardingPage() {
     } catch {}
   }
 
-  const playQuestion = useCallback(() => {
-    speak(FALLBACK_QUESTION, null, {
-      onStart: () => setIsSpeaking(true),
-      onEnd: () => setIsSpeaking(false),
+  const soundStepActiveRef = useRef(false);
+  const playQuestionRef = useRef<(isRepeat?: boolean) => void>(() => {});
+
+  const playQuestion = useCallback((isRepeat = false) => {
+    const nextQuestion = (() => {
+      if (!isRepeat) return FALLBACK_QUESTION;
+      let idx = lastQuestionIndexRef.current;
+      do { idx = Math.floor(Math.random() * SOUND_QUESTIONS.length); }
+      while (idx === lastQuestionIndexRef.current && SOUND_QUESTIONS.length > 1);
+      lastQuestionIndexRef.current = idx;
+      return SOUND_QUESTIONS[idx];
+    })();
+
+    if (isRepeat) {
+      setSoundBubbleVisible(false);
+      setTimeout(() => {
+        setSoundQuestion(nextQuestion);
+        setSoundBubbleVisible(true);
+        playDing();
+        setIsSpeaking(true);
+        speak(nextQuestion, null, {
+          onEnd: () => {
+            setIsSpeaking(false);
+            if (soundStepActiveRef.current) {
+              setTimeout(() => { if (soundStepActiveRef.current) playQuestionRef.current(true); }, 1400);
+            }
+          },
+        });
+      }, 300);
+      return;
+    }
+    setIsSpeaking(true);
+    speak(nextQuestion, null, {
+      onEnd: () => {
+        setIsSpeaking(false);
+        if (soundStepActiveRef.current) {
+          setTimeout(() => { if (soundStepActiveRef.current) playQuestionRef.current(true); }, 1400);
+        }
+      },
     });
   }, [speak]);
 
+  playQuestionRef.current = playQuestion;
+
   const handleSoundPlay = useCallback(() => {
-    setSoundResetKey((k) => k + 1);
     playDing();
     if (!soundBubbleVisible) {
       setTimeout(() => {
@@ -107,8 +144,10 @@ export default function OnboardingPage() {
 
   useEffect(() => {
     if (step !== 'sound') return;
+    soundStepActiveRef.current = true;
     const timer = setTimeout(() => handleSoundPlay(), 600);
     return () => {
+      soundStepActiveRef.current = false;
       clearTimeout(timer);
       stop();
       setIsSpeaking(false);
@@ -191,11 +230,9 @@ export default function OnboardingPage() {
         {step === 'sound' && (
           <StepMotion key="sound">
             <SoundStep
-              question={FALLBACK_QUESTION}
+              question={soundQuestion}
               isSpeaking={isSpeaking}
               bubbleVisible={soundBubbleVisible}
-              resetKey={soundResetKey}
-              onReplay={handleSoundPlay}
               onNext={() => goToStep('mic')}
             />
           </StepMotion>
