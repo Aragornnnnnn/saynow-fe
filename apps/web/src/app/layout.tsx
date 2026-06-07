@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { Toaster } from "@/components/ui/Toast";
 import { MSWProvider } from "@/mocks/MSWProvider";
 import "./globals.css";
 
@@ -76,6 +77,7 @@ export default function RootLayout({
             <QueryProvider>{children}</QueryProvider>
           </MSWProvider>
         </div>
+        <Toaster />
         <Analytics />
       </body>
     </html>
