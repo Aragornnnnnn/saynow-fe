@@ -3,12 +3,11 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Lock, ArrowRight } from 'lucide-react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
-import { SurveySheet } from '@/components/SurveySheet';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { exitApp } from '@/bridge/commands';
@@ -38,11 +37,6 @@ function Home() {
   const refreshToken = useAuthStore((s) => s.refreshToken);
   const member = useAuthStore((s) => s.member);
   const [isRedirectingToOnboarding, setIsRedirectingToOnboarding] = useState(false);
-  const [showSurvey, setShowSurvey] = useState(() => searchParams.get('survey') === 'true');
-  const [surveySessionId] = useState(() =>
-    searchParams.get('survey') === 'true' ? Number(searchParams.get('sessionId')) || null : null
-  );
-
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperInstanceRef = useRef<SwiperType | null>(null);
   const isUnlockMode = searchParams.get('unlocked') === 'true';
@@ -70,16 +64,14 @@ function Home() {
   useEffect(() => {
     if (!isUnlockMode || isPending || !data) return;
     const scenarios = data.categories.find((c) => !c.categoryLocked)?.scenarios.slice(0, 3) ?? [];
-    const newlyUnlocked = scenarios.findIndex((s) => !s.locked);
-    if (newlyUnlocked <= 0) return;
-    // 1번 카드(index 0)에서 시작
+    // 잠기지 않은 카드 중 가장 마지막 — 방금 해금된 카드
+    const unlockedIndex = scenarios.reduce((last, s, i) => (!s.locked ? i : last), -1);
+    if (unlockedIndex <= 0) return; // 0이면 1번만 해금된 것 — 애니메이션 불필요
     swiperInstanceRef.current?.slideTo(0, 0);
     setActiveIndex(0);
-    // 잠금 해제 카드 표시 (컬러 전환)
-    setUnlockedCardIndex(newlyUnlocked);
-    // 잠시 후 해당 카드로 슬라이드
+    setUnlockedCardIndex(unlockedIndex);
     const timer = setTimeout(() => {
-      swiperInstanceRef.current?.slideTo(newlyUnlocked, 600);
+      swiperInstanceRef.current?.slideTo(unlockedIndex, 600);
     }, 1200);
     return () => clearTimeout(timer);
   }, [isUnlockMode, isPending, data]);
@@ -238,13 +230,6 @@ function Home() {
           </Swiper>
         ) : null}
       </div>
-
-      {/* 서베이 */}
-      <AnimatePresence>
-        {showSurvey && (
-          <SurveySheet sessionId={surveySessionId} onDone={() => { setShowSurvey(false); router.replace('/'); }} />
-        )}
-      </AnimatePresence>
 
     </motion.main>
   );

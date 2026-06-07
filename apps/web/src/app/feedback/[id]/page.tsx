@@ -164,7 +164,7 @@ function TurnDetailView({
 
   function goNext() {
     if (!isLast) setIndex((i) => i + 1);
-    else router.replace(`/?survey=true&sessionId=${sessionId}&unlocked=true`);
+    else router.replace('/?unlocked=true');
   }
 
   function goPrev() {
