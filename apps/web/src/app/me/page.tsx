@@ -30,7 +30,19 @@ export default function MyPage() {
   const [isDeleteSheetOpen, setIsDeleteSheetOpen] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
   const [isFeedbackSheetOpen, setIsFeedbackSheetOpen] = useState(false);
+  const [labTapCount, setLabTapCount] = useState(0);
   const goHome = useBackButtonReplace('/');
+
+  function handleLabTap() {
+    setLabTapCount((n) => {
+      const next = n + 1;
+      if (next >= 6) {
+        router.push('/stt-test');
+        return 0;
+      }
+      return next;
+    });
+  }
 
   if (!isReady) return null;
 
@@ -121,7 +133,7 @@ export default function MyPage() {
 
           <div className="mt-4 flex gap-2">
             <StatChip label="연습 횟수" value={`${member?.userId ? '-' : '0'}회`} />
-            <StatChip label="로그인" value={getProviderLabel(member?.provider)} />
+            <StatChip label="로그인" value={getProviderLabel(member?.provider)} onClick={handleLabTap} />
           </div>
         </div>
 
@@ -139,11 +151,6 @@ export default function MyPage() {
               title="서비스 피드백"
               onClick={() => setIsFeedbackSheetOpen(true)}
             />
-          </MenuGroup>
-
-          {/* 실험실 */}
-          <MenuGroup>
-            <MenuLink href="/stt-test" title="실험실 — STT 인식률 테스트" />
           </MenuGroup>
 
           {/* 계정 관리 */}
@@ -332,11 +339,12 @@ function FeedbackSheetContent({ onDone }: { onDone: () => void }) {
 
 // ─── 서브 컴포넌트 ────────────────────────────────────────────────────────────
 
-function StatChip({ label, value }: { label: string; value: string }) {
+function StatChip({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) {
   return (
     <div
       className="flex flex-col rounded-xl px-3.5 py-2.5"
       style={{ background: '#fff', minWidth: 80 }}
+      onClick={onClick}
     >
       <span className="text-[11px]" style={{ color: '#999' }}>{label}</span>
       <span className="mt-0.5 text-[15px] font-semibold" style={{ color: '#111' }}>{value}</span>
