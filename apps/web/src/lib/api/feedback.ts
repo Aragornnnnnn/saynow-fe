@@ -7,17 +7,17 @@ export interface ApiTurnFeedback {
   originalQuestion: string;
   translatedQuestion: string;
   userUtterance: string;
-  feedbackType: string;
+  feedbackType: 'GOOD' | 'NEEDS_IMPROVEMENT';
   koreanAnalogy: string | null;
+  positiveFeedback: string | null;
   feedbackDetail: string | null;
-  betterExpression: string | null;
+  benchmarkMessage: string | null;
 }
 
 export interface ApiFeedback {
   sessionId: number;
   nativeScore: number;
-  nativeLevelLabel: string;
-  summary: string;
+  highlightMessage: string;
   turnFeedbacks: ApiTurnFeedback[];
 }
 
