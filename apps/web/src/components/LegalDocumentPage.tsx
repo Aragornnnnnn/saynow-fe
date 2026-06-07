@@ -1,6 +1,8 @@
 'use client';
 
-import { ArrowLeft } from 'lucide-react';
+// 개인정보 처리방침 / 이용약관 공통 레이아웃
+
+import { ChevronLeft } from 'lucide-react';
 import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 import type { LegalDocument } from '@/lib/legalDocuments';
 
@@ -10,82 +12,90 @@ interface LegalDocumentPageProps {
   backLabel: string;
 }
 
-export function LegalDocumentPage({
-  document,
-  backHref,
-  backLabel,
-}: LegalDocumentPageProps) {
+export function LegalDocumentPage({ document, backHref, backLabel }: LegalDocumentPageProps) {
   const goBack = useBackButtonReplace(backHref);
 
   return (
-    <main className="min-h-dvh bg-background text-foreground">
-      <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[760px] items-center gap-3 px-4 pb-3 pt-6 sm:px-8">
-          <button
-            type="button"
-            onClick={goBack}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-border bg-card text-foreground transition-colors active:bg-secondary"
-            aria-label={backLabel}
-          >
-            <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          </button>
-          <h1 className="truncate text-xl font-bold text-foreground">{document.title}</h1>
-        </div>
+    <main className="flex h-dvh flex-col" style={{ background: '#F2F2F7' }}>
+      {/* 헤더 — 내 정보 페이지와 동일한 패턴 */}
+      <header
+        className="relative flex shrink-0 items-center px-4"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 8 }}
+      >
+        <button
+          type="button"
+          onClick={goBack}
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-all active:scale-90 active:bg-zinc-200"
+          style={{ color: '#444', marginLeft: -4 }}
+          aria-label={backLabel}
+        >
+          <ChevronLeft size={22} strokeWidth={2} />
+        </button>
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold" style={{ color: '#111' }}>
+          {document.title}
+        </h1>
       </header>
 
-      <div className="mx-auto w-full max-w-[760px] px-5 pb-16 sm:px-8">
-        <section className="border-b border-border py-10 sm:py-12">
-          <h1 className="text-3xl font-bold leading-tight text-foreground sm:text-4xl">
-            {document.title}
-          </h1>
-          <dl className="mt-6 grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
-            <div className="flex gap-2">
-              <dt className="font-medium text-foreground">시행일</dt>
-              <dd>{document.effectiveDate}</dd>
+      {/* 본문 */}
+      <div className="no-scrollbar flex-1 overflow-y-auto">
+        <div className="mx-auto w-full max-w-190 px-5 pb-16">
+          {/* 메타 정보 */}
+          <div className="mt-4 mb-6 overflow-hidden rounded-xl" style={{ background: '#fff' }}>
+            <div className="flex items-center justify-between px-4 py-3.5 border-b" style={{ borderColor: '#F2F2F7' }}>
+              <span className="text-[14px]" style={{ color: '#888' }}>시행일</span>
+              <span className="text-[14px] font-medium" style={{ color: '#111' }}>{document.effectiveDate}</span>
             </div>
-            <div className="flex gap-2">
-              <dt className="font-medium text-foreground">문서 버전</dt>
-              <dd>{document.version}</dd>
+            <div className="flex items-center justify-between px-4 py-3.5">
+              <span className="text-[14px]" style={{ color: '#888' }}>문서 버전</span>
+              <span className="text-[14px] font-medium" style={{ color: '#111' }}>{document.version}</span>
             </div>
-          </dl>
-          <div className="mt-8 space-y-3">
-            {document.introduction.map((paragraph) => (
-              <p key={paragraph} className="text-[15px] leading-7 text-[#374151]">
-                {paragraph}
-              </p>
+          </div>
+
+          {/* 도입부 */}
+          {document.introduction.length > 0 && (
+            <div className="mb-4 space-y-3">
+              {document.introduction.map((paragraph) => (
+                <p key={paragraph} className="text-[14px] leading-7" style={{ color: '#555' }}>
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+          )}
+
+          {/* 섹션 목록 */}
+          <div className="space-y-3">
+            {document.sections.map((section) => (
+              <div
+                key={section.id}
+                id={section.id}
+                className="overflow-hidden rounded-xl"
+                style={{ background: '#fff' }}
+              >
+                <div className="px-4 pt-4 pb-1">
+                  <h2 className="text-[15px] font-bold" style={{ color: '#111' }}>
+                    {section.title}
+                  </h2>
+                </div>
+                <div className="px-4 pb-4 mt-2 space-y-2">
+                  {section.paragraphs.map((paragraph) => (
+                    <p key={paragraph} className="text-[14px] leading-7" style={{ color: '#555' }}>
+                      {paragraph}
+                    </p>
+                  ))}
+                  {section.bullets && (
+                    <ul className="mt-2 list-disc space-y-1.5 pl-5">
+                      {section.bullets.map((bullet) => (
+                        <li key={bullet} className="text-[14px] leading-7" style={{ color: '#555' }}>
+                          {bullet}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
-        </section>
-
-        <section>
-          {document.sections.map((section) => (
-            <article
-              key={section.id}
-              id={section.id}
-              className="border-b border-border py-9 last:border-b-0"
-            >
-              <h2 className="text-xl font-bold leading-7 text-foreground">
-                {section.title}
-              </h2>
-              <div className="mt-4 space-y-3">
-                {section.paragraphs.map((paragraph) => (
-                  <p key={paragraph} className="text-[15px] leading-7 text-[#374151]">
-                    {paragraph}
-                  </p>
-                ))}
-                {section.bullets && (
-                  <ul className="mt-4 list-disc space-y-2 pl-5">
-                    {section.bullets.map((bullet) => (
-                      <li key={bullet} className="text-[15px] leading-7 text-[#374151]">
-                        {bullet}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </article>
-          ))}
-        </section>
+        </div>
       </div>
     </main>
   );

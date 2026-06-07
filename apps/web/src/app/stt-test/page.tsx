@@ -2,7 +2,8 @@
 // STT 옵션별 인식 품질 비교 테스트 페이지
 
 import { useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
+import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 import { webBridge } from '@/bridge/webBridge';
 
 type Mode = 'web' | 'native';
@@ -175,7 +176,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export default function SttTestPage() {
-  const router = useRouter();
+  const goBack = useBackButtonReplace('/me');
   const isNative = webBridge.isAvailable();
 
   const [mode, setMode] = useState<Mode>(isNative ? 'native' : 'web');
@@ -400,20 +401,30 @@ export default function SttTestPage() {
   }
 
   return (
-    <div className="flex min-h-full flex-col bg-white">
-      <div className="px-5 pt-12 pb-6">
+    <div className="flex h-dvh flex-col" style={{ background: '#F2F2F7' }}>
+      {/* 헤더 — 내 정보 페이지와 동일한 패턴 */}
+      <header
+        className="relative flex shrink-0 items-center px-4"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 8 }}
+      >
         <button
-          onClick={() => router.back()}
-          className="mb-4 flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+          type="button"
+          onClick={goBack}
+          className="flex h-9 w-9 items-center justify-center rounded-full transition-all active:scale-90 active:bg-zinc-200"
+          style={{ color: '#444', marginLeft: -4 }}
+          aria-label="뒤로 가기"
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-            <path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-          뒤로
+          <ChevronLeft size={22} strokeWidth={2} />
         </button>
-        <p className="text-xs font-medium text-blue-500 mb-1">실험실</p>
-        <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">STT 인식률 테스트</h1>
-        <p className="mt-1.5 text-sm text-zinc-500 leading-relaxed">
+        <h1 className="absolute left-1/2 -translate-x-1/2 text-[17px] font-semibold" style={{ color: '#111' }}>
+          실험실
+        </h1>
+      </header>
+
+      <div className="no-scrollbar flex-1 overflow-y-auto">
+      <div className="px-5 pt-4 pb-4">
+        <p className="text-[22px] font-bold" style={{ color: '#111' }}>STT 인식률 테스트</p>
+        <p className="mt-1 text-[14px] leading-relaxed" style={{ color: '#888' }}>
           정답 문장, 힌트 단어, 언어 모델을 각각 독립적으로 바꿔가며 WER를 비교해요.
         </p>
       </div>
@@ -642,6 +653,7 @@ export default function SttTestPage() {
           </div>
         )}
 
+      </div>
       </div>
     </div>
   );
