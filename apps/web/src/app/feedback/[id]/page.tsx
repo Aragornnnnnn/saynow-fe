@@ -338,7 +338,7 @@ function SummaryPage({
         )}
       </AnimatePresence>
 
-      <div className='flex flex-1 flex-col px-6 pt-2'>
+      <div className='no-scrollbar flex flex-1 flex-col overflow-y-auto px-6 pt-2'>
         <motion.div
           className='mt-3'
           initial={{ opacity: 0, y: 8 }}
