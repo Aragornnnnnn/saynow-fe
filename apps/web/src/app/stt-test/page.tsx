@@ -358,7 +358,7 @@ export default function SttTestPage() {
         {isRecording && (
           <div className="rounded-2xl bg-zinc-100 px-4 py-3 flex items-center gap-3 mb-5">
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-            <p className="text-sm text-zinc-600">말을 멈추면 자동으로 분석해요</p>
+            <p className="text-sm text-zinc-600">직접 멈추거나, 1초 정도 말이 없으면 자동으로 분석해요</p>
           </div>
         )}
 
