@@ -51,6 +51,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [debugText, setDebugText] = useState('');
   // ── END DEBUG ──
 
+  // ── STT 엔진 선택 (웹 전용, 네이티브는 항상 기기 STT) ──
+  const [useDeepgram, setUseDeepgram] = useState(false);
+  const deepgramSocketRef = useRef<WebSocket | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  // ── END STT ENGINE ──
+
   const { speak, stop } = useTts();
   const queryClient = useQueryClient();
   const isNative = webBridge.isAvailable();
@@ -338,6 +344,89 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     recognitionRef.current?.stop();
   }
 
+  // ── Deepgram STT ──
+  async function startDeepgramStt() {
+    try {
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch {
+      setShowMicDeniedModal(true);
+      return;
+    }
+
+    const tokenRes = await fetch('/api/stt/token', { method: 'POST' });
+    if (!tokenRes.ok) return;
+    const { token } = (await tokenRes.json()) as { token: string };
+
+    const params = new URLSearchParams({
+      model: 'nova-3',
+      language: 'en-US',
+      smart_format: 'true',
+      interim_results: 'true',
+      endpointing: '400',
+      utterance_end_ms: '1000',
+    });
+    const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['token', token]);
+    deepgramSocketRef.current = ws;
+
+    transcriptRef.current = '';
+
+    ws.onopen = async () => {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = mr;
+      mr.ondataavailable = (e) => {
+        if (ws.readyState === WebSocket.OPEN) ws.send(e.data);
+      };
+      mr.start(250);
+    };
+
+    ws.onmessage = (e) => {
+      const msg = JSON.parse(e.data as string) as {
+        type: string;
+        channel: { alternatives: { transcript: string }[] };
+        is_final: boolean;
+        speech_final: boolean;
+      };
+      if (msg.type !== 'Results') return;
+      const text = msg.channel.alternatives[0]?.transcript ?? '';
+      if (!text) return;
+
+      if (msg.is_final) {
+        transcriptRef.current = (transcriptRef.current + ' ' + text).trim();
+        setTranscript(transcriptRef.current);
+      } else {
+        setTranscript((transcriptRef.current + ' ' + text).trim());
+      }
+    };
+
+    ws.onerror = () => stopDeepgramStt();
+
+    setPageState('recording');
+    setTranscript('');
+    setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+  }
+
+  function stopDeepgramStt() {
+    mediaRecorderRef.current?.stop();
+    mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+    mediaRecorderRef.current = null;
+
+    if (deepgramSocketRef.current) {
+      deepgramSocketRef.current.close();
+      deepgramSocketRef.current = null;
+    }
+
+    const text = transcriptRef.current.trim();
+    const sid = sessionIdRef.current;
+    if (text && sid) {
+      submitUserUtterance(text);
+    } else {
+      setPageState('idle');
+      if (!text) setEmptyToast(true);
+    }
+  }
+  // ── END Deepgram STT ──
+
   function startStt() {
     stop();
     if (isNative) {
@@ -346,6 +435,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       startNativeStt();
       setPageState('recording');
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+    } else if (useDeepgram) {
+      startDeepgramStt();
     } else {
       startWebStt();
     }
@@ -356,6 +447,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       setPageState('stopping');
       stopNativeStt();
       startStoppingTimeout();
+    } else if (useDeepgram) {
+      stopDeepgramStt();
     } else {
       stopWebStt();
       const text = transcriptRef.current.trim();
@@ -437,7 +530,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
       {/* 상단 헤더 */}
       <div
-        className='relative z-20 flex items-center px-4 pb-2'
+        className='relative z-20 flex items-center justify-between px-4 pb-2'
         style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}
       >
         <button
@@ -446,6 +539,17 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         >
           <ChevronLeft size={20} />
         </button>
+
+        {/* 웹 환경에서만 STT 엔진 토글 표시 */}
+        {!isNative && (
+          <button
+            onClick={() => setUseDeepgram((v) => !v)}
+            className='flex items-center gap-1.5 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 px-3 py-1.5 text-xs font-medium text-white active:bg-black/50 transition-colors'
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${useDeepgram ? 'bg-green-400' : 'bg-white/50'}`} />
+            {useDeepgram ? 'Deepgram' : 'Web STT'}
+          </button>
+        )}
       </div>
 
       {/* 채팅 메시지 영역 */}
@@ -552,7 +656,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                   transcriptRef.current = '';
                   setTranscript('');
                   if (isNative) { stopNativeStt(); setPageState('idle'); }
-                  else { stopWebStt(); setPageState('idle'); }
+                  else if (useDeepgram) {
+                    mediaRecorderRef.current?.stop();
+                    mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
+                    mediaRecorderRef.current = null;
+                    deepgramSocketRef.current?.close();
+                    deepgramSocketRef.current = null;
+                    setPageState('idle');
+                  } else { stopWebStt(); setPageState('idle'); }
                 }}
                 className='text-sm font-semibold text-white/70 active:text-white transition-colors'
               >

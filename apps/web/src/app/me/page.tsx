@@ -14,6 +14,7 @@ import { logout as requestLogout } from '@/lib/api/auth';
 import { deleteAccount } from '@/lib/api/member';
 import { submitNps } from '@/lib/api/feedback';
 import { useAuthStore } from '@/store/authStore';
+import { toast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { webBridge } from '@/bridge/webBridge';
@@ -40,6 +41,8 @@ export default function MyPage() {
         router.push('/stt-test');
         return 0;
       }
+      const remaining = 6 - next;
+      if (remaining <= 3) toast(`${remaining}번 더 탭하면 실험실이 열려요`);
       return next;
     });
   }

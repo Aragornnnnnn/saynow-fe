@@ -11,7 +11,7 @@ interface ToastItem {
 
 type Listener = (message: string) => void;
 
-let listeners: Listener[] = [];
+const listeners = new Set<Listener>();
 let nextId = 0;
 
 export function toast(message: string) {
@@ -29,9 +29,9 @@ export function Toaster() {
         setItems((prev) => prev.filter((t) => t.id !== id));
       }, 2500);
     };
-    listeners.push(handler);
+    listeners.add(handler);
     return () => {
-      listeners = listeners.filter((l) => l !== handler);
+      listeners.delete(handler);
     };
   }, []);
 
