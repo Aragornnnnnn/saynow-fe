@@ -462,7 +462,7 @@ function RunnerTrack({ targetPos, passed }: { targetPos: number; passed: boolean
           <div className='absolute' style={{ right: -44, bottom: '100%' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src='/runner.png'
+              src='/runner.webp'
               alt='runner'
               style={{ width: 88, height: 88, objectFit: 'contain', animation: `runnerBounce 1.2s ease-in-out ${(TRACK_DELAY + TRACK_DURATION) / 1000}s infinite` }}
             />

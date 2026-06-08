@@ -4,5 +4,5 @@ type ScenarioImageType = 'play' | 'success' | 'fail';
 
 export function getScenarioImage(scenarioId: number, type?: ScenarioImageType): string {
   if (type) return `/images/scenarios/scenario-${scenarioId}-${type}.webp`;
-  return `/images/scenarios/scenario-${scenarioId}.png`;
+  return `/images/scenarios/scenario-${scenarioId}.webp`;
 }
