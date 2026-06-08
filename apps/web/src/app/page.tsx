@@ -170,7 +170,7 @@ function Home() {
       {/* 시나리오 목록 */}
       <div className="relative flex-1 overflow-hidden">
         {isPending ? (
-          <div style={{ height: 'calc(100% - 80px)', marginTop: 40, padding: '14px 20px', boxSizing: 'border-box' }}>
+          <div style={{ height: 'calc(100% - 80px)', marginTop: 40, padding: '14px 28px 14px 20px', boxSizing: 'border-box' }}>
             <div className="w-full h-full rounded-[20px] overflow-hidden bg-card shadow-md flex flex-col">
               <div className="skeleton bg-border" style={{ flex: 2, minHeight: 0 }} />
               <div className="px-5 pt-5 pb-5 flex flex-col gap-3" style={{ flex: 1, minHeight: 0 }}>
@@ -187,13 +187,13 @@ function Home() {
             slidesPerView={1}
             spaceBetween={0}
 
-            style={{ height: 'calc(100% - 80px)', marginTop: 40, overflow: 'visible' }}
+            style={{ height: 'calc(100% - 40px)', marginTop: 20, overflow: 'visible' }}
             onSwiper={(swiper) => { swiperInstanceRef.current = swiper; }}
             onSlideChange={(swiper: SwiperType) => setActiveIndex(swiper.activeIndex)}
           >
             {scenarios.map((scenario, index) => (
               <SwiperSlide key={scenario.scenarioId}>
-                <div style={{ padding: '14px 20px', height: '100%', boxSizing: 'border-box' }}>
+                <div style={{ padding: '8px 28px 8px 20px', height: '100%', boxSizing: 'border-box' }}>
                   <motion.div
                     style={{ height: '100%' }}
                     initial={{ opacity: 0, y: 20 }}
@@ -249,9 +249,9 @@ function ScenarioCard({ scenario, onStart, isUnlocking = false }: { scenario: Ap
   const appearLocked = isLocked && !(isUnlocking && showAsUnlocked);
 
   return (
-    <div className="w-full h-full flex flex-col rounded-[20px] overflow-hidden bg-card shadow-md">
+    <div className="w-full h-full flex flex-col rounded-[20px] bg-card shadow-md overflow-hidden">
       {/* 이미지 섹션 */}
-      <div className="relative overflow-hidden" style={{ flex: 3, minHeight: 0, background: '#2a2a2a' }}>
+      <div className="relative overflow-hidden" style={{ flex: 1, minHeight: 0, background: '#2a2a2a' }}>
         <img
           src={getScenarioImage(scenario.scenarioId)}
           alt={scenario.scenarioTitle}
@@ -274,18 +274,18 @@ function ScenarioCard({ scenario, onStart, isUnlocking = false }: { scenario: Ap
       </div>
 
       {/* 텍스트 + CTA */}
-      <div className="flex flex-col px-5 pt-5 pb-5" style={{ flex: 1, minHeight: 0 }}>
+      <div className="flex flex-col gap-3 px-5 pt-4 pb-5" style={{ flex: 'none' }}>
         <div>
-          <p className={`text-[24px] font-extrabold leading-snug ${isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
+          <p className={`text-[20px] font-extrabold leading-snug ${isLocked ? 'text-muted-foreground' : 'text-foreground'}`}>
             {isComingSoon ? '???' : scenario.scenarioTitle}
           </p>
           {!isComingSoon && scenario.briefing && (
-            <p className="mt-2 text-[16px] font-medium text-muted-foreground leading-relaxed line-clamp-2">
+            <p className="mt-2 text-[14px] font-medium text-muted-foreground leading-relaxed line-clamp-2">
               {scenario.briefing}
             </p>
           )}
         </div>
-        <div className="mt-auto">
+        <div>
           {isLocked ? (
             <div
               onClick={() => toast('앞선 시나리오를 먼저 클리어해봐요!')}
