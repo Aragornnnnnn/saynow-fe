@@ -346,8 +346,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   // ── Deepgram STT ──
   async function startDeepgramStt() {
+    let stream: MediaStream;
     try {
-      await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       setShowMicDeniedModal(true);
       return;
@@ -364,14 +365,14 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       interim_results: 'true',
       endpointing: '400',
       utterance_end_ms: '1000',
+      vad_events: 'true',
     });
     const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['token', token]);
     deepgramSocketRef.current = ws;
 
     transcriptRef.current = '';
 
-    ws.onopen = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    ws.onopen = () => {
       const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       mediaRecorderRef.current = mr;
       mr.ondataavailable = (e) => {
@@ -383,19 +384,24 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     ws.onmessage = (e) => {
       const msg = JSON.parse(e.data as string) as {
         type: string;
-        channel: { alternatives: { transcript: string }[] };
-        is_final: boolean;
-        speech_final: boolean;
+        channel?: { alternatives: { transcript: string }[] };
+        is_final?: boolean;
       };
-      if (msg.type !== 'Results') return;
-      const text = msg.channel.alternatives[0]?.transcript ?? '';
-      if (!text) return;
 
-      if (msg.is_final) {
-        transcriptRef.current = (transcriptRef.current + ' ' + text).trim();
-        setTranscript(transcriptRef.current);
-      } else {
-        setTranscript((transcriptRef.current + ' ' + text).trim());
+      if (msg.type === 'Results' && msg.channel) {
+        const text = msg.channel.alternatives[0]?.transcript ?? '';
+        if (!text) return;
+        if (msg.is_final) {
+          transcriptRef.current = (transcriptRef.current + ' ' + text).trim();
+          setTranscript(transcriptRef.current);
+        } else {
+          setTranscript((transcriptRef.current + ' ' + text).trim());
+        }
+      }
+
+      // 침묵 감지 → 자동 종료
+      if (msg.type === 'UtteranceEnd') {
+        stopDeepgramStt();
       }
     };
 

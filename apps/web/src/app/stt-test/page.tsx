@@ -8,11 +8,12 @@ import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 type EngineResult = {
   text: string;
   latencyMs: number | null;
-  partialCount: number;
+  wordCount: number;
+  punctCount: number;
   done: boolean;
 };
 
-const EMPTY_RESULT: EngineResult = { text: '', latencyMs: null, partialCount: 0, done: false };
+const EMPTY_RESULT: EngineResult = { text: '', latencyMs: null, wordCount: 0, punctCount: 0, done: false };
 
 const CONTRACTIONS: [RegExp, string][] = [
   [/i'll/g, 'i will'], [/i'm/g, 'i am'], [/i've/g, 'i have'], [/i'd/g, 'i would'],
@@ -42,18 +43,16 @@ function calcWer(ref: string, hyp: string): number {
   return Math.min(100, Math.round((dp[r.length][h.length] / r.length) * 100));
 }
 
-function hasPunctuation(text: string) {
-  return /[.,!?;:]/.test(text);
+function countWords(text: string) {
+  return text.trim().split(/\s+/).filter(Boolean).length;
 }
 
-function highlightPunctuation(text: string) {
-  if (!text) return null;
-  const parts = text.split(/([.,!?;:]+)/g);
-  return parts.map((p, i) =>
-    /[.,!?;:]+/.test(p)
-      ? <mark key={i} className="bg-zinc-200 text-zinc-700 rounded px-0.5">{p}</mark>
-      : p
-  );
+function countPunct(text: string) {
+  return (text.match(/[.,!?;:]/g) ?? []).length;
+}
+
+function makeResult(text: string, latencyMs: number | null): EngineResult {
+  return { text, latencyMs, wordCount: countWords(text), punctCount: countPunct(text), done: true };
 }
 
 function WerChip({ wer }: { wer: number }) {
@@ -62,42 +61,45 @@ function WerChip({ wer }: { wer: number }) {
   return <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-bold text-red-700">WER {wer}%</span>;
 }
 
-function EngineCard({ label, result, wer, isRecording, error }: {
+function EngineCard({ label, result, interim, wer, isRecording, error, ready }: {
   label: string;
   result: EngineResult;
+  interim: string;
   wer: number | null;
   isRecording: boolean;
   error?: string | null;
+  ready: boolean;
 }) {
+  const displayText = ready ? result.text : interim;
+
   return (
     <div className="rounded-2xl bg-white border border-zinc-200 p-4 flex flex-col min-h-44">
       <div className="flex items-center justify-between mb-3">
         <p className="text-xs font-bold text-zinc-500 uppercase tracking-wide">{label}</p>
-        {result.done && result.latencyMs && (
+        {ready && result.latencyMs && (
           <span className="text-xs text-zinc-400">{(result.latencyMs / 1000).toFixed(1)}s</span>
         )}
       </div>
 
-      <p className="text-sm leading-relaxed text-zinc-900 flex-1">
-        {result.text
-          ? highlightPunctuation(result.text)
-          : <span className="text-zinc-300">{error ? '연결 실패' : isRecording ? '듣고 있어요...' : '—'}</span>
+      <p className="text-sm leading-relaxed text-zinc-900 flex-1 break-words">
+        {displayText
+          ? displayText
+          : <span className="text-zinc-300">
+              {error ? '연결 실패' : isRecording ? '듣고 있어요...' : ready ? '—' : '분석 중...'}
+            </span>
         }
       </p>
 
       {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
 
-      {result.text && (
+      {ready && result.text && (
         <div className="mt-3 pt-3 border-t border-zinc-100 flex flex-wrap gap-1.5">
-          {result.partialCount > 0 && (
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
-              partial {result.partialCount}회
-            </span>
-          )}
-          {hasPunctuation(result.text)
-            ? <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600">구두점 ✓</span>
-            : <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-400">구두점 없음</span>
-          }
+          <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-500">
+            {result.wordCount}단어
+          </span>
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${result.punctCount > 0 ? 'bg-zinc-100 text-zinc-600' : 'bg-zinc-100 text-zinc-400'}`}>
+            구두점 {result.punctCount}개
+          </span>
           {wer !== null && <WerChip wer={wer} />}
         </div>
       )}
@@ -110,6 +112,10 @@ export default function SttTestPage() {
 
   const [isRecording, setIsRecording] = useState(false);
   const [refText, setRefText] = useState('');
+  // 녹음 중 실시간 interim 텍스트
+  const [webInterim, setWebInterim] = useState('');
+  const [dgInterim, setDgInterim] = useState('');
+  // 둘 다 완료 후 동시에 보여줄 최종 결과
   const [webResult, setWebResult] = useState<EngineResult>(EMPTY_RESULT);
   const [dgResult, setDgResult] = useState<EngineResult>(EMPTY_RESULT);
   const [dgError, setDgError] = useState<string | null>(null);
@@ -117,26 +123,74 @@ export default function SttTestPage() {
   const webRef = useRef<SpeechRecognition | null>(null);
   const dgSocketRef = useRef<WebSocket | null>(null);
   const dgMediaRef = useRef<MediaRecorder | null>(null);
+  const recordingRef = useRef(false); // 이중 실행 방지
 
   const webStartRef = useRef(0);
   const dgStartRef = useRef(0);
-  const webPartialRef = useRef(0);
+  const webFinalRef = useRef('');
   const dgFinalRef = useRef('');
-  const dgPartialRef = useRef(0);
+
+  // 둘 다 완료되면 결과 공개
+  const webDoneRef = useRef(false);
+  const dgDoneRef = useRef(false);
+  const webPendingRef = useRef<EngineResult | null>(null);
+  const dgPendingRef = useRef<EngineResult | null>(null);
+
+  function tryReveal() {
+    if (!webDoneRef.current || !dgDoneRef.current) return;
+    if (webPendingRef.current) setWebResult(webPendingRef.current);
+    if (dgPendingRef.current) setDgResult(dgPendingRef.current);
+  }
+
+  function finishWeb(text: string) {
+    webDoneRef.current = true;
+    webPendingRef.current = makeResult(text, Date.now() - webStartRef.current);
+    tryReveal();
+  }
+
+  function finishDg(text: string) {
+    dgDoneRef.current = true;
+    dgPendingRef.current = makeResult(text, Date.now() - dgStartRef.current);
+    tryReveal();
+  }
+
+  function stopAll() {
+    if (!recordingRef.current) return;
+    recordingRef.current = false;
+    setIsRecording(false);
+
+    webRef.current?.stop();
+    webRef.current = null;
+
+    dgMediaRef.current?.stop();
+    dgMediaRef.current?.stream.getTracks().forEach((t) => t.stop());
+    dgMediaRef.current = null;
+    dgSocketRef.current?.close(1000);
+    dgSocketRef.current = null;
+  }
 
   async function startRecording() {
+    if (recordingRef.current) return; // 이중 실행 방지
+    recordingRef.current = true;
+
     setWebResult(EMPTY_RESULT);
     setDgResult(EMPTY_RESULT);
+    setWebInterim('');
+    setDgInterim('');
     setDgError(null);
-    webPartialRef.current = 0;
+    webFinalRef.current = '';
     dgFinalRef.current = '';
-    dgPartialRef.current = 0;
+    webDoneRef.current = false;
+    dgDoneRef.current = false;
+    webPendingRef.current = null;
+    dgPendingRef.current = null;
 
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       alert('마이크 권한이 필요해요.');
+      recordingRef.current = false;
       return;
     }
 
@@ -149,6 +203,7 @@ export default function SttTestPage() {
       rec.continuous = true;
       rec.interimResults = true;
       webStartRef.current = Date.now();
+
       rec.onresult = (e: SpeechRecognitionEvent) => {
         let final = '';
         let interim = '';
@@ -156,13 +211,27 @@ export default function SttTestPage() {
           if (e.results[i].isFinal) final += e.results[i][0].transcript;
           else interim += e.results[i][0].transcript;
         }
-        if (interim) webPartialRef.current++;
-        const display = (final + (interim ? ' ' + interim : '')).trim();
-        setWebResult((prev) => ({ ...prev, text: display, partialCount: webPartialRef.current }));
+        webFinalRef.current = final.trim();
+        setWebInterim((final + (interim ? ' ' + interim : '')).trim());
       };
-      rec.onerror = () => {};
+
+      // Web STT가 자동 종료되면 (침묵 감지) → 전체 종료 트리거
+      rec.onend = () => {
+        const text = webFinalRef.current;
+        finishWeb(text);
+        if (recordingRef.current) stopAll();
+      };
+
+      rec.onerror = () => {
+        finishWeb(webFinalRef.current);
+        if (recordingRef.current) stopAll();
+      };
+
       rec.start();
       webRef.current = rec;
+    } else {
+      // Web STT 없으면 Web 쪽 즉시 완료 처리
+      finishWeb('');
     }
 
     // ── Deepgram WebSocket ──
@@ -176,6 +245,8 @@ export default function SttTestPage() {
         smart_format: 'true',
         interim_results: 'true',
         endpointing: '400',
+        utterance_end_ms: '1000',
+        vad_events: 'true',
       });
       const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['token', token]);
       dgSocketRef.current = ws;
@@ -191,49 +262,48 @@ export default function SttTestPage() {
       ws.onmessage = (e) => {
         const msg = JSON.parse(e.data as string) as {
           type: string;
-          channel: { alternatives: { transcript: string }[] };
-          is_final: boolean;
+          channel?: { alternatives: { transcript: string }[] };
+          is_final?: boolean;
         };
-        if (msg.type !== 'Results') return;
-        const text = msg.channel.alternatives[0]?.transcript ?? '';
-        if (!text) return;
-        dgPartialRef.current++;
-        if (msg.is_final) {
-          dgFinalRef.current = (dgFinalRef.current + ' ' + text).trim();
-          setDgResult((prev) => ({ ...prev, text: dgFinalRef.current, latencyMs: Date.now() - dgStartRef.current, partialCount: dgPartialRef.current }));
-        } else {
-          const display = (dgFinalRef.current + ' ' + text).trim();
-          setDgResult((prev) => ({ ...prev, text: display, partialCount: dgPartialRef.current }));
+
+        if (msg.type === 'Results' && msg.channel) {
+          const text = msg.channel.alternatives[0]?.transcript ?? '';
+          if (!text) return;
+          if (msg.is_final) {
+            dgFinalRef.current = (dgFinalRef.current + ' ' + text).trim();
+            setDgInterim(dgFinalRef.current);
+          } else {
+            setDgInterim((dgFinalRef.current + ' ' + text).trim());
+          }
+        }
+
+        // 발화 끝 감지 → Deepgram 완료 처리 후 전체 종료
+        if (msg.type === 'UtteranceEnd') {
+          finishDg(dgFinalRef.current);
+          if (recordingRef.current) stopAll();
         }
       };
 
-      ws.onerror = () => setDgError('WebSocket 연결 실패');
+      ws.onerror = () => {
+        setDgError('WebSocket 연결 실패');
+        finishDg('');
+      };
       ws.onclose = (e) => {
-        if (e.code !== 1000 && e.code !== 1001) setDgError(`연결 끊김 (${e.code})`);
+        if (e.code !== 1000 && e.code !== 1001) {
+          setDgError(`연결 끊김 (${e.code})`);
+          finishDg(dgFinalRef.current);
+        }
       };
     } catch {
       setDgError('Deepgram 연결 실패');
+      finishDg('');
     }
 
     setIsRecording(true);
   }
 
-  function stopRecording() {
-    setIsRecording(false);
-
-    webRef.current?.stop();
-    webRef.current = null;
-    setWebResult((prev) => ({ ...prev, latencyMs: Date.now() - webStartRef.current, done: true }));
-
-    dgMediaRef.current?.stop();
-    dgMediaRef.current?.stream.getTracks().forEach((t) => t.stop());
-    dgMediaRef.current = null;
-    dgSocketRef.current?.close(1000);
-    dgSocketRef.current = null;
-    setDgResult((prev) => ({ ...prev, done: true }));
-  }
-
-  const wer = refText.trim() ? {
+  const bothReady = webResult.done && dgResult.done;
+  const wer = refText.trim() && bothReady ? {
     web: calcWer(refText, webResult.text),
     dg: calcWer(refText, dgResult.text),
   } : null;
@@ -258,10 +328,10 @@ export default function SttTestPage() {
 
         <div className="pt-4 pb-5">
           <p className="text-[22px] font-bold text-zinc-900">STT 엔진 비교</p>
-          <p className="mt-1 text-sm text-zinc-500">Web STT와 Deepgram을 동시에 녹음해서 실시간으로 비교해요.</p>
+          <p className="mt-1 text-sm text-zinc-500">말을 멈추면 자동으로 두 결과가 동시에 나타나요.</p>
         </div>
 
-        {/* 정답 문장 직접 입력 */}
+        {/* 정답 문장 */}
         <div className="mb-5">
           <p className="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">정답 문장 (선택)</p>
           <input
@@ -274,7 +344,7 @@ export default function SttTestPage() {
 
         {/* 녹음 버튼 */}
         <button
-          onClick={isRecording ? stopRecording : startRecording}
+          onClick={isRecording ? stopAll : startRecording}
           className={`w-full rounded-2xl py-5 flex items-center justify-center gap-3 text-base font-bold transition-colors mb-5 ${
             isRecording ? 'bg-red-500 text-white' : 'bg-zinc-900 text-white'
           }`}
@@ -288,14 +358,29 @@ export default function SttTestPage() {
         {isRecording && (
           <div className="rounded-2xl bg-zinc-100 px-4 py-3 flex items-center gap-3 mb-5">
             <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse shrink-0" />
-            <p className="text-sm text-zinc-600">녹음 중 — 말하고 멈추기를 눌러요</p>
+            <p className="text-sm text-zinc-600">말을 멈추면 자동으로 분석해요</p>
           </div>
         )}
 
         {/* 비교 카드 */}
         <div className="grid grid-cols-2 gap-3">
-          <EngineCard label="Web STT" result={webResult} wer={wer?.web ?? null} isRecording={isRecording} />
-          <EngineCard label="Deepgram" result={dgResult} wer={wer?.dg ?? null} isRecording={isRecording} error={dgError} />
+          <EngineCard
+            label="Web STT"
+            result={webResult}
+            interim={webInterim}
+            wer={wer?.web ?? null}
+            isRecording={isRecording}
+            ready={bothReady}
+          />
+          <EngineCard
+            label="Deepgram"
+            result={dgResult}
+            interim={dgInterim}
+            wer={wer?.dg ?? null}
+            isRecording={isRecording}
+            error={dgError}
+            ready={bothReady}
+          />
         </div>
 
       </div>
