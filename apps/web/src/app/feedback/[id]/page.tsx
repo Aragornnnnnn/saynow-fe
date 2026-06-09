@@ -6,6 +6,7 @@ import { ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Swiper, SwiperSlide } from 'swiper/react';
+import { Keyboard } from 'swiper/modules';
 import type { Swiper as SwiperType } from 'swiper';
 import 'swiper/css';
 import type { ApiTurnFeedback } from '@/lib/api';
@@ -206,8 +207,10 @@ function TurnDetailView({
       {/* 카드 콘텐츠 — Swiper로 드래그 중 양옆 카드 보임 */}
       <div className='relative flex-1 overflow-hidden'>
         <Swiper
+          modules={[Keyboard]}
+          keyboard={{ enabled: true }}
           onSwiper={(swiper) => { swiperRef.current = swiper; }}
-          onSlideChange={(swiper) => setIndex(swiper.activeIndex)}
+          onSlideChange={(swiper) => { setIndex(swiper.activeIndex); setHasShadow(false); }}
           slidesPerView={1}
           spaceBetween={16}
           style={{ height: '100%' }}
