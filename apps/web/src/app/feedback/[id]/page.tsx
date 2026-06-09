@@ -364,7 +364,7 @@ function SummaryPage({
           className='mt-10 mb-4'
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, delay: trackEndSec + 0.2 }}
+          transition={{ duration: 0.4, delay: trackEndSec - 0.6 }}
         >
           <p className='text-xl font-bold text-zinc-800 mb-3'>이번 대화에서</p>
           <div className='rounded-2xl bg-[#FFF4EC] divide-y divide-[#F0D9C8]'>
@@ -401,12 +401,12 @@ function SummaryPage({
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: trackEndSec + 0.4 }}
+            transition={{ duration: 0.3, delay: trackEndSec - 0.4 }}
           >
             <Button onClick={onNext}>
               {(totalTurns - goodTurns) > 0
-                ? '조금만 다듬으면 바로 통하는 표현 보기'
-                : '상세 분석 보러 갈게요'}
+                ? `원어민까지 ${totalTurns - goodTurns}걸음, 고쳐볼게요`
+                : '뭐가 잘 통했는지 볼게요'}
             </Button>
           </motion.div>
         </div>
@@ -510,6 +510,26 @@ function parseFeedbackDetail(detail: string): { before: string; after: string; r
   return { before, after: rest, reason: '' };
 }
 
+const KOREAN_ANALOGY_PREFIXES = [
+  '한국어로 비유하자면, ',
+  '한국어로 비유하자면,',
+  '한국어로 치면, ',
+  '한국어로 치면,',
+];
+
+function stripKoreanAnalogyPrefix(text: string): string {
+  let result = text;
+  for (const prefix of KOREAN_ANALOGY_PREFIXES) {
+    if (result.startsWith(prefix)) {
+      result = result.slice(prefix.length).trimStart();
+      break;
+    }
+  }
+  // 앞 큰따옴표 제거
+  result = result.replace(/^["\\]+/, '');
+  return result;
+}
+
 function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onScrollChange?: (scrolled: boolean) => void; isLast?: boolean }) {
   const isGood = turn.feedbackType === 'GOOD';
   const parsed = turn.feedbackDetail ? parseFeedbackDetail(turn.feedbackDetail) : null;
@@ -552,7 +572,7 @@ function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onS
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>한국어로 치면</p>
                 <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
-                  <p className='text-base text-zinc-600 leading-relaxed'>{turn.koreanAnalogy}</p>
+                  <p className='text-base text-zinc-600 leading-relaxed'>{stripKoreanAnalogyPrefix(turn.koreanAnalogy)}</p>
                 </div>
               </div>
             </FadeIn>
@@ -603,7 +623,7 @@ function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onS
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>한국어로 치면</p>
                 <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
-                  <p className='text-base text-zinc-600 leading-relaxed'>{turn.koreanAnalogy}</p>
+                  <p className='text-base text-zinc-600 leading-relaxed'>{stripKoreanAnalogyPrefix(turn.koreanAnalogy)}</p>
                 </div>
               </div>
             </FadeIn>
