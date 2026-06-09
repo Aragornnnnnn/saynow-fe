@@ -6,8 +6,7 @@ import { LoaderCircle } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { type ApiScenario } from '@/lib/api';
-
-const FALLBACK_IMAGE = '/images/scenarios/scenario-1.png';
+import { getScenarioImage } from '@/lib/scenarioImages';
 
 export function ScenarioStep({
   scenario,
@@ -51,9 +50,9 @@ export function ScenarioStep({
         ) : (
           <div className="flex flex-1 flex-col gap-4">
             {/* 메인 이미지 */}
-            <div className="relative w-full overflow-hidden rounded-[24px]" style={{ aspectRatio: '3/2' }}>
+            <div className="relative w-full overflow-hidden rounded-[24px]" style={{ aspectRatio: '4/3' }}>
               <img
-                src={FALLBACK_IMAGE}
+                src={scenario ? getScenarioImage(scenario.scenarioId) : getScenarioImage(1)}
                 alt=""
                 className="h-full w-full object-cover"
               />
