@@ -357,7 +357,7 @@ function SummaryPage({
         </motion.div>
 
         {/* 러너 트랙 */}
-        <RunnerTrack targetPos={score} passed={passed} />
+        <RunnerTrack targetPos={score} />
 
         {/* 이번 대화에서 섹션 */}
         <motion.div
@@ -419,7 +419,7 @@ function SummaryPage({
 
 // 왼쪽=평균 한국인(0%), 오른쪽=원어민(100%)
 // 캐릭터가 왼쪽(0%)에서 출발해 targetPos(%)까지 달려가며 바를 채움
-function RunnerTrack({ targetPos, passed }: { targetPos: number; passed: boolean }) {
+function RunnerTrack({ targetPos }: { targetPos: number }) {
   const [pos, setPos] = useState(0);
   const trackColor = '#E07A3A';
   useEffect(() => {
@@ -500,10 +500,13 @@ function parseFeedbackDetail(detail: string): { before: string; after: string; r
     return { before, after: rest.slice(0, ellipsisIdx).trim(), reason: rest.slice(ellipsisIdx + 3).trim() };
   }
 
-  // 포맷 2: "개선표현. 이유" — 첫 문장 끝(. ! ?) 기준으로 분리
-  const sentenceEnd = rest.search(/[.!?]\s/);
-  if (sentenceEnd !== -1) {
-    return { before, after: rest.slice(0, sentenceEnd + 1).trim(), reason: rest.slice(sentenceEnd + 1).trim() };
+  // 포맷 2: "개선표현. 이유" — 한글이 시작되는 지점 직전을 개선표현/이유 경계로 사용
+  const koreanStart = rest.search(/[가-힣]/);
+  if (koreanStart !== -1) {
+    // 한글 직전 마침표/공백 제거해서 after 추출
+    const after = rest.slice(0, koreanStart).replace(/[\s.!?]+$/, '');
+    const reason = rest.slice(koreanStart).trim();
+    if (after) return { before, after, reason };
   }
 
   // 이유 구분자 없으면 after만
