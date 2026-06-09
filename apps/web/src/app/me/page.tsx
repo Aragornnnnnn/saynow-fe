@@ -18,6 +18,7 @@ import { toast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 import { webBridge } from '@/bridge/webBridge';
+import { useScrollShadow } from '@/hooks/useScrollShadow';
 
 const EMOJIS = ['😩', '😟', '😶', '😄', '🤩'] as const;
 type EmojiScore = 1 | 2 | 3 | 4 | 5;
@@ -33,6 +34,7 @@ export default function MyPage() {
   const [isFeedbackSheetOpen, setIsFeedbackSheetOpen] = useState(false);
   const [labTapCount, setLabTapCount] = useState(0);
   const goHome = useBackButtonReplace('/');
+  const { ref: scrollRef, onScroll, hasShadow } = useScrollShadow();
 
   function handleLabTap() {
     setLabTapCount((n) => {
@@ -95,8 +97,13 @@ export default function MyPage() {
     >
       {/* 헤더 */}
       <header
-        className="relative flex items-center px-4"
-        style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)', paddingBottom: 8, borderBottom: '1px solid #ebebeb' }}
+        className="relative flex items-center px-4 transition-shadow duration-200"
+        style={{
+          paddingTop: 'max(env(safe-area-inset-top), 16px)',
+          paddingBottom: 8,
+          borderBottom: '1px solid #ebebeb',
+          boxShadow: hasShadow ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+        }}
       >
         <button
           type="button"
@@ -112,7 +119,7 @@ export default function MyPage() {
         </h1>
       </header>
 
-      <div className="no-scrollbar flex-1 overflow-y-auto" style={{ background: '#F2F2F7' }}>
+      <div ref={scrollRef} onScroll={onScroll} className="no-scrollbar flex-1 overflow-y-auto" style={{ background: '#F2F2F7' }}>
         {/* 프로필 섹션 */}
         <div className="px-5 pb-5 pt-6">
           <div className="flex items-center gap-4">
