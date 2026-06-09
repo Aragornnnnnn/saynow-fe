@@ -5,12 +5,16 @@ import { use, useEffect, useRef, useState } from 'react';
 import { ChevronLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import type { Swiper as SwiperType } from 'swiper';
+import 'swiper/css';
 import type { ApiTurnFeedback } from '@/lib/api';
 import { useFeedbackQuery } from '@/queries/feedback';
 import { useScenarioStore } from '@/store/scenarioStore';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { Button } from '@/components/ui/Button';
+import { useScrollShadow } from '@/hooks/useScrollShadow';
 
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -151,75 +155,71 @@ function SummarySkeleton() {
 // ─── TurnDetailView ───────────────────────────────────────────────────────────
 
 // 발화별 상세 피드백을 전체 화면으로 보여줌
-// 상단 게이지가 페이지 넘길수록 채워지고, 좌우 스와이프로 넘길 수 있음
+// Swiper로 iOS 스타일 드래그 중 다음 카드 미리보기 구현
 function TurnDetailView({
-  turns, sessionId, onBack,
+  turns, onBack,
 }: {
   turns: ApiTurnFeedback[]; sessionId: number; onBack: () => void;
 }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
+  const [hasShadow, setHasShadow] = useState(false);
+  const swiperRef = useRef<SwiperType | null>(null);
   const isLast = index === turns.length - 1;
-  const progress = (index + 1) / turns.length;
 
   function goNext() {
-    if (!isLast) setIndex((i) => i + 1);
+    if (!isLast) swiperRef.current?.slideNext();
     else router.replace('/?unlocked=true');
-  }
-
-  function goPrev() {
-    if (index > 0) setIndex((i) => i - 1);
-  }
-
-  function handleDragEnd(_: unknown, info: { offset: { x: number }; velocity: { x: number } }) {
-    if (info.offset.x < -60 || info.velocity.x < -300) goNext();
-    else if (info.offset.x > 60 || info.velocity.x > 300) goPrev();
   }
 
   return (
     <div className='flex h-full flex-col bg-background' style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
-      {/* 헤더 */}
-      <div className='flex items-center px-4 pt-4 pb-2 shrink-0'>
-        <button
-          onClick={onBack}
-          className='flex items-center justify-center w-8 h-8 -ml-1 rounded-full text-zinc-400 active:bg-zinc-100'
-        >
-          <ChevronLeft size={22} strokeWidth={2} />
-        </button>
-        <p className='flex-1 text-center text-lg font-bold text-zinc-800 pr-7'>상세 분석</p>
-      </div>
-
-      {/* 진행 게이지 */}
-      <div className='px-4 pb-3 shrink-0'>
-        <div className='relative h-1.5 rounded-full bg-zinc-200 overflow-hidden'>
-          <motion.div
-            className='absolute left-0 top-0 h-full rounded-full bg-[#E07A3A]'
-            animate={{ width: `${progress * 100}%` }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          />
-        </div>
-        <p className='text-xs text-zinc-400 mt-1 text-right'>{index + 1} / {turns.length}</p>
-      </div>
-
-      {/* 카드 콘텐츠 */}
-      <div className='relative flex-1 overflow-hidden'>
-        <AnimatePresence mode='wait' initial={false}>
-          <motion.div
-            key={index}
-            className='h-full'
-            initial={{ opacity: 0, x: 40 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -40 }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
-            drag='x'
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={0.1}
-            onDragEnd={handleDragEnd}
+      {/* 헤더 + 세그먼트 진행 바 */}
+      <div
+        className='shrink-0 transition-shadow duration-200'
+        style={{ boxShadow: hasShadow ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}
+      >
+        <div className='flex items-center px-4 pt-4 pb-2'>
+          <button
+            onClick={onBack}
+            className='flex items-center justify-center w-8 h-8 -ml-1 rounded-full text-zinc-400 active:bg-zinc-100'
           >
-            <TurnCard turn={turns[index]} />
-          </motion.div>
-        </AnimatePresence>
+            <ChevronLeft size={22} strokeWidth={2} />
+          </button>
+          <p className='flex-1 text-center text-lg font-bold text-zinc-800 pr-7'>상세 분석</p>
+        </div>
+        <div className='px-4 pb-4 flex gap-1.5'>
+          {turns.map((_, i) => (
+            <motion.div
+              key={i}
+              className='flex-1 rounded-full'
+              style={{ height: 3 }}
+              animate={{
+                backgroundColor: i <= index ? '#E07A3A' : '#E4E4E7',
+              }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+            />
+          ))}
+        </div>
+      </div>
 
+      {/* 카드 콘텐츠 — Swiper로 드래그 중 양옆 카드 보임 */}
+      <div className='relative flex-1 overflow-hidden'>
+        <Swiper
+          onSwiper={(swiper) => { swiperRef.current = swiper; }}
+          onSlideChange={(swiper) => setIndex(swiper.activeIndex)}
+          slidesPerView={1}
+          spaceBetween={16}
+          style={{ height: '100%' }}
+          resistance
+          resistanceRatio={0.65}
+        >
+          {turns.map((turn, i) => (
+            <SwiperSlide key={i} style={{ height: '100%' }}>
+              <TurnCard turn={turn} onScrollChange={setHasShadow} isLast={i === turns.length - 1} />
+            </SwiperSlide>
+          ))}
+        </Swiper>
       </div>
 
       {/* 마지막 페이지 CTA */}
@@ -232,7 +232,7 @@ function TurnDetailView({
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <Button onClick={goNext}>다음 대화 하러 갈게요</Button>
+            <Button onClick={goNext}>다음 대화할게요</Button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -285,6 +285,7 @@ function SummaryPage({
   const displayScore = useCountUp(score, TRACK_DELAY, TRACK_DURATION);
   const trackEndSec = (TRACK_DELAY + TRACK_DURATION) / 1000;
   const [showExitModal, setShowExitModal] = useState(false);
+  const { ref: scrollRef, onScroll, hasShadow } = useScrollShadow();
 
   const turnStat = goodTurns > 0
     ? `${totalTurns}번 대화 중 ${goodTurns}번 잘 통했어요`
@@ -293,7 +294,10 @@ function SummaryPage({
   return (
     <div className='flex h-full flex-col bg-background' style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
       {/* 네비게이션 헤더 */}
-      <div className='flex items-center px-4 pt-4 pb-3 border-b border-zinc-200'>
+      <div
+        className='flex items-center px-4 pt-4 pb-3 border-b border-zinc-200 transition-shadow duration-200'
+        style={{ boxShadow: hasShadow ? '0 2px 8px rgba(0,0,0,0.08)' : 'none' }}
+      >
         <button
           onClick={() => setShowExitModal(true)}
           className='flex items-center justify-center w-8 h-8 -ml-1 rounded-full text-zinc-500 active:bg-zinc-100'
@@ -338,7 +342,7 @@ function SummaryPage({
         )}
       </AnimatePresence>
 
-      <div className='no-scrollbar flex flex-1 flex-col overflow-y-auto px-6 pt-2'>
+      <div ref={scrollRef} onScroll={onScroll} className='no-scrollbar flex flex-1 flex-col overflow-y-auto px-6 pt-2'>
         <motion.div
           className='mt-3'
           initial={{ opacity: 0, y: 8 }}
@@ -394,27 +398,16 @@ function SummaryPage({
 
         {/* CTA */}
         <div className='mt-auto' style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)', paddingTop: '32px' }}>
-          {(totalTurns - goodTurns) > 0 && (
-            <motion.div
-              className='text-center mb-3'
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.4, delay: trackEndSec + 0.6 }}
-            >
-              <p
-                className='text-base font-medium text-zinc-800'
-                style={{ animation: `runnerBounce 1.2s ease-in-out ${trackEndSec}s infinite` }}
-              >
-                조금만 다듬으면 바로 통하는 표현이 있어요 <span className='tossface'>👇</span>
-              </p>
-            </motion.div>
-          )}
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: trackEndSec + 0.4 }}
           >
-            <Button onClick={onNext}>상세 분석 보러 갈게요</Button>
+            <Button onClick={onNext}>
+              {(totalTurns - goodTurns) > 0
+                ? '조금만 다듬으면 바로 통하는 표현 보기'
+                : '상세 분석 보러 갈게요'}
+            </Button>
           </motion.div>
         </div>
       </div>
@@ -493,24 +486,40 @@ function FadeIn({ delay, children }: { delay: number; children: React.ReactNode 
   );
 }
 
-// "원문 → 개선표현... 이유" 형태의 feedbackDetail을 파싱
+// "원문 → 개선표현... 이유" 또는 "원문 → 개선표현. 이유" 형태를 파싱
 function parseFeedbackDetail(detail: string): { before: string; after: string; reason: string } | null {
   const arrowIdx = detail.indexOf('→');
-  const ellipsisIdx = detail.indexOf('...');
-  if (arrowIdx === -1 || ellipsisIdx === -1 || ellipsisIdx < arrowIdx) return null;
-  return {
-    before: detail.slice(0, arrowIdx).trim(),
-    after: detail.slice(arrowIdx + 1, ellipsisIdx).trim(),
-    reason: detail.slice(ellipsisIdx + 3).trim(),
-  };
+  if (arrowIdx === -1) return null;
+
+  const before = detail.slice(0, arrowIdx).trim();
+  const rest = detail.slice(arrowIdx + 1).trim();
+
+  // 포맷 1: "개선표현... 이유"
+  const ellipsisIdx = rest.indexOf('...');
+  if (ellipsisIdx !== -1) {
+    return { before, after: rest.slice(0, ellipsisIdx).trim(), reason: rest.slice(ellipsisIdx + 3).trim() };
+  }
+
+  // 포맷 2: "개선표현. 이유" — 첫 문장 끝(. ! ?) 기준으로 분리
+  const sentenceEnd = rest.search(/[.!?]\s/);
+  if (sentenceEnd !== -1) {
+    return { before, after: rest.slice(0, sentenceEnd + 1).trim(), reason: rest.slice(sentenceEnd + 1).trim() };
+  }
+
+  // 이유 구분자 없으면 after만
+  return { before, after: rest, reason: '' };
 }
 
-function TurnCard({ turn }: { turn: ApiTurnFeedback }) {
+function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onScrollChange?: (scrolled: boolean) => void; isLast?: boolean }) {
   const isGood = turn.feedbackType === 'GOOD';
   const parsed = turn.feedbackDetail ? parseFeedbackDetail(turn.feedbackDetail) : null;
 
   return (
-    <div className='no-scrollbar h-full overflow-y-auto overscroll-y-contain px-4 pt-2 pb-8 space-y-5'>
+    <div
+      className='no-scrollbar h-full overflow-y-auto overscroll-y-contain px-4 pt-2 space-y-5'
+      style={{ paddingBottom: isLast ? 'max(calc(env(safe-area-inset-bottom) + 72px), 72px)' : 32 }}
+      onScroll={(e) => onScrollChange?.((e.currentTarget.scrollTop) > 0)}
+    >
 
       {/* 채팅 UI */}
       <FadeIn delay={0}>
@@ -530,7 +539,7 @@ function TurnCard({ turn }: { turn: ApiTurnFeedback }) {
       <div className='border-t border-zinc-100 mx-1 pt-3'>
         <FadeIn delay={0.2}>
           <p className='text-2xl font-black leading-tight text-zinc-800'>
-            <span className='tossface'>{isGood ? '🙌' : '💪'}</span>{' '}
+            <span className='tossface'>{isGood ? '✅' : '💪'}</span>{' '}
             {isGood ? '잘 통했어요' : '한 단계 더 업그레이드해봐요'}
           </p>
         </FadeIn>
@@ -542,25 +551,47 @@ function TurnCard({ turn }: { turn: ApiTurnFeedback }) {
             <FadeIn delay={0.18}>
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>한국어로 치면</p>
-                <p className='text-base text-zinc-600 leading-relaxed px-1 pt-1'>{turn.koreanAnalogy}</p>
+                <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
+                  <p className='text-base text-zinc-600 leading-relaxed'>{turn.koreanAnalogy}</p>
+                </div>
               </div>
             </FadeIn>
           )}
 
-          {turn.feedbackDetail && (
-            <FadeIn delay={0.3}>
-              <div className='space-y-2'>
-                <p className='text-sm font-bold text-zinc-800'>잘한 이유</p>
-                <p className='text-base text-zinc-700 leading-relaxed bg-zinc-50 rounded-2xl px-4 py-4'>{turn.feedbackDetail}</p>
-              </div>
-            </FadeIn>
-          )}
+          {turn.feedbackDetail && (() => {
+            const p = parseFeedbackDetail(turn.feedbackDetail);
+            return (
+              <FadeIn delay={0.3}>
+                <div className='space-y-2'>
+                  <p className='text-sm font-bold text-zinc-800'>잘한 이유</p>
+                  {p ? (
+                    <div className='rounded-2xl border border-zinc-200 px-4 py-4 space-y-3'>
+                      <div className='flex items-center gap-2 flex-wrap'>
+                        <p className='text-base font-semibold text-zinc-500'>{p.before}</p>
+                        <span className='text-zinc-300 font-bold'>→</span>
+                        <p className='text-base font-bold text-zinc-800'>{p.after}</p>
+                      </div>
+                      {p.reason && (
+                        <p className='text-sm text-zinc-500 leading-relaxed border-t border-zinc-200 pt-3'>{p.reason}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
+                      <p className='text-base text-zinc-700 leading-relaxed'>{turn.feedbackDetail}</p>
+                    </div>
+                  )}
+                </div>
+              </FadeIn>
+            );
+          })()}
 
           {turn.benchmarkMessage && (
             <FadeIn delay={0.42}>
-              <div className='rounded-2xl bg-[#FFF4EC] border border-[#F0D9C8] px-4 py-4 space-y-1.5'>
-                <p className='text-sm font-bold text-[#E07A3A]'>알고 있었나요?</p>
-                <p className='text-base font-semibold text-zinc-800 leading-relaxed'>{turn.benchmarkMessage}</p>
+              <div className='space-y-2'>
+                <p className='text-sm font-bold text-[#3B82F6]'>이 디테일이 통했어요</p>
+                <div className='rounded-2xl bg-[#EFF6FF] border border-[#BFDBFE] px-4 py-4'>
+                  <p className='text-base font-semibold text-zinc-800 leading-relaxed'>{turn.benchmarkMessage}</p>
+                </div>
               </div>
             </FadeIn>
           )}
@@ -571,7 +602,9 @@ function TurnCard({ turn }: { turn: ApiTurnFeedback }) {
             <FadeIn delay={0.18}>
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>한국어로 치면</p>
-                <p className='text-base text-zinc-600 leading-relaxed px-1 pt-1'>{turn.koreanAnalogy}</p>
+                <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
+                  <p className='text-base text-zinc-600 leading-relaxed'>{turn.koreanAnalogy}</p>
+                </div>
               </div>
             </FadeIn>
           )}
@@ -581,13 +614,11 @@ function TurnCard({ turn }: { turn: ApiTurnFeedback }) {
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>이렇게 하면 더 통해요</p>
                 <div className='rounded-2xl border border-zinc-200 px-4 py-4 space-y-3'>
-                  {/* 내 표현 → 더 나은 표현 한 줄 */}
                   <div className='flex items-center gap-2 flex-wrap'>
                     <p className='text-base font-semibold text-zinc-600 line-through decoration-zinc-600'>{parsed.before}</p>
                     <span className='text-zinc-300 font-bold'>→</span>
                     <p className='text-base font-bold text-zinc-800'>{parsed.after}</p>
                   </div>
-                  {/* 이유 */}
                   {parsed.reason && (
                     <p className='text-sm text-zinc-500 leading-relaxed border-t border-zinc-200 pt-3'>{parsed.reason}</p>
                   )}
@@ -598,7 +629,9 @@ function TurnCard({ turn }: { turn: ApiTurnFeedback }) {
             <FadeIn delay={0.3}>
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>이렇게 하면 더 통해요</p>
-                <p className='text-base text-zinc-700 leading-relaxed bg-zinc-50 rounded-2xl px-4 py-4'>{turn.feedbackDetail}</p>
+                <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
+                  <p className='text-base text-zinc-700 leading-relaxed'>{turn.feedbackDetail}</p>
+                </div>
               </div>
             </FadeIn>
           ) : null}
@@ -606,27 +639,16 @@ function TurnCard({ turn }: { turn: ApiTurnFeedback }) {
           {turn.positiveFeedback && (
             <FadeIn delay={0.42}>
               <div className='space-y-2'>
-                <p className='text-sm font-bold text-zinc-800'>잘한 점</p>
-                <p className='text-base text-zinc-600 leading-relaxed px-1 pt-1'>{turn.positiveFeedback}</p>
+                <p className='text-sm font-bold text-[#16A34A]'>이 부분은 좋았어요</p>
+                <div className='rounded-2xl bg-[#F0FDF4] border border-[#BBF7D0] px-4 py-4'>
+                  <p className='text-base font-semibold text-zinc-800 leading-relaxed'>{turn.positiveFeedback}</p>
+                </div>
               </div>
             </FadeIn>
           )}
         </>
       )}
 
-      {/* 스와이프 힌트 */}
-      <FadeIn delay={0.6}>
-        <div className='relative h-14 overflow-visible'>
-          <motion.span
-            className='tossface text-2xl absolute top-1/2 -translate-y-1/2'
-            style={{ right: -4 }}
-            animate={{ x: [0, -140, -140], opacity: [1, 1, 0] }}
-            transition={{ duration: 1.8, repeat: Infinity, repeatDelay: 0.6, ease: 'easeOut', times: [0, 0.7, 1] }}
-          >
-            👆
-          </motion.span>
-        </div>
-      </FadeIn>
     </div>
   );
 }
