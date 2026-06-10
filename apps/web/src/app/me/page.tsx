@@ -33,7 +33,7 @@ export default function MyPage() {
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
   const [isFeedbackSheetOpen, setIsFeedbackSheetOpen] = useState(false);
   const [labTapCount, setLabTapCount] = useState(0);
-  const goHome = useBackButtonReplace('/');
+  const goHome = useBackButtonReplace('/home');
   const { ref: scrollRef, onScroll, hasShadow } = useScrollShadow();
 
   function handleLabTap() {

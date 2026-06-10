@@ -56,7 +56,7 @@ function LoginPageContent() {
   const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear, !isPending);
 
   useEffect(() => {
-    if (accessToken) router.replace('/');
+    if (accessToken) router.replace('/home');
   }, [accessToken, router]);
 
   useEffect(() => {
@@ -96,7 +96,7 @@ function LoginPageContent() {
     localStorage.setItem(LAST_LOGIN_KEY, member.provider as SocialProvider);
     setAuth(accessToken, refreshToken, member);
     updateNativeAuthSession(accessToken, refreshToken, member);
-    router.replace(shouldShowOnboarding(member) ? '/onboarding' : '/');
+    router.replace(shouldShowOnboarding(member) ? '/onboarding' : '/home');
   }
 
   useBridgeEvent('NATIVE_LOGIN_SUCCESS', (msg) => {

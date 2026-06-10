@@ -32,7 +32,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
         <main className='flex h-full items-center justify-center bg-background px-6'>
           <div className='space-y-4 text-center'>
             <p className='text-muted-foreground'>{error.message}</p>
-            <button onClick={() => router.replace('/?unlocked=true')} className='text-sm font-medium text-primary'>돌아가기</button>
+            <button onClick={() => router.replace('/home?unlocked=true')} className='text-sm font-medium text-primary'>돌아가기</button>
           </div>
         </main>
       );
@@ -45,7 +45,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
       <main className='flex h-full items-center justify-center bg-background px-6'>
         <div className='space-y-4 text-center'>
           <p className='text-muted-foreground'>{error?.message ?? '피드백을 불러올 수 없어요.'}</p>
-          <button onClick={() => router.replace('/?unlocked=true')} className='text-sm font-medium text-primary'>돌아가기</button>
+          <button onClick={() => router.replace('/home?unlocked=true')} className='text-sm font-medium text-primary'>돌아가기</button>
         </div>
       </main>
     );
@@ -170,7 +170,7 @@ function TurnDetailView({
 
   function goNext() {
     if (!isLast) swiperRef.current?.slideNext();
-    else router.replace('/?unlocked=true');
+    else router.replace('/home?unlocked=true');
   }
 
   return (
@@ -334,7 +334,7 @@ function SummaryPage({
               <div className='flex flex-col gap-2'>
                 <Button onClick={() => setShowExitModal(false)}>계속 볼게요</Button>
                 <button
-                  onClick={() => router.replace('/?unlocked=true')}
+                  onClick={() => router.replace('/home?unlocked=true')}
                   className='w-full py-3 text-sm font-semibold text-zinc-400'
                 >
                   그냥 나갈게요

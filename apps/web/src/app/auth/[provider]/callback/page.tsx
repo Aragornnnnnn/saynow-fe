@@ -88,7 +88,7 @@ function SocialCallbackContent({ provider }: { provider: string }) {
         clearPendingSocialLogin();
         setAuth(data.accessToken, data.refreshToken, data.user);
         updateNativeAuthSession(data.accessToken, data.refreshToken, data.user);
-        router.replace(shouldShowOnboarding(data.user) ? '/onboarding' : '/');
+        router.replace(shouldShowOnboarding(data.user) ? '/onboarding' : '/home');
       } catch (error) {
         if (!cancelled) {
           const message = error instanceof Error ? error.message : '로그인에 실패했습니다.';

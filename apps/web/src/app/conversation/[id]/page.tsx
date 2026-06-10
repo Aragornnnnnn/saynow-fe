@@ -484,7 +484,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   async function handleExit() {
     if (sessionId) await abandonSession(sessionId).catch(() => {});
-    router.push('/');
+    router.push('/home');
   }
 
   if (pageState === 'error') {
@@ -492,7 +492,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       <main className='flex h-full items-center justify-center bg-background px-6'>
         <div className='space-y-4 text-center'>
           <p className='text-muted-foreground'>{error}</p>
-          <button onClick={() => router.push('/')} className='text-sm font-medium text-primary'>
+          <button onClick={() => router.push('/home')} className='text-sm font-medium text-primary'>
             돌아가기
           </button>
         </div>
