@@ -23,7 +23,7 @@ import type { SocialProvider } from '@/lib/api';
 import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
 import { shouldShowOnboarding } from '@/lib/onboarding';
 
-const LAST_LOGIN_KEY = 'saynow-last-login';
+const LAST_LOGIN_KEY = 'landit-last-login';
 
 function haptic() {
   if (webBridge.isAvailable()) triggerHaptic('light');

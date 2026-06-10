@@ -9,7 +9,7 @@ type PendingSocialLogin = {
   codeVerifier?: string;
 };
 
-export const SOCIAL_LOGIN_STORAGE_KEY = 'saynow-social-login';
+export const SOCIAL_LOGIN_STORAGE_KEY = 'landit-social-login';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 

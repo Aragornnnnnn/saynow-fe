@@ -7,13 +7,13 @@ import { MSWProvider } from "@/mocks/MSWProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SayNow — 외국인과의 영어 회화 연습",
+  title: "Landit — 외국인과의 영어 회화 연습",
   description: "실제 외국인 상황을 시뮬레이션하며 영어 회화를 연습하고, AI가 외국인 관점의 이해도 피드백을 드려요.",
-  keywords: ["영어 회화", "영어 연습", "AI 영어", "영어 스피킹", "SayNow"],
+  keywords: ["영어 회화", "영어 연습", "AI 영어", "영어 스피킹", "Landit"],
   openGraph: {
-    title: "SayNow — 외국인과의 영어 회화 연습",
+    title: "Landit — 외국인과의 영어 회화 연습",
     description: "실제 외국인 상황을 시뮬레이션하며 영어 회화를 연습하고, AI가 외국인 관점의 이해도 피드백을 드려요.",
-    siteName: "SayNow",
+    siteName: "Landit",
     locale: "ko_KR",
     type: "website",
   },

@@ -51,7 +51,7 @@ export default function MyPage() {
 
   if (!isReady) return null;
 
-  const displayName = member?.nickname?.trim() || 'SayNow 사용자';
+  const displayName = member?.nickname?.trim() || 'Landit 사용자';
   const emailText = member?.email ?? '';
 
   function finishSignedOut() {
@@ -264,7 +264,7 @@ function FeedbackSheetContent({ onDone }: { onDone: () => void }) {
     <>
       <div className="mb-5 flex items-start justify-between">
         <div>
-          <p className="text-base font-bold text-foreground">SayNow 어떠세요?</p>
+          <p className="text-base font-bold text-foreground">Landit 어떠세요?</p>
           <p className="mt-0.5 text-xs text-muted-foreground">솔직하게 말해줘요, 다 듣고 반영할게요</p>
         </div>
         <button onClick={onDone} className="text-xl leading-none text-muted-foreground">

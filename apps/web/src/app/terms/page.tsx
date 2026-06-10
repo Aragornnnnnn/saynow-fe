@@ -6,7 +6,7 @@ export default function PublicTermsPage() {
     <LegalDocumentPage
       document={termsDocument}
       backHref="/"
-      backLabel="SayNow 홈으로 돌아가기"
+      backLabel="Landit 홈으로 돌아가기"
     />
   );
 }

@@ -1,6 +1,6 @@
 import type { AuthMember } from '@/store/authStore';
 
-const ONBOARDING_COMPLETE_PREFIX = 'saynow-onboarding-complete';
+const ONBOARDING_COMPLETE_PREFIX = 'landit-onboarding-complete';
 
 function getOnboardingCompleteKey(userId: string) {
   return `${ONBOARDING_COMPLETE_PREFIX}:${userId}`;

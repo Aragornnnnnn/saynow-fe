@@ -33,7 +33,7 @@ export const useAuthStore = create<AuthState>()(
       clearAuth: () => set({ accessToken: null, refreshToken: null, member: null }),
     }),
     {
-      name: 'saynow-auth',
+      name: 'landit-auth',
       // refreshToken만 localStorage에 유지, accessToken은 메모리에서 관리
       partialize: (state) => ({
         refreshToken: state.refreshToken,

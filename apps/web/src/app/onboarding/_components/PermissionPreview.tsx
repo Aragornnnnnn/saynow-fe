@@ -27,7 +27,7 @@ function IosPermissionPreview() {
         <div className="px-5 pb-5 pt-6 text-center">
           <div className="space-y-2">
             <p className="text-[19px] font-semibold leading-snug">
-              'SayNow'이(가)
+              'Landit'이(가)
               <br />
               마이크에 접근하려고 합니다.
             </p>
@@ -67,7 +67,7 @@ function AndroidPermissionPreview() {
           <span className="-ml-0.5 h-1.5 w-1.5 rounded-full bg-white/80" />
         </div>
         <p className="mx-auto max-w-[264px] text-[16px] font-semibold leading-snug">
-          SayNow에서 오디오를 녹음하도록 허용하시겠습니까?
+          Landit에서 오디오를 녹음하도록 허용하시겠습니까?
         </p>
         <div className="mt-7 space-y-1 text-[20px] font-bold leading-none">
           <div className="relative flex h-14 w-full items-center justify-center">
