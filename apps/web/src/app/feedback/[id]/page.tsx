@@ -51,7 +51,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
     );
   }
 
-  const passed = header.nativeScore >= 70;
+
   const goodTurns = turnFeedbacks.filter((t) => t.feedbackType === 'GOOD').length;
 
   return (
@@ -67,7 +67,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
         >
           <SummaryPage
             score={header.nativeScore}
-            passed={passed}
+
             highlightMessage={header.highlightMessage}
             totalTurns={turnFeedbacks.length}
             goodTurns={goodTurns}
@@ -266,11 +266,15 @@ function useCountUp(target: number, delay: number, duration: number) {
 }
 
 function getScoreInterpretation(score: number): string {
-  if (score >= 90) return '외국인이 모든 말을 이해했어요';
-  if (score >= 70) return '외국인이 대부분 이해했어요';
-  if (score >= 50) return '외국인이 절반 이상 이해했어요';
-  if (score >= 30) return '외국인이 맥락을 파악했어요';
-  return '외국인이 상황을 감지했어요';
+  if (score >= 95) return '어색한 표현 하나 없이, 원어민이 완벽히 이해했어요.';
+  if (score >= 90) return '원어민과 프리토킹이 가능해요.';
+  if (score >= 80) return '원어민이 되묻지 않고 한 번에 알아들었어요. 사소한 실수 정도는 인간미라 괜찮아요.';
+  if (score >= 70) return '살짝 어색한 표현이 있어도, 원어민이 내 의도를 알아듣는 데엔 문제 없어요.';
+  if (score >= 60) return '유창하진 않아도 괜찮아요. 하고 싶은 말은 다 전달됐어요.';
+  if (score >= 50) return '원어민이 아리송해하면서도 어느 정도 알아들었어요. 조금만 다듬으면 또렷하게 전달돼요.';
+  if (score >= 40) return '센스 있는 원어민은 핵심을 알아차렸지만, 무심한 상대였다면 놓쳤을 거예요.';
+  if (score >= 30) return '원어민이 무슨 말인지 감 정도만 잡았어요.';
+  return '몸짓까지 썼다면 통했겠지만, 말만으로는 아직 어려웠어요.';
 }
 
 // RunnerTrack과 동일: delay 400ms, duration 1800ms
@@ -278,9 +282,9 @@ const TRACK_DELAY = 400;
 const TRACK_DURATION = 1800;
 
 function SummaryPage({
-  score, passed, highlightMessage, totalTurns, goodTurns, scenarioTitle, onNext,
+  score, highlightMessage, totalTurns, goodTurns, scenarioTitle, onNext,
 }: {
-  score: number; passed: boolean; highlightMessage: string;
+  score: number; highlightMessage: string;
   totalTurns: number; goodTurns: number; scenarioTitle: string | null; onNext: () => void;
 }) {
   const router = useRouter();
@@ -290,9 +294,7 @@ function SummaryPage({
   const [showExitModal, setShowExitModal] = useState(false);
   const { ref: scrollRef, onScroll, hasShadow } = useScrollShadow();
 
-  const turnStat = goodTurns > 0
-    ? `${totalTurns}번 대화 중 ${goodTurns}번 잘 통했어요`
-    : `${totalTurns}번 모두 끝까지 도전했어요`;
+
 
   return (
     <div className='flex h-full flex-col bg-background' style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
@@ -383,8 +385,8 @@ function SummaryPage({
               <p className='text-xs font-semibold text-zinc-500 mb-1'>대화 성공률</p>
               <p className='text-base font-semibold text-zinc-800 leading-snug'>
                 {goodTurns > 0
-                  ? <>{totalTurns}번 중 <span className='text-[#E07A3A]'>{goodTurns}번</span> 잘 통했어요</>
-                  : turnStat
+                  ? <>{totalTurns}번 중 <span className='text-[#E07A3A]'>{goodTurns}번</span> 원어민처럼 말했어요</>
+                  : `${totalTurns}번 모두 끝까지 말했어요.`
                 }
               </p>
             </div>
