@@ -1,3 +1,4 @@
+import { AppEventsLogger, Settings } from 'react-native-fbsdk-next';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
@@ -24,6 +25,7 @@ import type { WebCommandHandlers } from './bridge/useWebViewBridge';
 import { useStt } from './hooks/useStt';
 
 SplashScreen.preventAutoHideAsync();
+Settings.initializeSDK();
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? (__DEV__ ? 'http://localhost:3000' : undefined);
 
@@ -79,6 +81,9 @@ export default function App() {
         const idToken = await requestSocialIdToken(message.provider, nonce);
         const session = await socialLogin(message.provider, idToken, nonce);
         await saveAuthSession(session);
+        if (session.member.newUser) {
+          AppEventsLogger.logEvent('fb_mobile_complete_registration', { fb_registration_method: message.provider });
+        }
         postToWeb({
           type: 'NATIVE_LOGIN_SUCCESS',
           accessToken: session.accessToken,
