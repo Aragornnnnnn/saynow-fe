@@ -7,7 +7,7 @@ import type { SocialProvider } from './mobileApi';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const REDIRECT_SCHEME = 'saynow';
+const REDIRECT_SCHEME = 'landit';
 const REDIRECT_PATH = 'oauthredirect';
 
 const GOOGLE_DISCOVERY = {

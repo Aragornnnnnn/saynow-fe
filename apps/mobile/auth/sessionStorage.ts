@@ -1,7 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 import type { NativeAuthSession } from './mobileApi';
 
-const AUTH_SESSION_KEY = 'saynow-native-auth';
+const AUTH_SESSION_KEY = 'landit-native-auth';
 
 export async function loadAuthSession(): Promise<NativeAuthSession | null> {
   const raw = await SecureStore.getItemAsync(AUTH_SESSION_KEY);

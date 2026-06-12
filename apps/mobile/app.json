@@ -1,13 +1,10 @@
 {
   "expo": {
-    "name": "SayNow",
+    "name": "Landit",
     "slug": "saynow",
     "entryPoint": "./index.ts",
     "version": "1.0.0",
-    "scheme": [
-      "saynow",
-      "com.saynow.app"
-    ],
+    "scheme": ["landit", "com.saynow.app"],
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -37,17 +34,12 @@
     },
     "plugins": [
       "expo-web-browser",
-      [
-        "./plugins/withGradleVersion",
-        { "version": "8.13" }
-      ],
+      ["./plugins/withGradleVersion", { "version": "8.13" }],
       [
         "expo-build-properties",
         {
           "android": {
-            "extraMavenRepos": [
-              "https://devrepo.kakao.com/nexus/content/groups/public/"
-            ]
+            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
           }
         }
       ],
