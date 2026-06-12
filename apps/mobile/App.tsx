@@ -1,4 +1,3 @@
-import { Settings } from 'react-native-fbsdk-next';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
@@ -14,7 +13,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import WebView from 'react-native-webview';
 import { generateNonce } from './auth/nonce';
 import { refreshAuthSession, socialLogin } from './auth/mobileApi';
@@ -25,7 +24,6 @@ import type { WebCommandHandlers } from './bridge/useWebViewBridge';
 import { useStt } from './hooks/useStt';
 
 SplashScreen.preventAutoHideAsync();
-Settings.initializeSDK();
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? (__DEV__ ? 'http://localhost:3000' : undefined);
 
@@ -128,7 +126,7 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={styles.container}>
+      <View style={styles.container}>
         {!WEB_URL ? (
           <View style={styles.errorContainer}>
             <Text style={styles.errorEmoji}>!</Text>
@@ -200,7 +198,7 @@ export default function App() {
           />
         )}
         <StatusBar style="dark" />
-      </SafeAreaView>
+      </View>
     </SafeAreaProvider>
   );
 }
@@ -217,8 +215,8 @@ function createAuthScript(session: { accessToken: string; refreshToken: string; 
   return `
     (function () {
       try {
-        localStorage.setItem('saynow-auth', ${JSON.stringify(persisted)});
-        if (window.location.pathname === '/login') window.location.replace('/');
+        localStorage.setItem('landit-auth', ${JSON.stringify(persisted)});
+        if (window.location.pathname === '/login') window.location.replace('/home');
       } catch (e) {}
     })();
     true;

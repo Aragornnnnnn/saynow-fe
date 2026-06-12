@@ -2,6 +2,7 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { AppBridge } from "@/providers/AppBridge";
 import { Toaster } from "@/components/ui/Toast";
 import { MSWProvider } from "@/mocks/MSWProvider";
 import "./globals.css";
@@ -51,6 +52,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -74,7 +76,9 @@ export default function RootLayout({
       <body className="h-full bg-zinc-200 text-foreground">
         <div className="mx-auto h-full w-full max-w-[430px] bg-background shadow-xl">
           <MSWProvider>
-            <QueryProvider>{children}</QueryProvider>
+            <QueryProvider>
+              <AppBridge>{children}</AppBridge>
+            </QueryProvider>
           </MSWProvider>
         </div>
         <Toaster />
