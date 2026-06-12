@@ -1,3 +1,5 @@
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const appJson = require('./app.json') as { expo: { version: string } };
 import { AppEventsLogger, Settings } from 'react-native-fbsdk-next';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
@@ -9,6 +11,7 @@ import {
   BackHandler,
   Linking,
   NativeModules,
+  Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -160,7 +163,10 @@ export default function App() {
             javaScriptCanOpenWindowsAutomatically
             setSupportMultipleWindows
             injectedJavaScriptBeforeContentLoaded={authScript ?? 'true;'}
-            onLoadEnd={() => SplashScreen.hideAsync()}
+            onLoadEnd={() => {
+              SplashScreen.hideAsync();
+              postToWeb({ type: 'APP_VERSION_INFO', platform: Platform.OS, buildNumber: '1', versionName: appJson.expo.version });
+            }}
             onMessage={handleMessage}
             onError={handleError}
             onHttpError={handleError}

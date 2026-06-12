@@ -25,7 +25,8 @@ export type NativeToWebMessage =
   | { type: 'TTS_END' }
   | { type: 'BACK_PRESSED' }
   | { type: 'NATIVE_LOGIN_SUCCESS'; accessToken: string; refreshToken: string; member: BridgeAuthMember }
-  | { type: 'NATIVE_LOGIN_ERROR'; message: string };
+  | { type: 'NATIVE_LOGIN_ERROR'; message: string }
+  | { type: 'APP_VERSION_INFO'; platform: string; buildNumber: string; versionName?: string };
 
 export function serializeWebMessage(message: WebToNativeMessage): string {
   return JSON.stringify(message);
@@ -65,6 +66,10 @@ function normalizeNativeMessage(value: unknown): NativeToWebMessage | null {
     case 'NATIVE_LOGIN_ERROR':
       return typeof value.message === 'string'
         ? { type: value.type, message: value.message }
+        : null;
+    case 'APP_VERSION_INFO':
+      return typeof value.platform === 'string' && typeof value.buildNumber === 'string'
+        ? { type: value.type, platform: value.platform, buildNumber: value.buildNumber, versionName: typeof value.versionName === 'string' ? value.versionName : undefined }
         : null;
     default:
       return null;
