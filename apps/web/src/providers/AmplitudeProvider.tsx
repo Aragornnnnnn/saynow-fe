@@ -16,6 +16,7 @@ export function AmplitudeProvider({ children }: { children: React.ReactNode }) {
     initialized = true;
 
     amplitude.initAll(API_KEY, {
+      analytics: { defaultTracking: false },
       sessionReplay: { sampleRate: 1 },
     });
 
