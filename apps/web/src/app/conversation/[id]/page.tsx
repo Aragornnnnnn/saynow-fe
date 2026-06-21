@@ -213,12 +213,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             }
           }
           if (prev === 'recording') {
-            const accumulated = (transcriptRef.current + ' ' + msg.transcript).trim();
-            transcriptRef.current = accumulated;
-            setTranscript(accumulated);
+            const text = msg.transcript.trim();
+            transcriptRef.current = text;
+            setTranscript(text);
             // silence detection 시 자동 제출
-            if (accumulated && sessionId) {
-              setTimeout(() => submitUserUtterance(accumulated), 0);
+            if (text && sessionId) {
+              setTimeout(() => submitUserUtterance(text), 0);
               return 'submitting';
             }
           }
