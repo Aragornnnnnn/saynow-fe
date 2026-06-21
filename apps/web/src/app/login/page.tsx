@@ -22,6 +22,7 @@ import { useAuthStore } from '@/store/authStore';
 import type { SocialProvider } from '@/lib/api';
 import { clearPendingSocialLogin, startWebSocialLogin } from '@/lib/webSocialLogin';
 import { shouldShowOnboarding } from '@/lib/onboarding';
+import { track, EVENTS } from '@/lib/analytics';
 
 const LAST_LOGIN_KEY = 'landit-last-login';
 
@@ -56,6 +57,10 @@ function LoginPageContent() {
   const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear, !isPending);
 
   useEffect(() => {
+    track(EVENTS.APP_OPENED);
+  }, []);
+
+  useEffect(() => {
     if (accessToken) router.replace('/home');
   }, [accessToken, router]);
 
@@ -77,6 +82,7 @@ function LoginPageContent() {
   async function startLogin(provider: SocialProvider) {
     setErrorMessage(null);
     setPendingProvider(provider);
+    track(EVENTS.LOGIN_STARTED, { provider: provider.toLowerCase() });
 
     if (webBridge.isAvailable()) {
       requestNativeLogin(provider);
@@ -94,6 +100,7 @@ function LoginPageContent() {
 
   function onLoginSuccess(accessToken: string, refreshToken: string, member: Parameters<typeof setAuth>[2]) {
     localStorage.setItem(LAST_LOGIN_KEY, member.provider as SocialProvider);
+    track(EVENTS.LOGIN_COMPLETED, { provider: (member.provider as string).toLowerCase() });
     setAuth(accessToken, refreshToken, member);
     updateNativeAuthSession(accessToken, refreshToken, member);
     router.replace(shouldShowOnboarding(member) ? '/onboarding' : '/home');

@@ -22,6 +22,7 @@ import { SoundStep } from './_steps/SoundStep';
 import { MicStep } from './_steps/MicStep';
 import { ScenarioStep } from './_steps/ScenarioStep';
 import { STEP_ORDER, FALLBACK_QUESTION, SOUND_QUESTIONS, type OnboardingStep, type MicPermissionState } from './_types';
+import { track, EVENTS } from '@/lib/analytics';
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -54,6 +55,10 @@ export default function OnboardingPage() {
   }, [step]);
 
   useBackButtonBridge(handleBack);
+
+  useEffect(() => {
+    track(EVENTS.ONBOARDING_STARTED);
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -159,6 +164,7 @@ export default function OnboardingPage() {
     useCallback(() => {
       micDeniedRef.current = true;
       if (micTimerRef.current) clearTimeout(micTimerRef.current);
+      track(EVENTS.MICROPHONE_PERMISSION_DENIED);
       setMicState('denied');
     }, []),
   );
@@ -166,12 +172,15 @@ export default function OnboardingPage() {
   async function requestMicrophonePermission() {
     setMicState('requesting');
     micDeniedRef.current = false;
+    track(EVENTS.MICROPHONE_PERMISSION_PROMPTED);
 
     if (webBridge.isAvailable()) {
       startNativeStt();
       micTimerRef.current = setTimeout(() => {
         stopNativeStt();
         if (!micDeniedRef.current) {
+          track(EVENTS.MICROPHONE_PERMISSION_GRANTED);
+          track(EVENTS.ONBOARDING_STEP_COMPLETED, { step_name: 'mic' });
           setMicState('idle');
           goToStep('scenario');
         }
@@ -181,10 +190,13 @@ export default function OnboardingPage() {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((track) => track.stop());
+      stream.getTracks().forEach((t) => t.stop());
+      track(EVENTS.MICROPHONE_PERMISSION_GRANTED);
+      track(EVENTS.ONBOARDING_STEP_COMPLETED, { step_name: 'mic' });
       setMicState('idle');
       goToStep('scenario');
     } catch {
+      track(EVENTS.MICROPHONE_PERMISSION_DENIED);
       setMicState('denied');
     }
   }
@@ -200,6 +212,7 @@ export default function OnboardingPage() {
       scenarioEmoji: firstScenario.scenarioEmoji ?? null,
     });
 
+    track(EVENTS.ONBOARDING_COMPLETED);
     markOnboardingComplete(member.userId);
     prefetchSession(firstScenario.scenarioId);
     router.replace(`/conversation/${firstScenario.scenarioId}`);
@@ -217,7 +230,7 @@ export default function OnboardingPage() {
       <AnimatePresence mode="wait">
         {step === 'intro' && (
           <StepMotion key="intro">
-            <IntroStep nickname={member?.nickname ?? ''} onNext={() => goToStep('sound')} />
+            <IntroStep nickname={member?.nickname ?? ''} onNext={() => { track(EVENTS.ONBOARDING_STEP_COMPLETED, { step_name: 'intro' }); goToStep('sound'); }} />
           </StepMotion>
         )}
 
@@ -227,7 +240,7 @@ export default function OnboardingPage() {
               question={soundQuestion}
               isSpeaking={isSpeaking}
               bubbleVisible={soundBubbleVisible}
-              onNext={() => goToStep('mic')}
+              onNext={() => { track(EVENTS.ONBOARDING_STEP_COMPLETED, { step_name: 'sound' }); goToStep('mic'); }}
             />
           </StepMotion>
         )}

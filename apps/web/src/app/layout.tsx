@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { AppBridge } from "@/providers/AppBridge";
+import { AmplitudeProvider } from "@/providers/AmplitudeProvider";
 import { Toaster } from "@/components/ui/Toast";
 import { MSWProvider } from "@/mocks/MSWProvider";
 import "./globals.css";
@@ -75,11 +76,13 @@ export default function RootLayout({
       </head>
       <body className="h-full bg-zinc-200 text-foreground">
         <div className="mx-auto h-full w-full max-w-[430px] bg-background shadow-xl">
-          <MSWProvider>
-            <QueryProvider>
-              <AppBridge>{children}</AppBridge>
-            </QueryProvider>
-          </MSWProvider>
+          <AmplitudeProvider>
+            <MSWProvider>
+              <QueryProvider>
+                <AppBridge>{children}</AppBridge>
+              </QueryProvider>
+            </MSWProvider>
+          </AmplitudeProvider>
         </div>
         <Toaster />
         <Analytics />

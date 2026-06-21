@@ -16,6 +16,7 @@ import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { Button } from '@/components/ui/Button';
 import { useScrollShadow } from '@/hooks/useScrollShadow';
+import { track, EVENTS } from '@/lib/analytics';
 
 export default function FeedbackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -67,12 +68,13 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
         >
           <SummaryPage
             score={header.nativeScore}
-
             highlightMessage={header.highlightMessage}
             totalTurns={turnFeedbacks.length}
             goodTurns={goodTurns}
             scenarioTitle={scenario?.scenarioTitle ?? null}
-            onNext={() => setPage(1)}
+            sessionId={header.sessionId}
+            scenarioId={scenario?.scenarioId ?? null}
+            onNext={() => { track(EVENTS.FEEDBACK_DETAIL_VIEWED, { scenario_id: scenario?.scenarioId, session_id: header.sessionId }); setPage(1); }}
           />
         </motion.div>
       ) : (
@@ -87,6 +89,7 @@ export default function FeedbackPage({ params }: { params: Promise<{ id: string 
           <TurnDetailView
             turns={turnFeedbacks}
             sessionId={header.sessionId}
+            scenarioId={scenario?.scenarioId ?? null}
             onBack={() => setPage(0)}
           />
         </motion.div>
@@ -158,9 +161,9 @@ function SummarySkeleton() {
 // 발화별 상세 피드백을 전체 화면으로 보여줌
 // Swiper로 iOS 스타일 드래그 중 다음 카드 미리보기 구현
 function TurnDetailView({
-  turns, onBack,
+  turns, sessionId, scenarioId, onBack,
 }: {
-  turns: ApiTurnFeedback[]; sessionId: number; onBack: () => void;
+  turns: ApiTurnFeedback[]; sessionId: number; scenarioId: number | null; onBack: () => void;
 }) {
   const router = useRouter();
   const [index, setIndex] = useState(0);
@@ -210,7 +213,7 @@ function TurnDetailView({
           modules={[Keyboard]}
           keyboard={{ enabled: true }}
           onSwiper={(swiper) => { swiperRef.current = swiper; }}
-          onSlideChange={(swiper) => { setIndex(swiper.activeIndex); setHasShadow(false); }}
+          onSlideChange={(swiper) => { const i = swiper.activeIndex; track(EVENTS.FEEDBACK_TURN_NAVIGATED, { scenario_id: scenarioId, session_id: sessionId, turn_index: i }); setIndex(i); setHasShadow(false); }}
           slidesPerView={1}
           spaceBetween={16}
           style={{ height: '100%' }}
@@ -282,10 +285,11 @@ const TRACK_DELAY = 400;
 const TRACK_DURATION = 1800;
 
 function SummaryPage({
-  score, highlightMessage, totalTurns, goodTurns, scenarioTitle, onNext,
+  score, highlightMessage, totalTurns, goodTurns, scenarioTitle, sessionId, scenarioId, onNext,
 }: {
   score: number; highlightMessage: string;
-  totalTurns: number; goodTurns: number; scenarioTitle: string | null; onNext: () => void;
+  totalTurns: number; goodTurns: number; scenarioTitle: string | null;
+  sessionId: number; scenarioId: number | null; onNext: () => void;
 }) {
   const router = useRouter();
   const interpretation = getScoreInterpretation(score);
@@ -293,6 +297,11 @@ function SummaryPage({
   const trackEndSec = (TRACK_DELAY + TRACK_DURATION) / 1000;
   const [showExitModal, setShowExitModal] = useState(false);
   const { ref: scrollRef, onScroll, hasShadow } = useScrollShadow();
+
+  useEffect(() => {
+    track(EVENTS.FEEDBACK_SUMMARY_VIEWED, { scenario_id: scenarioId, session_id: sessionId, score });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
 
 
@@ -336,7 +345,7 @@ function SummaryPage({
               <div className='flex flex-col gap-2'>
                 <Button onClick={() => setShowExitModal(false)}>계속 볼게요</Button>
                 <button
-                  onClick={() => router.replace('/home?unlocked=true')}
+                  onClick={() => { track(EVENTS.FEEDBACK_EXITED_EARLY, { scenario_id: scenarioId, session_id: sessionId }); router.replace('/home?unlocked=true'); }}
                   className='w-full py-3 text-sm font-semibold text-zinc-400'
                 >
                   그냥 나갈게요

@@ -10,6 +10,7 @@ import {
 import { useAuthStore } from '@/store/authStore';
 import { updateNativeAuthSession } from '@/bridge/commands';
 import { shouldShowOnboarding } from '@/lib/onboarding';
+import { track, EVENTS } from '@/lib/analytics';
 
 export default function SocialCallbackPage({
   params,
@@ -86,6 +87,7 @@ function SocialCallbackContent({ provider }: { provider: string }) {
         if (cancelled) return;
 
         clearPendingSocialLogin();
+        track(EVENTS.LOGIN_COMPLETED, { provider: data.user.provider.toLowerCase() });
         setAuth(data.accessToken, data.refreshToken, data.user);
         updateNativeAuthSession(data.accessToken, data.refreshToken, data.user);
         router.replace(shouldShowOnboarding(data.user) ? '/onboarding' : '/home');

@@ -21,6 +21,7 @@ import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { TypingDots } from '@/components/chat/TypingDots';
 import { Button } from '@/components/ui/Button';
+import { track, EVENTS } from '@/lib/analytics';
 
 interface ChatMessage {
   id: string;
@@ -51,16 +52,15 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [debugText, setDebugText] = useState('');
   // ── END DEBUG ──
 
-  // ── STT 엔진 선택 (웹 전용, 네이티브는 항상 기기 STT) ──
-  const [useDeepgram, setUseDeepgram] = useState(false);
   const deepgramSocketRef = useRef<WebSocket | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  // ── END STT ENGINE ──
 
   const { speak, stop } = useTts();
   const queryClient = useQueryClient();
   const isNative = webBridge.isAvailable();
   const sessionStartedRef = useRef(false);
+  const turnIndexRef = useRef(0);
+  const sttEngineRef = useRef<'native' | 'web' | 'deepgram'>('web');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef('');
@@ -93,6 +93,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           translatedText: data.currentTurn.translatedQuestion,
         },
       ]);
+      track(EVENTS.CONVERSATION_STARTED, { scenario_id: Number(id), session_id: data.sessionId });
       setPageState('idle');
     } catch (e) {
       setError((e as Error).message);
@@ -127,9 +128,12 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
     try {
       const result = await submitUtterance(sessionId, text);
+      track(EVENTS.TURN_COMPLETED, { scenario_id: Number(id), session_id: sessionId, turn_index: turnIndexRef.current, stt_engine: sttEngineRef.current });
+      turnIndexRef.current += 1;
 
       // 마지막 답변 — ... 말풍선 → 마무리 멘트 → 결과 보기 버튼
       if (result.progress.completed) {
+        track(EVENTS.CONVERSATION_COMPLETED, { scenario_id: Number(id), session_id: sessionId });
         const closingLines: [string, string][] = [
           ["Great job! Let's see how you did!", '수고했어요! 결과를 확인해봐요!'],
           ['Nice work! Check out your feedback!', '잘 하셨어요! 피드백을 확인해봐요!'],
@@ -203,6 +207,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               setTimeout(() => submitUserUtterance(text), 0);
               return 'submitting';
             } else {
+              track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId });
               setEmptyToast(true);
               return 'idle';
             }
@@ -236,6 +241,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           setTimeout(() => submitUserUtterance(text), 0);
           return 'submitting';
         }
+        track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId });
         setEmptyToast(true);
         return 'idle';
       });
@@ -260,6 +266,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           setTimeout(() => submitUserUtterance(text), 0);
           return 'submitting';
         }
+        track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId });
         setEmptyToast(true);
         return 'idle';
       });
@@ -320,7 +327,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       } else {
         setPageState((prev) => {
           if (prev === 'recording') {
-            if (!text) setEmptyToast(true);
+            if (!text) { track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sid }); setEmptyToast(true); }
             return 'idle';
           }
           return prev;
@@ -333,6 +340,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       setPageState('idle');
     };
 
+    sttEngineRef.current = 'web';
     recognition.start();
     recognitionRef.current = recognition;
     setPageState('recording');
@@ -345,18 +353,33 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   // ── Deepgram STT ──
-  async function startDeepgramStt() {
+  // 실패 시 fallbackStt()로 넘어감
+  async function startDeepgramStt(fallbackStt: () => void): Promise<boolean> {
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      setShowMicDeniedModal(true);
-      return;
+    } catch (e) {
+      // 권한 거부는 모달, getUserMedia 미지원(iOS WKWebView 등)은 폴백
+      if (e instanceof DOMException && e.name === 'NotAllowedError') {
+        setShowMicDeniedModal(true);
+        return false;
+      }
+      fallbackStt();
+      return false;
     }
 
     const tokenRes = await fetch('/api/stt/token', { method: 'POST' });
-    if (!tokenRes.ok) return;
+    if (!tokenRes.ok) {
+      fallbackStt();
+      return false;
+    }
     const { token } = (await tokenRes.json()) as { token: string };
+
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm')
+      ? 'audio/webm'
+      : MediaRecorder.isTypeSupported('audio/ogg')
+      ? 'audio/ogg'
+      : '';
 
     const params = new URLSearchParams({
       model: 'nova-3',
@@ -373,7 +396,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     transcriptRef.current = '';
 
     ws.onopen = () => {
-      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      sttEngineRef.current = 'deepgram';
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRecorderRef.current = mr;
       mr.ondataavailable = (e) => {
         if (ws.readyState === WebSocket.OPEN) ws.send(e.data);
@@ -405,11 +429,16 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       }
     };
 
-    ws.onerror = () => stopDeepgramStt();
+    ws.onerror = () => {
+      deepgramSocketRef.current = null;
+      stream.getTracks().forEach((t) => t.stop());
+      fallbackStt();
+    };
 
     setPageState('recording');
     setTranscript('');
     setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+    return true;
   }
 
   function stopDeepgramStt() {
@@ -428,37 +457,38 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       submitUserUtterance(text);
     } else {
       setPageState('idle');
-      if (!text) setEmptyToast(true);
+      if (!text) { track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId }); setEmptyToast(true); }
     }
   }
   // ── END Deepgram STT ──
 
   function startStt() {
     stop();
+    transcriptRef.current = '';
+    setTranscript('');
     if (isNative) {
-      transcriptRef.current = '';
-      setTranscript('');
+      sttEngineRef.current = 'native';
       startNativeStt();
       setPageState('recording');
       setTimeout(() => bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
-    } else if (useDeepgram) {
-      startDeepgramStt();
     } else {
-      startWebStt();
+      // 웹 브라우저: Deepgram 먼저, 실패 시 브라우저 SpeechRecognition으로 폴백
+      startDeepgramStt(startWebStt);
     }
   }
 
   function stopStt() {
-    if (isNative) {
+    if (deepgramSocketRef.current) {
+      stopDeepgramStt();
+    } else if (isNative) {
       setPageState('stopping');
       stopNativeStt();
       startStoppingTimeout();
-    } else if (useDeepgram) {
-      stopDeepgramStt();
     } else {
       stopWebStt();
       const text = transcriptRef.current.trim();
       if (!text || !sessionId) {
+        track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId });
         setPageState('idle');
         setEmptyToast(true);
         return;
@@ -483,6 +513,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   }
 
   async function handleExit() {
+    track(EVENTS.CONVERSATION_ABANDONED, { scenario_id: Number(id), session_id: sessionId });
     if (sessionId) await abandonSession(sessionId).catch(() => {});
     router.push('/home');
   }
@@ -546,16 +577,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           <ChevronLeft size={20} />
         </button>
 
-        {/* 웹 환경에서만 STT 엔진 토글 표시 */}
-        {!isNative && (
-          <button
-            onClick={() => setUseDeepgram((v) => !v)}
-            className='flex items-center gap-1.5 rounded-full bg-black/30 backdrop-blur-sm border border-white/20 px-3 py-1.5 text-xs font-medium text-white active:bg-black/50 transition-colors'
-          >
-            <span className={`h-1.5 w-1.5 rounded-full ${useDeepgram ? 'bg-green-400' : 'bg-white/50'}`} />
-            {useDeepgram ? 'Deepgram' : 'Web STT'}
-          </button>
-        )}
+        <div />
       </div>
 
       {/* 채팅 메시지 영역 */}
@@ -659,17 +681,21 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
               </div>
               <button
                 onClick={() => {
+                  track(EVENTS.RECORDING_CANCELLED, { scenario_id: Number(id), session_id: sessionId, stt_engine: sttEngineRef.current });
                   transcriptRef.current = '';
                   setTranscript('');
-                  if (isNative) { stopNativeStt(); setPageState('idle'); }
-                  else if (useDeepgram) {
+                  if (deepgramSocketRef.current) {
                     mediaRecorderRef.current?.stop();
                     mediaRecorderRef.current?.stream.getTracks().forEach((t) => t.stop());
                     mediaRecorderRef.current = null;
-                    deepgramSocketRef.current?.close();
+                    deepgramSocketRef.current.close();
                     deepgramSocketRef.current = null;
                     setPageState('idle');
-                  } else { stopWebStt(); setPageState('idle'); }
+                  } else if (isNative) {
+                    stopNativeStt(); setPageState('idle');
+                  } else {
+                    stopWebStt(); setPageState('idle');
+                  }
                 }}
                 className='text-sm font-semibold text-white/70 active:text-white transition-colors'
               >

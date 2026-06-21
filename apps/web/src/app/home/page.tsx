@@ -20,6 +20,7 @@ import { getScenarioImage } from '@/lib/scenarioImages';
 import { useScenarioStore } from '@/store/scenarioStore';
 import { useAuthStore } from '@/store/authStore';
 import { shouldShowOnboarding } from '@/lib/onboarding';
+import { track, EVENTS } from '@/lib/analytics';
 
 export default function Page() {
   return (
@@ -39,6 +40,7 @@ function Home() {
   const [isRedirectingToOnboarding, setIsRedirectingToOnboarding] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const swiperInstanceRef = useRef<SwiperType | null>(null);
+  const allCompletedFiredRef = useRef(false);
   const isUnlockMode = searchParams.get('unlocked') === 'true';
   const [unlockedCardIndex, setUnlockedCardIndex] = useState<number | null>(null);
   const { data, isPending, error, refetch } = useScenariosQuery(_hasHydrated && !!refreshToken);
@@ -76,13 +78,28 @@ function Home() {
     return () => clearTimeout(timer);
   }, [isUnlockMode, isPending, data]);
 
-  if (!isReady || isRedirectingToOnboarding) return null;
-
   const categories = data?.categories ?? [];
   const activeCategory = categories.find((c) => !c.categoryLocked);
+  const scenarios = activeCategory?.scenarios.slice(0, 3) ?? [];
+  const allCompleted = scenarios.length > 0 && scenarios.every((s) => s.completed);
+
+  useEffect(() => {
+    if (allCompleted && activeIndex === scenarios.length && !allCompletedFiredRef.current) {
+      allCompletedFiredRef.current = true;
+      track(EVENTS.ALL_SCENARIOS_COMPLETED);
+    }
+  }, [allCompleted, activeIndex, scenarios.length]);
+
+  useEffect(() => {
+    if (isReady && !shouldShowOnboarding(member)) track(EVENTS.SCENARIO_LIST_VIEWED);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady]);
+
+  if (!isReady || isRedirectingToOnboarding) return null;
 
   function handleStart(scenario: ApiScenario) {
     if (scenario.locked) return;
+    track(EVENTS.SCENARIO_STARTED, { scenario_id: scenario.scenarioId, is_retry: scenario.completed });
     setScenario({
       scenarioId: scenario.scenarioId,
       scenarioTitle: scenario.scenarioTitle,
@@ -107,8 +124,6 @@ function Home() {
     );
   }
 
-  const scenarios = activeCategory?.scenarios.slice(0, 3) ?? [];
-  const allCompleted = scenarios.length > 0 && scenarios.every((s) => s.completed);
   const totalDots = scenarios.length + 1;
 
   return (
@@ -128,7 +143,7 @@ function Home() {
           <span className="tossface text-[22px] leading-none">🗂️</span>
           <span className="text-[17px] font-semibold" style={{ color: '#111' }}>대화 목록</span>
         </div>
-        <Link href="/me" className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-3 transition-all active:scale-90 active:bg-zinc-100">
+        <Link href="/me" onClick={() => track(EVENTS.MY_PAGE_VIEWED)} className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-3 transition-all active:scale-90 active:bg-zinc-100">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="8" r="4" />
             <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
@@ -288,7 +303,7 @@ function ScenarioCard({ scenario, onStart, isUnlocking = false }: { scenario: Ap
         <div>
           {isLocked ? (
             <div
-              onClick={() => toast('앞선 시나리오를 먼저 클리어해봐요!')}
+              onClick={() => { track(EVENTS.SCENARIO_LOCKED_TAPPED, { scenario_id: scenario.scenarioId, lock_reason: scenario.lockReason?.toLowerCase() ?? 'unknown' }); toast('앞선 시나리오를 먼저 클리어해봐요!'); }}
               className="flex w-full h-14 items-center justify-center gap-1.5 rounded-2xl text-base font-bold cursor-pointer"
               style={{ background: '#EBEBEA', color: '#AAAAAA' }}
             >
