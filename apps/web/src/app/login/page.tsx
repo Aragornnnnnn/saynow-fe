@@ -57,10 +57,6 @@ function LoginPageContent() {
   const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear, !isPending);
 
   useEffect(() => {
-    track(EVENTS.APP_OPENED);
-  }, []);
-
-  useEffect(() => {
     if (accessToken) router.replace('/home');
   }, [accessToken, router]);
 

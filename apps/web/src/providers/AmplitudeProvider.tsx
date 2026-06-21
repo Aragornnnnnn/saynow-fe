@@ -4,7 +4,7 @@
 import { useEffect } from 'react';
 import * as amplitude from '@amplitude/unified';
 import { webBridge } from '@/bridge/webBridge';
-import { identify } from '@/lib/analytics';
+import { identify, track, EVENTS } from '@/lib/analytics';
 
 const API_KEY = process.env.NEXT_PUBLIC_AMPLITUDE_API_KEY ?? '';
 const ENV = process.env.NODE_ENV === 'production' ? 'prod' : 'dev';
@@ -18,6 +18,7 @@ export function AmplitudeProvider({ children }: { children: React.ReactNode }) {
     amplitude.initAll(API_KEY, {
       sessionReplay: { sampleRate: 1 },
     });
+    track(EVENTS.APP_OPENED);
 
     if (!webBridge.isAvailable()) {
       identify({ platform: 'web', environment: ENV });
