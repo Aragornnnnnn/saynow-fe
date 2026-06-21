@@ -11,7 +11,7 @@ import { ensureAccessToken } from '@/lib/api/client';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
-import { startNativeStt, stopNativeStt } from '@/bridge/commands';
+import { prepareNativeStt, startNativeStt, stopNativeStt } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import { getScenarioImage } from '@/lib/scenarioImages';
@@ -94,6 +94,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
         },
       ]);
       track(EVENTS.CONVERSATION_STARTED, { scenario_id: Number(id), session_id: data.sessionId });
+      if (isNative) prepareNativeStt();
       setPageState('idle');
     } catch (e) {
       setError((e as Error).message);

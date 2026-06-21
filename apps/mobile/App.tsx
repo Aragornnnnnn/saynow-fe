@@ -38,7 +38,7 @@ export default function App() {
   const [hasError, setHasError] = useState(false);
   const [authScript, setAuthScript] = useState<string | null>(null);
   const postToWeb = usePostToWeb(webviewRef);
-  const { start: startStt, stop: stopStt } = useStt({
+  const { prepare: prepareStt, start: startStt, stop: stopStt } = useStt({
     onPartial: (transcript) => postToWeb({ type: 'STT_PARTIAL', transcript }),
     onFinal: (transcript) => postToWeb({ type: 'STT_FINAL', transcript }),
     onDenied: () => postToWeb({ type: 'MIC_PERMISSION_DENIED' }),
@@ -65,7 +65,11 @@ export default function App() {
   }, []);
 
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
-    START_STT: (message) => startStt({ contextualStrings: message.contextualStrings, languageModel: message.languageModel }),
+    PREPARE_STT: () => prepareStt(),
+    START_STT: (message) => {
+      Speech.stop();
+      startStt({ contextualStrings: message.contextualStrings, languageModel: message.languageModel });
+    },
     STOP_STT: () => stopStt(),
     OPEN_SETTINGS: () => Linking.openSettings(),
     PLAY_TTS: (message) => {
@@ -122,7 +126,7 @@ export default function App() {
       }[message.style];
       Haptics.impactAsync(style);
     },
-  }), [postToWeb, startStt, stopStt]);
+  }), [postToWeb, prepareStt, startStt, stopStt]);
 
   const isWebViewActive = !!WEB_URL && isReady && !hasError;
   const handleMessage = useWebViewBridge(webCommandHandlers, postToWeb, isWebViewActive);

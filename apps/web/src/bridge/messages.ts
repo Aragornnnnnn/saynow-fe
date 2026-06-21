@@ -2,6 +2,7 @@ import type { AuthMember } from '@/store/authStore';
 export type BridgeAuthMember = AuthMember;
 
 export type WebToNativeMessage =
+  | { type: 'PREPARE_STT' }
   | { type: 'START_STT'; contextualStrings?: string[]; languageModel?: 'web_search' | 'free_form' }
   | { type: 'STOP_STT' }
   | { type: 'OPEN_SETTINGS' }

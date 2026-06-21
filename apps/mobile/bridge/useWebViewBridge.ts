@@ -54,6 +54,8 @@ export function useWebViewBridge(
 
 function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHandlers) {
   switch (message.type) {
+    case 'PREPARE_STT':
+      return handlers.PREPARE_STT?.(message);
     case 'START_STT':
       return handlers.START_STT?.(message);
     case 'STOP_STT':

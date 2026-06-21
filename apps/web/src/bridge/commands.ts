@@ -9,6 +9,10 @@ export function requestNativeLogin(provider: 'KAKAO' | 'GOOGLE') {
   return webBridge.send({ type: 'NATIVE_LOGIN', provider });
 }
 
+export function prepareNativeStt() {
+  return webBridge.send({ type: 'PREPARE_STT' });
+}
+
 export function startNativeStt() {
   return webBridge.send({ type: 'START_STT' });
 }
