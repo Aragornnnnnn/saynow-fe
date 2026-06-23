@@ -82,6 +82,7 @@ export default function App() {
         onError: () => postToWeb({ type: 'TTS_END' }),
       });
     },
+    STOP_TTS: () => Speech.stop(),
     NATIVE_LOGIN: async (message) => {
       try {
         const nonce = generateNonce();

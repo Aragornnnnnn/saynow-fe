@@ -25,6 +25,10 @@ export function playNativeTts(text: string, url: string | null) {
   return webBridge.send({ type: 'PLAY_TTS', text, url });
 }
 
+export function stopNativeTts() {
+  return webBridge.send({ type: 'STOP_TTS' });
+}
+
 export function updateNativeAuthSession(
   accessToken: string,
   refreshToken: string,

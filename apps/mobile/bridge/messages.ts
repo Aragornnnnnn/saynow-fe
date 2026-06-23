@@ -12,6 +12,7 @@ export type WebToNativeMessage =
   | { type: 'STOP_STT' }
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
+  | { type: 'STOP_TTS' }
   | { type: 'NATIVE_LOGIN'; provider: 'KAKAO' | 'GOOGLE' }
   | {
       type: 'AUTH_SESSION_UPDATED';
@@ -70,6 +71,7 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
     }
     case 'PREPARE_STT':
     case 'STOP_STT':
+    case 'STOP_TTS':
     case 'OPEN_SETTINGS':
       return { type: value.type };
     case 'PLAY_TTS':

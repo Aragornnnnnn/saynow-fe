@@ -11,7 +11,7 @@ import { ensureAccessToken } from '@/lib/api/client';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
-import { prepareNativeStt, startNativeStt, stopNativeStt } from '@/bridge/commands';
+import { prepareNativeStt, startNativeStt, stopNativeStt, stopNativeTts } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import { getScenarioImage } from '@/lib/scenarioImages';
@@ -71,6 +71,18 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
 
   useEffect(() => {
     handleStartSession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 페이지 이탈 시 TTS·STT 정리 — 마이크/소리 누수 방지
+  useEffect(() => {
+    return () => {
+      stop();
+      if (isNative) {
+        stopNativeStt();
+        stopNativeTts();
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

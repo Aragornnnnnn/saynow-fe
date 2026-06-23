@@ -64,6 +64,8 @@ function dispatchWebCommand(message: WebToNativeMessage, handlers: WebCommandHan
       return handlers.OPEN_SETTINGS?.(message);
     case 'PLAY_TTS':
       return handlers.PLAY_TTS?.(message);
+    case 'STOP_TTS':
+      return handlers.STOP_TTS?.(message);
     case 'NATIVE_LOGIN':
       return handlers.NATIVE_LOGIN?.(message);
     case 'AUTH_SESSION_UPDATED':
