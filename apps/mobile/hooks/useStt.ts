@@ -10,7 +10,7 @@ const DEEPGRAM_PARAMS = new URLSearchParams({
   language: 'en-US',
   smart_format: 'true',
   interim_results: 'true',
-  endpointing: '400',
+  endpointing: '1000',
   utterance_end_ms: '1000',
   vad_events: 'true',
   encoding: 'linear16',

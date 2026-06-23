@@ -30,7 +30,7 @@ interface ChatMessage {
   translatedText?: string;
 }
 
-type PageState = 'loading' | 'idle' | 'recording' | 'stopping' | 'submitting' | 'navigating' | 'error';
+type PageState = 'loading' | 'idle' | 'recording' | 'submitting' | 'navigating' | 'error';
 
 export default function ConversationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -66,7 +66,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const transcriptRef = useRef('');
   const sessionIdRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const stoppingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isRecording = pageState === 'recording';
   const [emptyToast, setEmptyToast] = useState(false);
 
@@ -199,25 +198,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     useCallback(
       (msg) => {
         setPageState((prev) => {
-          if (prev === 'stopping') {
-            clearStoppingTimeout();
-            const text = msg.transcript.trim();
-            if (text && sessionId) {
-              transcriptRef.current = text;
-              setTranscript(text);
-              setTimeout(() => submitUserUtterance(text), 0);
-              return 'submitting';
-            } else {
-              track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId });
-              setEmptyToast(true);
-              return 'idle';
-            }
-          }
           if (prev === 'recording') {
             const text = msg.transcript.trim();
             transcriptRef.current = text;
             setTranscript(text);
-            // silence detection 시 자동 제출
+            // 1초 침묵 자동 종료 시 제출
             if (text && sessionId) {
               setTimeout(() => submitUserUtterance(text), 0);
               return 'submitting';
@@ -231,37 +216,11 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     ),
   );
 
-  // stopping 상태에서 3초 내 STT_FINAL 없으면 강제 idle 복구
-  function startStoppingTimeout() {
-    if (stoppingTimeoutRef.current) clearTimeout(stoppingTimeoutRef.current);
-    stoppingTimeoutRef.current = setTimeout(() => {
-      setPageState((prev) => {
-        if (prev !== 'stopping') return prev;
-        const text = transcriptRef.current.trim();
-        if (text && sessionId) {
-          setTimeout(() => submitUserUtterance(text), 0);
-          return 'submitting';
-        }
-        track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId });
-        setEmptyToast(true);
-        return 'idle';
-      });
-    }, 3000);
-  }
-
-  function clearStoppingTimeout() {
-    if (stoppingTimeoutRef.current) {
-      clearTimeout(stoppingTimeoutRef.current);
-      stoppingTimeoutRef.current = null;
-    }
-  }
-
   useBridgeEvent(
     'STT_ERROR',
     useCallback(() => {
-      clearStoppingTimeout();
       setPageState((prev) => {
-        if (prev !== 'stopping' && prev !== 'recording') return prev;
+        if (prev !== 'recording') return prev;
         const text = transcriptRef.current.trim();
         if (text && sessionId) {
           setTimeout(() => submitUserUtterance(text), 0);
@@ -278,7 +237,6 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   useBridgeEvent(
     'MIC_PERMISSION_DENIED',
     useCallback(() => {
-      clearStoppingTimeout();
       setShowMicDeniedModal(true);
       setPageState('idle');
     }, []),
@@ -387,7 +345,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       language: 'en-US',
       smart_format: 'true',
       interim_results: 'true',
-      endpointing: '400',
+      endpointing: '1000',
       utterance_end_ms: '1000',
       vad_events: 'true',
     });
@@ -478,33 +436,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
     }
   }
 
-  function stopStt() {
-    if (deepgramSocketRef.current) {
-      stopDeepgramStt();
-    } else if (isNative) {
-      setPageState('stopping');
-      stopNativeStt();
-      startStoppingTimeout();
-    } else {
-      stopWebStt();
-      const text = transcriptRef.current.trim();
-      if (!text || !sessionId) {
-        track(EVENTS.EMPTY_RECORDING_SUBMITTED, { scenario_id: Number(id), session_id: sessionId });
-        setPageState('idle');
-        setEmptyToast(true);
-        return;
-      }
-      submitUserUtterance(text);
-    }
-  }
-
-  async function handleMicPress() {
+  function handleMicPress() {
     setEmptyToast(false);
-    if (isRecording) {
-      stopStt();
-    } else {
-      startStt();
-    }
+    startStt();
   }
 
   function handleNext() {
@@ -660,7 +594,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
                 <><span className='h-5 w-5 rounded-full border-2 border-white/40 border-t-white animate-spin' /><span>이동 중...</span></>
               ) : '결과 보기'}
             </motion.button>
-          ) : pageState === 'submitting' || pageState === 'stopping' ? (
+          ) : pageState === 'submitting' ? (
             <motion.div key='submitting' className='flex h-14 items-center justify-center gap-2'>
               <span className='h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin' />
               <span className='text-sm font-semibold text-white/70'>분석 중...</span>
