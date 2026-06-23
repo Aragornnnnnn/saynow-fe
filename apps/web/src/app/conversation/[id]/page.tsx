@@ -349,7 +349,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       utterance_end_ms: '1000',
       vad_events: 'true',
     });
-    const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['token', token]);
+    const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['bearer', token]);
     deepgramSocketRef.current = ws;
 
     transcriptRef.current = '';

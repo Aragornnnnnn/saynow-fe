@@ -129,7 +129,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
 
       return new Promise((resolve) => {
         log('Deepgram WS 연결 시도');
-        const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${DEEPGRAM_PARAMS}`, ['token', token]);
+        const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${DEEPGRAM_PARAMS}`, ['bearer', token]);
         wsRef.current = ws;
 
         ws.onopen = () => {

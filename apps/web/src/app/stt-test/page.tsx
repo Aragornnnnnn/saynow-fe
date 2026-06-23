@@ -248,7 +248,7 @@ export default function SttTestPage() {
         utterance_end_ms: '1000',
         vad_events: 'true',
       });
-      const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['token', token]);
+      const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['bearer', token]);
       dgSocketRef.current = ws;
       dgStartRef.current = Date.now();
 
