@@ -154,8 +154,7 @@ export const feedbackHandler = http.post(
       data: {
         sessionId: Number(params.sessionId),
         nativeScore: 82,
-        nativeLevelLabel: '유학생 수준',
-        summary: '하고 싶은 말을 끝까지 전달하는 힘이 좋았어요.',
+        highlightMessage: '하고 싶은 말을 끝까지 전달하는 힘이 좋았어요.',
         turnFeedbacks: [
           {
             turnId: 101,
@@ -164,9 +163,12 @@ export const feedbackHandler = http.post(
             translatedQuestion: '가장 좋아하는 음식이 뭐예요? 왜 좋아하나요?',
             userUtterance: 'I like pizza because it is spicy.',
             feedbackType: 'GOOD',
-            koreanAnalogy: '한국어로 비유하자면 담백하게 이유를 붙인 말처럼 들려요.',
+            koreanAnalogy: '담백하게 이유를 붙인 말처럼 들려요.',
+            positiveFeedback: null,
             feedbackDetail: '좋아하는 음식과 이유를 한 문장 안에서 분명하게 연결했기 때문이에요.',
-            betterExpression: null,
+            correctionExpression: null,
+            correctionReason: null,
+            benchmarkMessage: '한국인의 30%가 이유를 빼먹는데 정확히 붙였어요.',
           },
           {
             turnId: 102,
@@ -176,8 +178,11 @@ export const feedbackHandler = http.post(
             userUtterance: 'No cook. I buy outside.',
             feedbackType: 'NEEDS_IMPROVEMENT',
             koreanAnalogy: '뜻은 통하지만 단어만 이어 붙인 답처럼 들려요.',
-            feedbackDetail: '동사를 넣어 문장으로 연결하면 훨씬 자연스럽습니다.',
-            betterExpression: 'No, I usually buy it from a restaurant.',
+            positiveFeedback: '직접 요리하지 않는다는 의도는 분명하게 전달됐어요.',
+            feedbackDetail: null,
+            correctionExpression: 'No, I usually buy it from a restaurant.',
+            correctionReason: '동사를 넣어 완전한 문장으로 말하면 훨씬 자연스럽게 들려요.',
+            benchmarkMessage: null,
           },
         ],
       },

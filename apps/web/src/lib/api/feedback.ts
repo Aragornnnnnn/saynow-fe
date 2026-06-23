@@ -11,6 +11,8 @@ export interface ApiTurnFeedback {
   koreanAnalogy: string | null;
   positiveFeedback: string | null;
   feedbackDetail: string | null;
+  correctionExpression: string | null;
+  correctionReason: string | null;
   benchmarkMessage: string | null;
 }
 

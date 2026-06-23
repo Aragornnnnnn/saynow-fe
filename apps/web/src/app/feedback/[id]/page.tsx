@@ -500,56 +500,8 @@ function FadeIn({ delay, children }: { delay: number; children: React.ReactNode 
   );
 }
 
-// "원문 → 개선표현... 이유" 또는 "원문 → 개선표현. 이유" 형태를 파싱
-function parseFeedbackDetail(detail: string): { before: string; after: string; reason: string } | null {
-  const arrowIdx = detail.indexOf('→');
-  if (arrowIdx === -1) return null;
-
-  const before = detail.slice(0, arrowIdx).trim();
-  const rest = detail.slice(arrowIdx + 1).trim();
-
-  // 포맷 1: "개선표현... 이유"
-  const ellipsisIdx = rest.indexOf('...');
-  if (ellipsisIdx !== -1) {
-    return { before, after: rest.slice(0, ellipsisIdx).trim(), reason: rest.slice(ellipsisIdx + 3).trim() };
-  }
-
-  // 포맷 2: "개선표현. 이유" — 한글이 시작되는 지점 직전을 개선표현/이유 경계로 사용
-  const koreanStart = rest.search(/[가-힣]/);
-  if (koreanStart !== -1) {
-    // 한글 직전 마침표/공백 제거해서 after 추출
-    const after = rest.slice(0, koreanStart).replace(/[\s.!?]+$/, '');
-    const reason = rest.slice(koreanStart).trim();
-    if (after) return { before, after, reason };
-  }
-
-  // 이유 구분자 없으면 after만
-  return { before, after: rest, reason: '' };
-}
-
-const KOREAN_ANALOGY_PREFIXES = [
-  '한국어로 비유하자면, ',
-  '한국어로 비유하자면,',
-  '한국어로 치면, ',
-  '한국어로 치면,',
-];
-
-function stripKoreanAnalogyPrefix(text: string): string {
-  let result = text;
-  for (const prefix of KOREAN_ANALOGY_PREFIXES) {
-    if (result.startsWith(prefix)) {
-      result = result.slice(prefix.length).trimStart();
-      break;
-    }
-  }
-  // 앞 큰따옴표 제거
-  result = result.replace(/^["\\]+/, '');
-  return result;
-}
-
 function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onScrollChange?: (scrolled: boolean) => void; isLast?: boolean }) {
   const isGood = turn.feedbackType === 'GOOD';
-  const parsed = turn.feedbackDetail ? parseFeedbackDetail(turn.feedbackDetail) : null;
 
   return (
     <div
@@ -589,38 +541,22 @@ function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onS
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>한국어로 치면</p>
                 <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
-                  <p className='text-base text-zinc-600 leading-relaxed'>{stripKoreanAnalogyPrefix(turn.koreanAnalogy)}</p>
+                  <p className='text-base text-zinc-600 leading-relaxed'>{turn.koreanAnalogy}</p>
                 </div>
               </div>
             </FadeIn>
           )}
 
-          {turn.feedbackDetail && (() => {
-            const p = parseFeedbackDetail(turn.feedbackDetail);
-            return (
-              <FadeIn delay={0.3}>
-                <div className='space-y-2'>
-                  <p className='text-sm font-bold text-zinc-800'>잘한 이유</p>
-                  {p ? (
-                    <div className='rounded-2xl border border-zinc-200 px-4 py-4 space-y-3'>
-                      <div className='flex items-center gap-2 flex-wrap'>
-                        <p className='text-base font-semibold text-zinc-500'>{p.before}</p>
-                        <span className='text-zinc-300 font-bold'>→</span>
-                        <p className='text-base font-bold text-zinc-800'>{p.after}</p>
-                      </div>
-                      {p.reason && (
-                        <p className='text-sm text-zinc-500 leading-relaxed border-t border-zinc-200 pt-3'>{p.reason}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
-                      <p className='text-base text-zinc-700 leading-relaxed'>{turn.feedbackDetail}</p>
-                    </div>
-                  )}
+          {turn.feedbackDetail && (
+            <FadeIn delay={0.3}>
+              <div className='space-y-2'>
+                <p className='text-sm font-bold text-zinc-800'>잘한 이유</p>
+                <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
+                  <p className='text-base text-zinc-700 leading-relaxed'>{turn.feedbackDetail}</p>
                 </div>
-              </FadeIn>
-            );
-          })()}
+              </div>
+            </FadeIn>
+          )}
 
           {turn.benchmarkMessage && (
             <FadeIn delay={0.42}>
@@ -640,38 +576,29 @@ function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onS
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>한국어로 치면</p>
                 <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
-                  <p className='text-base text-zinc-600 leading-relaxed'>{stripKoreanAnalogyPrefix(turn.koreanAnalogy)}</p>
+                  <p className='text-base text-zinc-600 leading-relaxed'>{turn.koreanAnalogy}</p>
                 </div>
               </div>
             </FadeIn>
           )}
 
-          {parsed ? (
+          {turn.correctionExpression && (
             <FadeIn delay={0.3}>
               <div className='space-y-2'>
                 <p className='text-sm font-bold text-zinc-800'>이렇게 하면 더 통해요</p>
                 <div className='rounded-2xl border border-zinc-200 px-4 py-4 space-y-3'>
                   <div className='flex items-center gap-2 flex-wrap'>
-                    <p className='text-base font-semibold text-zinc-600 line-through decoration-zinc-600'>{parsed.before}</p>
+                    <p className='text-base font-semibold text-zinc-600 line-through decoration-zinc-600'>{turn.userUtterance}</p>
                     <span className='text-zinc-300 font-bold'>→</span>
-                    <p className='text-base font-bold text-zinc-800'>{parsed.after}</p>
+                    <p className='text-base font-bold text-zinc-800'>{turn.correctionExpression}</p>
                   </div>
-                  {parsed.reason && (
-                    <p className='text-sm text-zinc-500 leading-relaxed border-t border-zinc-200 pt-3'>{parsed.reason}</p>
+                  {turn.correctionReason && (
+                    <p className='text-sm text-zinc-500 leading-relaxed border-t border-zinc-200 pt-3'>{turn.correctionReason}</p>
                   )}
                 </div>
               </div>
             </FadeIn>
-          ) : turn.feedbackDetail ? (
-            <FadeIn delay={0.3}>
-              <div className='space-y-2'>
-                <p className='text-sm font-bold text-zinc-800'>이렇게 하면 더 통해요</p>
-                <div className='rounded-2xl border border-zinc-200 px-4 py-4'>
-                  <p className='text-base text-zinc-700 leading-relaxed'>{turn.feedbackDetail}</p>
-                </div>
-              </div>
-            </FadeIn>
-          ) : null}
+          )}
 
           {turn.positiveFeedback && (
             <FadeIn delay={0.42}>
