@@ -40,7 +40,7 @@ export default function App() {
   const postToWeb = usePostToWeb(webviewRef);
   const { prepare: prepareStt, start: startStt, stop: stopStt } = useStt({
     onPartial: (transcript) => postToWeb({ type: 'STT_PARTIAL', transcript }),
-    onFinal: (transcript) => postToWeb({ type: 'STT_FINAL', transcript }),
+    onFinal: (transcript, engine) => postToWeb({ type: 'STT_FINAL', transcript, engine }),
     onDenied: () => postToWeb({ type: 'MIC_PERMISSION_DENIED' }),
     onError: () => postToWeb({ type: 'STT_ERROR' }),
   });

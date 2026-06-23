@@ -26,7 +26,7 @@ export type WebToNativeMessage =
 
 export type NativeToWebMessage =
   | { type: 'STT_PARTIAL'; transcript: string }
-  | { type: 'STT_FINAL'; transcript: string }
+  | { type: 'STT_FINAL'; transcript: string; engine?: 'deepgram' | 'native' }
   | { type: 'STT_ERROR' }
   | { type: 'MIC_PERMISSION_DENIED' }
   | { type: 'TTS_END' }

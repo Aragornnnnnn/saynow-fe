@@ -214,6 +214,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
             const text = msg.transcript.trim();
             transcriptRef.current = text;
             setTranscript(text);
+            // 네이티브가 실제 사용한 엔진(deepgram/폴백 native) 반영
+            if (msg.engine) sttEngineRef.current = msg.engine;
             // 1초 침묵 자동 종료 시 제출
             if (text && sessionId) {
               setTimeout(() => submitUserUtterance(text), 0);

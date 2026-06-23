@@ -20,7 +20,7 @@ const DEEPGRAM_PARAMS = new URLSearchParams({
 
 interface UseSttOptions {
   onPartial: (transcript: string) => void;
-  onFinal: (transcript: string) => void;
+  onFinal: (transcript: string, engine: 'deepgram' | 'native') => void;
   onDenied: () => void;
   onError: () => void;
 }
@@ -53,7 +53,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     const transcript = event.results[0]?.transcript ?? '';
     log('네이티브 결과', { transcript, isFinal: event.isFinal });
     if (event.isFinal) {
-      onFinal(transcript);
+      onFinal(transcript, 'native');
     } else {
       onPartial(transcript);
     }
@@ -237,7 +237,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     // 즉시 다음 턴용 WS 미리 연결 (AI 응답 + TTS 재생 시간 동안 완료됨)
     connectDeepgram();
 
-    if (transcript) onFinal(transcript);
+    if (transcript) onFinal(transcript, 'deepgram');
   }
 
   // ── AudioRecord 초기화 (앱 전체 생애주기에서 한 번) ─────────────────────
