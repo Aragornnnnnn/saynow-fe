@@ -70,15 +70,16 @@ function FeedbackSheetContent({ onDone }: { onDone: () => void }) {
 
   return (
     <>
-      <div className="mb-4 flex justify-end">
-        <button onClick={onDone} className="text-xl leading-none text-muted-foreground">
+      {/* 제목(질문) + 닫기 */}
+      <div className="relative mb-6">
+        <button onClick={onDone} className="absolute -top-1 right-0 text-xl leading-none text-muted-foreground">
           ✕
         </button>
+        <p className="pr-8 text-xl font-bold leading-snug text-foreground">Landit을 쓰면서 얼마나 만족하시나요?</p>
       </div>
 
       {/* 만족도 */}
-      <p className="mb-4 text-sm font-medium text-foreground">Landit을 쓰면서 얼마나 만족하시나요?</p>
-      <div className="flex justify-between">
+      <div className="mb-7 flex justify-between">
         {EMOJIS.map((emoji, i) => {
           const s = (i + 1) as EmojiScore;
           const selected = score === s;
@@ -119,34 +120,21 @@ function FeedbackSheetContent({ onDone }: { onDone: () => void }) {
         })}
       </div>
 
-      {/* 의견 — 이모지를 누르면 펼쳐짐 */}
-      <AnimatePresence initial={false}>
-        {score !== null && (
-          <motion.div
-            key="comment"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            <div className="pt-5">
-              <p className="mb-2 text-sm font-medium text-foreground">전하고 싶은 의견이 있다면?</p>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                maxLength={300}
-                rows={3}
-                placeholder="대화 흐름, 발음, AI 피드백 등 자유롭게 적어주세요"
-                className="w-full resize-none rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-              />
-              <p className="mt-1.5 mb-5 text-xs text-muted-foreground">주신 의견은 한 글자도 빼놓지 않고 꼼꼼히 읽어볼게요.</p>
+      {/* 의견 — 항상 노출 */}
+      <p className="mb-2 text-sm font-medium text-foreground">전하고 싶은 의견이 있다면?</p>
+      <textarea
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+        maxLength={300}
+        rows={3}
+        placeholder="대화 흐름, 발음, AI 피드백 등 자유롭게 적어주세요"
+        className="w-full resize-none rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
+      />
+      <p className="mt-1.5 mb-5 text-xs text-muted-foreground">주신 의견은 한 글자도 빼놓지 않고 꼼꼼히 읽어볼게요.</p>
 
-              <Button size="md" onClick={handleSubmit}>제출할게요</Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Button size="md" onClick={handleSubmit} disabled={score === null}>
+        {score === null ? '얼마나 만족하는지 알려줘요' : '제출할게요'}
+      </Button>
     </>
   );
 }
