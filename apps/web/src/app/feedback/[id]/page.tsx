@@ -363,7 +363,11 @@ function SummaryPage({
         >
           <p className='text-base text-zinc-500 mb-1'>한국인 평균보다</p>
           <p className='text-4xl font-black tracking-tight leading-tight'>
-            <span className='text-[#E07A3A]'>{displayScore}%</span>
+            {/* 카운트업 중 자릿수 변화로 뒤 문구가 밀리지 않게 최종 값만큼 너비 고정 */}
+            <span className='relative inline-block tabular-nums text-[#E07A3A]'>
+              <span className='invisible' aria-hidden>{score}%</span>
+              <span className='absolute inset-0 text-right'>{displayScore}%</span>
+            </span>
             <span className='text-zinc-800'> 더 잘 전달했어요</span>
           </p>
         </motion.div>
