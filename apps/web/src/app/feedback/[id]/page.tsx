@@ -176,6 +176,11 @@ function TurnDetailView({
     else router.replace('/home?unlocked=true');
   }
 
+  function goBack() {
+    if (index > 0) swiperRef.current?.slidePrev();
+    else onBack();
+  }
+
   return (
     <div className='flex h-full flex-col bg-background' style={{ paddingTop: 'max(env(safe-area-inset-top), 0px)' }}>
       {/* 헤더 + 세그먼트 진행 바 */}
@@ -185,7 +190,7 @@ function TurnDetailView({
       >
         <div className='flex items-center px-4 pt-4 pb-2'>
           <button
-            onClick={onBack}
+            onClick={goBack}
             className='flex items-center justify-center w-8 h-8 -ml-1 rounded-full text-zinc-400 active:bg-zinc-100'
           >
             <ChevronLeft size={22} strokeWidth={2} />
@@ -222,26 +227,19 @@ function TurnDetailView({
         >
           {turns.map((turn, i) => (
             <SwiperSlide key={i} style={{ height: '100%' }}>
-              <TurnCard turn={turn} onScrollChange={setHasShadow} isLast={i === turns.length - 1} />
+              <TurnCard turn={turn} onScrollChange={setHasShadow} />
             </SwiperSlide>
           ))}
         </Swiper>
       </div>
 
-      {/* 마지막 페이지 CTA */}
-      <AnimatePresence>
-        {isLast && (
-          <motion.div
-            className='px-5 pt-3 shrink-0 border-t border-zinc-100'
-            style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <Button onClick={goNext}>다음 대화할게요</Button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* 하단 CTA — 항상 노출 (좌우 스와이프를 모르는 사용자를 위한 명시적 다음 버튼) */}
+      <div
+        className='px-5 pt-3 shrink-0 border-t border-zinc-100'
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 24px)' }}
+      >
+        <Button onClick={goNext}>{isLast ? '다음 대화할게요' : '다음'}</Button>
+      </div>
     </div>
   );
 }
@@ -500,13 +498,13 @@ function FadeIn({ delay, children }: { delay: number; children: React.ReactNode 
   );
 }
 
-function TurnCard({ turn, onScrollChange, isLast }: { turn: ApiTurnFeedback; onScrollChange?: (scrolled: boolean) => void; isLast?: boolean }) {
+function TurnCard({ turn, onScrollChange }: { turn: ApiTurnFeedback; onScrollChange?: (scrolled: boolean) => void }) {
   const isGood = turn.feedbackType === 'GOOD';
 
   return (
     <div
       className='no-scrollbar h-full overflow-y-auto overscroll-y-contain px-4 pt-2 space-y-5'
-      style={{ paddingBottom: isLast ? 'max(calc(env(safe-area-inset-bottom) + 72px), 72px)' : 32 }}
+      style={{ paddingBottom: 32 }}
       onScroll={(e) => onScrollChange?.((e.currentTarget.scrollTop) > 0)}
     >
 
