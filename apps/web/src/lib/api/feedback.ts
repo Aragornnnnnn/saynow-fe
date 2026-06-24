@@ -29,12 +29,12 @@ export function createFeedback(sessionId: number): Promise<ApiFeedback> {
   });
 }
 
-export function submitNps(sessionId: number, score: number, lowScoreReason?: string): Promise<void> {
+export function submitNps(sessionId: number, score: number, comment?: string): Promise<void> {
   return request(`/api/v1/sessions/${sessionId}/nps`, {
     method: 'POST',
     body: JSON.stringify({
       score,
-      lowScoreReason: score <= 2 ? (lowScoreReason ?? null) : null,
+      lowScoreReason: comment?.trim() ? comment : null,
     }),
   });
 }

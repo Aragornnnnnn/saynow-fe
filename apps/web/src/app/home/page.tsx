@@ -12,6 +12,7 @@ import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { exitApp } from '@/bridge/commands';
 import { Button } from '@/components/ui/Button';
+import { FeedbackButton } from '@/components/FeedbackButton';
 import { toast } from '@/components/ui/Toast';
 import type { ApiScenario } from '@/lib/api';
 import { useScenariosQuery } from '@/queries/scenarios';
@@ -143,13 +144,16 @@ function Home() {
           <span className="tossface text-[22px] leading-none">🗂️</span>
           <span className="text-[17px] font-semibold" style={{ color: '#111' }}>대화 목록</span>
         </div>
-        <Link href="/me" onClick={() => track(EVENTS.MY_PAGE_VIEWED)} className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-3 transition-all active:scale-90 active:bg-zinc-100">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-          </svg>
-          <span className="text-[10px] font-medium" style={{ color: '#888' }}>내 정보</span>
-        </Link>
+        <div className="flex items-center">
+          <FeedbackButton />
+          <Link href="/me" onClick={() => track(EVENTS.MY_PAGE_VIEWED)} className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-3 transition-all active:scale-90 active:bg-zinc-100">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+            </svg>
+            <span className="text-[10px] font-medium" style={{ color: '#888' }}>내 정보</span>
+          </Link>
+        </div>
       </div>
 
       {/* 수직 인디케이터 */}

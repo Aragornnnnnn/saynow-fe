@@ -5,23 +5,18 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { clearNativeAuthSession, triggerHaptic } from '@/bridge/commands';
+import { clearNativeAuthSession } from '@/bridge/commands';
 import { useBackButtonReplace } from '@/hooks/useBackButtonReplace';
 import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { logout as requestLogout } from '@/lib/api/auth';
 import { deleteAccount } from '@/lib/api/member';
-import { submitNps } from '@/lib/api/feedback';
 import { useAuthStore } from '@/store/authStore';
 import { toast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { BottomSheet } from '@/components/ui/BottomSheet';
-import { webBridge } from '@/bridge/webBridge';
 import { useScrollShadow } from '@/hooks/useScrollShadow';
-
-const EMOJIS = ['😩', '😟', '😶', '😄', '🤩'] as const;
-type EmojiScore = 1 | 2 | 3 | 4 | 5;
 
 export default function MyPage() {
   const router = useRouter();
@@ -31,7 +26,6 @@ export default function MyPage() {
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isDeleteSheetOpen, setIsDeleteSheetOpen] = useState(false);
   const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
-  const [isFeedbackSheetOpen, setIsFeedbackSheetOpen] = useState(false);
   const [labTapCount, setLabTapCount] = useState(0);
   const goHome = useBackButtonReplace('/home');
   const { ref: scrollRef, onScroll, hasShadow } = useScrollShadow();
@@ -155,14 +149,6 @@ export default function MyPage() {
             <MenuLink href="/me/terms" title="서비스 이용약관" />
           </MenuGroup>
 
-          {/* 서비스 피드백 */}
-          <MenuGroup>
-            <MenuButton
-              title="서비스 피드백"
-              onClick={() => setIsFeedbackSheetOpen(true)}
-            />
-          </MenuGroup>
-
           {/* 계정 관리 */}
           <MenuGroup>
             <MenuButton
@@ -181,11 +167,6 @@ export default function MyPage() {
           </MenuGroup>
         </div>
       </div>
-
-      {/* 서비스 피드백 바텀시트 */}
-      <BottomSheet open={isFeedbackSheetOpen} onClose={() => setIsFeedbackSheetOpen(false)}>
-        <FeedbackSheetContent onDone={() => setIsFeedbackSheetOpen(false)} />
-      </BottomSheet>
 
       {/* 회원탈퇴 확인 바텀시트 */}
       <BottomSheet open={isDeleteSheetOpen} onClose={() => !isDeletingAccount && setIsDeleteSheetOpen(false)}>
@@ -221,129 +202,6 @@ export default function MyPage() {
         </div>
       </BottomSheet>
     </motion.main>
-  );
-}
-
-// ─── 서비스 피드백 바텀시트 콘텐츠 ───────────────────────────────────────────────
-
-function FeedbackSheetContent({ onDone }: { onDone: () => void }) {
-  const [score, setScore] = useState<EmojiScore | null>(null);
-  const [comment, setComment] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const needsComment = score !== null && score <= 2;
-
-  function handleSelect(s: EmojiScore) {
-    if (webBridge.isAvailable()) triggerHaptic('light');
-    setScore(s);
-    if (s > 2) setComment('');
-  }
-
-  async function handleSubmit() {
-    if (score !== null) {
-      try {
-        await submitNps(0, score, comment || undefined);
-      } catch {
-        // 제출 실패해도 UX 차단 안 함
-      }
-    }
-    setSubmitted(true);
-    setTimeout(onDone, 1200);
-  }
-
-  if (submitted) {
-    return (
-      <div className="py-6 flex flex-col items-center gap-2">
-        <span className="tossface text-4xl">🙏</span>
-        <p className="text-base font-bold text-zinc-800">소중한 피드백 감사해요!</p>
-        <p className="text-sm text-zinc-500">더 나은 서비스로 돌아올게요</p>
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="mb-5 flex items-start justify-between">
-        <div>
-          <p className="text-base font-bold text-foreground">Landit 어떠세요?</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">솔직하게 말해줘요, 다 듣고 반영할게요</p>
-        </div>
-        <button onClick={onDone} className="text-xl leading-none text-muted-foreground">
-          ✕
-        </button>
-      </div>
-
-      <div className="mb-7 flex justify-between">
-        {EMOJIS.map((emoji, i) => {
-          const s = (i + 1) as EmojiScore;
-          const selected = score === s;
-          const dimmed = score !== null && !selected;
-          return (
-            <motion.button
-              key={emoji}
-              onClick={() => handleSelect(s)}
-              initial={{ scale: 0, opacity: 0 }}
-              animate={{
-                scale: selected ? 1.25 : 1,
-                opacity: dimmed ? 0.3 : 1,
-                y: selected ? -6 : 0,
-              }}
-              transition={{
-                scale: { type: 'spring', stiffness: 420, damping: 18, delay: score === null ? 0.05 + i * 0.07 : 0 },
-                opacity: { duration: 0.15 },
-                y: { type: 'spring', stiffness: 420, damping: 18 },
-              }}
-              whileTap={{ scale: 0.8 }}
-              className="relative flex flex-col items-center pb-3"
-            >
-              <span className="tossface text-4xl">{emoji}</span>
-              <AnimatePresence>
-                {selected && (
-                  <motion.div
-                    key="dot"
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    exit={{ scale: 0, opacity: 0 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 25 }}
-                    className="absolute bottom-0 h-1.5 w-1.5 rounded-full bg-primary"
-                  />
-                )}
-              </AnimatePresence>
-            </motion.button>
-          );
-        })}
-      </div>
-
-      <AnimatePresence>
-        {needsComment && (
-          <motion.div
-            key="comment"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            className="overflow-hidden"
-          >
-            <div className="mb-5">
-              <p className="mb-2 text-sm font-medium text-foreground">어떤 점이 아쉬우셨나요?</p>
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                maxLength={300}
-                rows={3}
-                placeholder="대화 흐름, 발음, AI 피드백 등 자유롭게 적어주세요"
-                className="w-full resize-none rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
-                autoFocus
-              />
-              <p className="mt-1 text-right text-xs text-muted-foreground">{comment.length} / 300</p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <Button size="md" onClick={handleSubmit} disabled={score === null}>
-        {score === null ? '이모지를 선택해줘요' : '제출할게요'}
-      </Button>
-    </>
   );
 }
 
