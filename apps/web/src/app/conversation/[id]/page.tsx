@@ -11,7 +11,7 @@ import { ensureAccessToken } from '@/lib/api/client';
 import { feedbackQueryKeys } from '@/queries/feedback';
 import { useBackButtonBridge } from '@/hooks/useBackButtonBridge';
 import { useBridgeEvent } from '@/bridge/useBridgeEvent';
-import { prepareNativeStt, startNativeStt, stopNativeStt, stopNativeTts } from '@/bridge/commands';
+import { prepareNativeStt, startNativeStt, stopNativeStt, stopNativeTts, STT_ENDPOINTING_MS } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { useTts } from '@/hooks/useTts';
 import { getScenarioImage } from '@/lib/scenarioImages';
@@ -359,8 +359,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       language: 'en-US',
       smart_format: 'true',
       interim_results: 'true',
-      endpointing: '1000',
-      utterance_end_ms: '1000',
+      endpointing: String(STT_ENDPOINTING_MS),
+      utterance_end_ms: String(STT_ENDPOINTING_MS),
       vad_events: 'true',
     });
     const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${params}`, ['bearer', token]);

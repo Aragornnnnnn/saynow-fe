@@ -9,8 +9,12 @@ export function requestNativeLogin(provider: 'KAKAO' | 'GOOGLE') {
   return webBridge.send({ type: 'NATIVE_LOGIN', provider });
 }
 
-export function prepareNativeStt() {
-  return webBridge.send({ type: 'PREPARE_STT' });
+// 침묵 감지 시간(ms) — 이만큼 멈추면 발화 종료로 판단. 학습자 호흡을 고려해 2초.
+// 여기 값만 바꿔 웹 배포하면 앱 재빌드 없이 조정됨(네이티브는 못 받으면 자체 기본값 사용)
+export const STT_ENDPOINTING_MS = 2000;
+
+export function prepareNativeStt(endpointingMs: number = STT_ENDPOINTING_MS) {
+  return webBridge.send({ type: 'PREPARE_STT', endpointingMs });
 }
 
 export function startNativeStt() {

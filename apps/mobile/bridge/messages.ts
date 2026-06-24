@@ -7,7 +7,7 @@ export type BridgeAuthMember = {
 };
 
 export type WebToNativeMessage =
-  | { type: 'PREPARE_STT' }
+  | { type: 'PREPARE_STT'; endpointingMs?: number }
   | { type: 'START_STT'; contextualStrings?: string[]; languageModel?: 'web_search' | 'free_form' }
   | { type: 'STOP_STT' }
   | { type: 'OPEN_SETTINGS' }
@@ -69,7 +69,13 @@ function normalizeWebMessage(value: unknown): WebToNativeMessage | null {
         ...(languageModel ? { languageModel } : {}),
       };
     }
-    case 'PREPARE_STT':
+    case 'PREPARE_STT': {
+      const endpointingMs =
+        typeof value.endpointingMs === 'number' && Number.isFinite(value.endpointingMs)
+          ? value.endpointingMs
+          : undefined;
+      return { type: value.type, ...(endpointingMs !== undefined ? { endpointingMs } : {}) };
+    }
     case 'STOP_STT':
     case 'STOP_TTS':
     case 'OPEN_SETTINGS':

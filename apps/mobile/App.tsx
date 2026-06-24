@@ -65,7 +65,7 @@ export default function App() {
   }, []);
 
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
-    PREPARE_STT: () => prepareStt(),
+    PREPARE_STT: (message) => prepareStt({ endpointingMs: message.endpointingMs }),
     START_STT: (message) => {
       Speech.stop();
       startStt({ contextualStrings: message.contextualStrings, languageModel: message.languageModel });

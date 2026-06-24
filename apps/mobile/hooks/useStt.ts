@@ -5,18 +5,30 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-spe
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000';
 
-const DEEPGRAM_PARAMS = new URLSearchParams({
-  model: 'nova-3',
-  language: 'en-US',
-  smart_format: 'true',
-  interim_results: 'true',
-  endpointing: '1000',
-  utterance_end_ms: '1000',
-  vad_events: 'true',
-  encoding: 'linear16',
-  channels: '1',
-  sample_rate: '16000',
-}).toString();
+// 침묵 감지 시간(ms) — 이만큼 말이 멈추면 턴 종료. 웹이 PREPARE_STT로 덮어쓸 수 있고, 없으면 기본값 사용
+const DEFAULT_ENDPOINTING_MS = 2000;
+const MIN_ENDPOINTING_MS = 1000;
+const MAX_ENDPOINTING_MS = 5000;
+
+function clampEndpointingMs(value: number | undefined): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return DEFAULT_ENDPOINTING_MS;
+  return Math.min(MAX_ENDPOINTING_MS, Math.max(MIN_ENDPOINTING_MS, Math.round(value)));
+}
+
+function buildDeepgramParams(endpointingMs: number): string {
+  return new URLSearchParams({
+    model: 'nova-3',
+    language: 'en-US',
+    smart_format: 'true',
+    interim_results: 'true',
+    endpointing: String(endpointingMs),
+    utterance_end_ms: String(endpointingMs),
+    vad_events: 'true',
+    encoding: 'linear16',
+    channels: '1',
+    sample_rate: '16000',
+  }).toString();
+}
 
 interface UseSttOptions {
   onPartial: (transcript: string) => void;
@@ -45,6 +57,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   const engineRef = useRef<'deepgram' | 'native'>('deepgram');
   const wsRef = useRef<WebSocket | null>(null);
   const finalTranscriptRef = useRef('');
+  const endpointingMsRef = useRef(DEFAULT_ENDPOINTING_MS);
 
   // ── 네이티브 폴백 ────────────────────────────────────────────────────────
 
@@ -129,7 +142,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
 
       return new Promise((resolve) => {
         log('Deepgram WS 연결 시도');
-        const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${DEEPGRAM_PARAMS}`, ['bearer', token]);
+        const ws = new WebSocket(`wss://api.deepgram.com/v1/listen?${buildDeepgramParams(endpointingMsRef.current)}`, ['bearer', token]);
         wsRef.current = ws;
 
         ws.onopen = () => {
@@ -277,9 +290,11 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
 
   // ── 공개 API ─────────────────────────────────────────────────────────────
 
-  // 대화 페이지 진입 시 웹에서 호출 — WS 미리 연결
-  const prepare = useCallback(() => {
-    log('prepare() — Deepgram 미리 연결');
+  // 대화 페이지 진입 시 웹에서 호출 — endpointing 값을 받아 WS 미리 연결
+  // 값은 연결 URL에 박히므로 반드시 선접속 전(여기)에서 정해져야 함
+  const prepare = useCallback((options: { endpointingMs?: number } = {}) => {
+    endpointingMsRef.current = clampEndpointingMs(options.endpointingMs);
+    log('prepare() — Deepgram 미리 연결', { endpointingMs: endpointingMsRef.current });
     connectDeepgram();
   }, [connectDeepgram]);
 
