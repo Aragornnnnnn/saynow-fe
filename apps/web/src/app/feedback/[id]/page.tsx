@@ -508,29 +508,30 @@ function TurnCard({ turn, onScrollChange }: { turn: ApiTurnFeedback; onScrollCha
       onScroll={(e) => onScrollChange?.((e.currentTarget.scrollTop) > 0)}
     >
 
-      {/* 채팅 UI */}
+      {/* 타입 제목 — 결론을 맨 위에 노출 */}
       <FadeIn delay={0}>
+        <p className='text-2xl font-black leading-tight text-zinc-800'>
+          <span className='tossface'>{isGood ? '✅' : '💪'}</span>{' '}
+          {isGood ? '잘 통했어요' : '한 단계 더 업그레이드해봐요'}
+        </p>
+      </FadeIn>
+
+      {/* 채팅 UI */}
+      <FadeIn delay={0.1}>
         <div>
           <p className='text-xs font-semibold text-zinc-500 mb-1.5 px-1'>질문</p>
           <AiBubble text={turn.originalQuestion} translatedText={turn.translatedQuestion} />
         </div>
       </FadeIn>
-      <FadeIn delay={0.1}>
+      <FadeIn delay={0.2}>
         <div>
           <p className='text-xs font-semibold text-zinc-500 mb-1.5 px-1 text-right'>내 답변</p>
           <UserBubble text={turn.userUtterance} />
         </div>
       </FadeIn>
 
-      {/* 구분선 + 타입 제목 */}
-      <div className='border-t border-zinc-100 mx-1 pt-3'>
-        <FadeIn delay={0.2}>
-          <p className='text-2xl font-black leading-tight text-zinc-800'>
-            <span className='tossface'>{isGood ? '✅' : '💪'}</span>{' '}
-            {isGood ? '잘 통했어요' : '한 단계 더 업그레이드해봐요'}
-          </p>
-        </FadeIn>
-      </div>
+      {/* 구분선 — 대화와 분석 사이 */}
+      <div className='border-t border-zinc-100 mx-1' />
 
       {isGood ? (
         <>
