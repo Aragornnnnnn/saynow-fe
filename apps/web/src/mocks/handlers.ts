@@ -111,6 +111,14 @@ export const submitUtteranceHandler = http.post(
     const completed = sequence >= 3;
     const nextSequence = sequence + 1;
 
+    // 종료 시에도 속마음은 non-null, nextTurn에 AI 마무리 멘트가 실려 옴
+    const innerThought = completed
+      ? '마지막 답변도 분명하네. 자연스럽게 마무리하면 좋겠다.'
+      : sequence === 1
+      ? '매운 피자를 좋아한다고 바로 이유까지 말해주네. 대화하기 편하다.'
+      : '음, 직접 안 해먹는구나. 그럴 수도 있지.';
+    const innerThoughtType = completed ? 'GOOD' : sequence === 1 ? 'GOOD' : 'NORMAL';
+
     const response = HttpResponse.json({
       success: true,
       data: {
@@ -118,9 +126,16 @@ export const submitUtteranceHandler = http.post(
           turnId: 100 + sequence,
           sequence,
           turnFeedbackStatus: 'PREPARING',
+          innerThought,
+          innerThoughtType,
         },
         nextTurn: completed
-          ? null
+          ? {
+              turnId: 100 + nextSequence,
+              sequence: nextSequence,
+              aiQuestion: 'Thanks for sharing. That was a great chat!',
+              translatedQuestion: '이야기해줘서 고마워. 정말 좋은 대화였어!',
+            }
           : {
               turnId: 100 + nextSequence,
               sequence: nextSequence,
@@ -132,7 +147,7 @@ export const submitUtteranceHandler = http.post(
                 : '그 음식을 마지막으로 언제 먹었나요?',
             },
         progress: {
-          currentSequence: completed ? 3 : nextSequence,
+          currentSequence: nextSequence,
           totalQuestionCount: 3,
           completed,
         },

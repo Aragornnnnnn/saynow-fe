@@ -20,6 +20,7 @@ import { StepMotion } from './_components/StepMotion';
 import { IntroStep } from './_steps/IntroStep';
 import { SoundStep } from './_steps/SoundStep';
 import { MicStep } from './_steps/MicStep';
+import { ThoughtStep } from './_steps/ThoughtStep';
 import { ScenarioStep } from './_steps/ScenarioStep';
 import { STEP_ORDER, FALLBACK_QUESTION, SOUND_QUESTIONS, type OnboardingStep, type MicPermissionState } from './_types';
 import { track, EVENTS } from '@/lib/analytics';
@@ -182,7 +183,7 @@ export default function OnboardingPage() {
           track(EVENTS.MICROPHONE_PERMISSION_GRANTED);
           track(EVENTS.ONBOARDING_STEP_COMPLETED, { step_name: 'mic' });
           setMicState('idle');
-          goToStep('scenario');
+          goToStep('thought');
         }
       }, 700);
       return;
@@ -194,7 +195,7 @@ export default function OnboardingPage() {
       track(EVENTS.MICROPHONE_PERMISSION_GRANTED);
       track(EVENTS.ONBOARDING_STEP_COMPLETED, { step_name: 'mic' });
       setMicState('idle');
-      goToStep('scenario');
+      goToStep('thought');
     } catch {
       track(EVENTS.MICROPHONE_PERMISSION_DENIED);
       setMicState('denied');
@@ -253,6 +254,12 @@ export default function OnboardingPage() {
               onOpenSettings={() => openNativeSettings()}
               isNative={webBridge.isAvailable()}
             />
+          </StepMotion>
+        )}
+
+        {step === 'thought' && (
+          <StepMotion key="thought">
+            <ThoughtStep onNext={() => { track(EVENTS.ONBOARDING_STEP_COMPLETED, { step_name: 'thought' }); goToStep('scenario'); }} />
           </StepMotion>
         )}
 

@@ -22,10 +22,14 @@ export interface ApiSessionStarted {
   progress: ApiSessionProgress;
 }
 
+export type InnerThoughtType = 'GOOD' | 'NORMAL' | 'BAD';
+
 export interface ApiSubmittedTurn {
   turnId: number;
   sequence: number;
   turnFeedbackStatus: string;
+  innerThought: string | null;
+  innerThoughtType: InnerThoughtType | null;
 }
 
 export interface ApiUtteranceResult {

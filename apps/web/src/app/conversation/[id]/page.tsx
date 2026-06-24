@@ -20,6 +20,7 @@ import MicDeniedModal from './MicDeniedModal';
 import { AiBubble } from '@/components/chat/AiBubble';
 import { UserBubble } from '@/components/chat/UserBubble';
 import { TypingDots } from '@/components/chat/TypingDots';
+import { ThoughtOverlay, thoughtReadMs, type FloatingThought } from '@/components/chat/ThoughtOverlay';
 import { Button } from '@/components/ui/Button';
 import { track, EVENTS } from '@/lib/analytics';
 
@@ -42,6 +43,7 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
   const [feedbackAvailable, setFeedbackAvailable] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [transcript, setTranscript] = useState('');
+  const [floatingThought, setFloatingThought] = useState<FloatingThought | null>(null);
   const [showExitModal, setShowExitModal] = useState(false);
   const [showMicDeniedModal, setShowMicDeniedModal] = useState(false);
   const [bgBlurred, setBgBlurred] = useState(false);
@@ -143,16 +145,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
       track(EVENTS.TURN_COMPLETED, { scenario_id: Number(id), session_id: sessionId, turn_index: turnIndexRef.current, stt_engine: sttEngineRef.current });
       turnIndexRef.current += 1;
 
-      // 마지막 답변 — ... 말풍선 → 마무리 멘트 → 결과 보기 버튼
+      // 마지막 답변 — 종료 속마음(Sona) → AI 마무리 멘트(nextTurn) → 결과 보기 버튼
       if (result.progress.completed) {
         track(EVENTS.CONVERSATION_COMPLETED, { scenario_id: Number(id), session_id: sessionId });
-        const closingLines: [string, string][] = [
-          ["Great job! Let's see how you did!", '수고했어요! 결과를 확인해봐요!'],
-          ['Nice work! Check out your feedback!', '잘 하셨어요! 피드백을 확인해봐요!'],
-          ['Well done! See how it sounded to a native speaker.', '훌륭해요! 원어민에게 어떻게 들렸는지 볼게요!'],
-          ["That's a wrap! Let's check your results.", '대화 완료! 결과를 확인해봐요!'],
-        ];
-        const [closing, closingKo] = closingLines[Math.floor(Math.random() * closingLines.length)];
         queryClient.prefetchQuery({
           queryKey: feedbackQueryKeys.detail(sessionId),
           queryFn: () => createFeedback(sessionId),
@@ -162,15 +157,38 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           const img = new Image();
           img.src = getScenarioImage(Number(id), type);
         });
-        await new Promise((r) => setTimeout(r, 1000));
-        setPageState('idle');
-        setMessages((prev) => [
-          ...prev,
-          { id: `ai-closing-${Date.now()}`, role: 'ai', text: closing, translatedText: closingKo },
-        ]);
-        await new Promise((r) => setTimeout(r, 400));
+
+        // 마지막 속마음 — Sona가 한 번 더 띄움
+        const { innerThought, innerThoughtType } = result.submittedTurn;
+        if (innerThought && innerThoughtType) {
+          setFloatingThought({ text: innerThought, type: innerThoughtType });
+          await new Promise((r) => setTimeout(r, thoughtReadMs(innerThought)));
+          setFloatingThought(null);
+          await new Promise((r) => setTimeout(r, 350));
+        }
+
+        // AI 마무리 멘트 — nextTurn으로 내려옴. 발화라 TTS로 읽힘.
+        const closingTurn = result.nextTurn;
+        if (closingTurn) {
+          setMessages((prev) => [
+            ...prev,
+            { id: `ai-closing-${Date.now()}`, role: 'ai', text: closingTurn.aiQuestion, translatedText: closingTurn.translatedQuestion },
+          ]);
+          await new Promise((r) => setTimeout(r, 400));
+        }
+        // feedbackAvailable 먼저 → 마이크 버튼 순간 노출 방지 (await로 분리하지 않음)
         setFeedbackAvailable(true);
+        setPageState('idle');
         return;
+      }
+
+      // 속마음 — 다음 질문 전에 화면 위로 잠깐 띄움. 메시지에 안 넣어 TTS도 안 읽힘.
+      const { innerThought, innerThoughtType } = result.submittedTurn;
+      if (innerThought && innerThoughtType) {
+        setFloatingThought({ text: innerThought, type: innerThoughtType });
+        await new Promise((r) => setTimeout(r, thoughtReadMs(innerThought)));
+        setFloatingThought(null);
+        await new Promise((r) => setTimeout(r, 350));
       }
 
       const nextTurn = result.nextTurn;
@@ -543,8 +561,8 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           ),
         )}
 
-        {/* AI 타이핑 중 */}
-        {pageState === 'submitting' && (
+        {/* AI 타이핑 중 — 속마음 떠 있는 동안은 가림 */}
+        {pageState === 'submitting' && !floatingThought && (
           <div className='flex items-end gap-2'>
             <div className='max-w-[72%] rounded-2xl rounded-bl-md bg-[#EFEFEF] px-4 py-3'>
               <TypingDots />
@@ -691,6 +709,9 @@ export default function ConversationPage({ params }: { params: Promise<{ id: str
           )}
         </AnimatePresence>
       </div>
+
+      {/* 속마음 플로팅 반응 */}
+      <ThoughtOverlay thought={floatingThought} />
 
       {showExitModal && <ExitConfirmModal onConfirm={handleExit} onCancel={() => setShowExitModal(false)} />}
       {showMicDeniedModal && (
