@@ -30,7 +30,7 @@ export function ThoughtStep({ onNext }: { onNext: () => void }) {
           상대 속마음을 대신 알려줄게요
         </h1>
 
-        <div className="flex flex-1 flex-col items-center justify-center gap-6">
+        <div className="flex flex-1 flex-col items-center justify-center">
           <div className="flex min-h-30 w-full items-center justify-center">
             <AnimatePresence mode="wait">
               <motion.div
@@ -44,21 +44,6 @@ export function ThoughtStep({ onNext }: { onNext: () => void }) {
                 <ThoughtCard thought={DEMOS[index]} />
               </motion.div>
             </AnimatePresence>
-          </div>
-
-          {/* 여러 표정이 돌아간다는 표시 */}
-          <div className="flex gap-1.5">
-            {DEMOS.map((_, i) => (
-              <span
-                key={i}
-                className="h-1.5 rounded-full transition-all duration-300"
-                style={{
-                  width: i === index ? 18 : 6,
-                  backgroundColor: 'var(--onboarding-fg)',
-                  opacity: i === index ? 0.9 : 0.3,
-                }}
-              />
-            ))}
           </div>
         </div>
       </div>
