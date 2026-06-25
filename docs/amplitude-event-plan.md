@@ -1,6 +1,6 @@
 # Amplitude 이벤트 플랜
 
-- **최종 수정**: 2026-06-22
+- **최종 수정**: 2026-06-25
 - **최종 수정자**: 김준서
 
 ---
@@ -115,6 +115,24 @@ All Scenarios Completed
 | `Feedback Turn Navigated` | 발화별 카드 스와이프 | `scenario_id`, `session_id`, `turn_index` |
 | `Feedback Exited Early` | 상세 분석 안 보고 총평에서 나감 | `scenario_id`, `session_id` |
 
+### 의견 보내기 (만족도)
+
+| 이벤트 | 발화 시점 | 속성 |
+|--------|-----------|------|
+| `Opinion Sheet Opened` | 홈 헤더 "의견 보내기" 버튼 클릭 (바텀시트 열림) | — |
+| `Opinion Submitted` | 만족도 제출 버튼 클릭 | `score` (1~5), `has_comment` (자유 의견 작성 여부) |
+
+> AI 피드백 결과 화면(`Feedback *`)과 구분하기 위해 사용자→서비스 만족도 의견은 `Opinion *` 접두어를 사용.
+
+### 계정
+
+| 이벤트 | 발화 시점 | 속성 |
+|--------|-----------|------|
+| `Logout Completed` | 로그아웃 완료 (내 정보 → 로그아웃) | — |
+| `Account Deletion Completed` | 회원탈퇴 성공 | — |
+
+> 탈퇴 사유는 현재 수집 안 함. 사유 입력 플로우가 생기면 `reason` 속성 추가 검토.
+
 ---
 
 ## 유저 속성 (User Properties)
@@ -170,6 +188,14 @@ export const EVENTS = {
   FEEDBACK_DETAIL_VIEWED: 'Feedback Detail Viewed',
   FEEDBACK_TURN_NAVIGATED: 'Feedback Turn Navigated',
   FEEDBACK_EXITED_EARLY: 'Feedback Exited Early',
+
+  // 의견 보내기 (만족도)
+  OPINION_SHEET_OPENED: 'Opinion Sheet Opened',
+  OPINION_SUBMITTED: 'Opinion Submitted',
+
+  // 계정
+  LOGOUT_COMPLETED: 'Logout Completed',
+  ACCOUNT_DELETION_COMPLETED: 'Account Deletion Completed',
 } as const;
 
 export const USER_PROPERTIES = {
@@ -191,4 +217,6 @@ export const USER_PROPERTIES = {
 | 홈 | 4 |
 | 대화 | 6 |
 | 피드백 | 4 |
-| **합계** | **24** |
+| 의견 보내기 | 2 |
+| 계정 | 2 |
+| **합계** | **28** |

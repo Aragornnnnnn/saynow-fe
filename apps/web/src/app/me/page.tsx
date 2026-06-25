@@ -13,6 +13,7 @@ import { useRequireAuth } from '@/hooks/useRequireAuth';
 import { logout as requestLogout } from '@/lib/api/auth';
 import { deleteAccount } from '@/lib/api/member';
 import { useAuthStore } from '@/store/authStore';
+import { track, EVENTS } from '@/lib/analytics';
 import { toast } from '@/components/ui/Toast';
 import { Button } from '@/components/ui/Button';
 import { BottomSheet } from '@/components/ui/BottomSheet';
@@ -63,6 +64,7 @@ export default function MyPage() {
       console.warn('[Auth] logout failed:', error);
     } finally {
       setIsLoggingOut(false);
+      track(EVENTS.LOGOUT_COMPLETED);
       finishSignedOut();
     }
   }
@@ -73,6 +75,7 @@ export default function MyPage() {
     setDeleteErrorMessage(null);
     try {
       await deleteAccount();
+      track(EVENTS.ACCOUNT_DELETION_COMPLETED);
       finishSignedOut();
     } catch (error) {
       const message = error instanceof Error ? error.message : '회원탈퇴에 실패했습니다.';

@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { triggerHaptic } from '@/bridge/commands';
 import { webBridge } from '@/bridge/webBridge';
 import { submitNps } from '@/lib/api/feedback';
+import { track, EVENTS } from '@/lib/analytics';
 import { Button } from '@/components/ui/Button';
 import { BottomSheet } from '@/components/ui/BottomSheet';
 
@@ -19,7 +20,10 @@ export function FeedbackButton() {
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          track(EVENTS.OPINION_SHEET_OPENED);
+          setOpen(true);
+        }}
         className="flex h-11 flex-col items-center justify-center gap-0.5 rounded-xl px-3 transition-all active:scale-90 active:bg-zinc-100"
         aria-label="의견 보내기"
       >
@@ -48,6 +52,7 @@ function FeedbackSheetContent({ onDone }: { onDone: () => void }) {
 
   async function handleSubmit() {
     if (score !== null) {
+      track(EVENTS.OPINION_SUBMITTED, { score, has_comment: comment.trim().length > 0 });
       try {
         await submitNps(0, score, comment || undefined);
       } catch {
