@@ -502,6 +502,26 @@ function FadeIn({ delay, children }: { delay: number; children: React.ReactNode 
   );
 }
 
+// BE가 보내는 <del>...</del> 태그로 감싼 부분만 취소선으로 렌더링 — 태그가 없으면 그대로 출력
+function StruckText({ text }: { text: string }) {
+  const parts = text.split(/(<del>.*?<\/del>)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        const match = part.match(/^<del>(.*?)<\/del>$/);
+        if (match) {
+          return (
+            <span key={i} className='line-through decoration-zinc-600'>
+              {match[1]}
+            </span>
+          );
+        }
+        return part;
+      })}
+    </>
+  );
+}
+
 function TurnCard({ turn, onScrollChange }: { turn: ApiTurnFeedback; onScrollChange?: (scrolled: boolean) => void }) {
   const isGood = turn.feedbackType === 'GOOD';
 
@@ -591,7 +611,7 @@ function TurnCard({ turn, onScrollChange }: { turn: ApiTurnFeedback; onScrollCha
                 <p className='text-sm font-bold text-zinc-800'>이렇게 하면 더 통해요</p>
                 <div className='rounded-2xl border border-zinc-200 px-4 py-4 space-y-3'>
                   <div className='flex items-center gap-2 flex-wrap'>
-                    <p className='text-base font-semibold text-zinc-600 line-through decoration-zinc-600'>{turn.userUtterance}</p>
+                    <p className='text-base font-semibold text-zinc-600'><StruckText text={turn.userUtterance} /></p>
                     <span className='text-zinc-300 font-bold'>→</span>
                     <p className='text-base font-bold text-zinc-800'>{turn.correctionExpression}</p>
                   </div>
