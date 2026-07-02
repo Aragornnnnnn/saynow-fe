@@ -58,6 +58,9 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   const wsRef = useRef<WebSocket | null>(null);
   const finalTranscriptRef = useRef('');
   const endpointingMsRef = useRef(DEFAULT_ENDPOINTING_MS);
+  // AudioRecord.stop()의 resolve = 네이티브 녹음 스레드 완전 종료. 다음 start() 전에 대기해야
+  // 이전 스레드가 새 녹음을 건드려 터지는 네이티브 크래시(SIGABRT, releaseBuffer)를 막을 수 있음
+  const stopPromiseRef = useRef<Promise<unknown> | null>(null);
 
   // ── 네이티브 폴백 ────────────────────────────────────────────────────────
 
@@ -223,7 +226,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
           if (isRecordingRef.current) {
             log('녹음 중 WS 종료 → onError');
             isRecordingRef.current = false;
-            AudioRecord.stop().catch(() => {});
+            stopPromiseRef.current = AudioRecord.stop().catch(() => {});
             onError();
           }
         };
@@ -240,7 +243,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     log('finishTurn', transcript);
     submittedRef.current = true;
     isRecordingRef.current = false;
-    AudioRecord.stop().catch(() => {});
+    stopPromiseRef.current = AudioRecord.stop().catch(() => {});
 
     // WS 닫기
     const ws = wsRef.current;
@@ -281,7 +284,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     return () => {
       log('훅 언마운트 — 완전 종료');
       isRecordingRef.current = false;
-      AudioRecord.stop().catch(() => {});
+      stopPromiseRef.current = AudioRecord.stop().catch(() => {});
       wsRef.current?.close();
       wsRef.current = null;
     };
@@ -344,17 +347,21 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
       }
     }
 
-    // 이번 턴 초기화 + AudioRecord re-init (매 턴 깨끗한 상태 보장)
+    // 이번 턴 초기화
     finalTranscriptRef.current = '';
     submittedRef.current = false;
     engineRef.current = 'deepgram';
 
-    AudioRecord.init({
-      sampleRate: 16000,
-      channels: 1,
-      bitsPerSample: 16,
-      wavFile: '',
-    });
+    // 이전 턴 녹음 스레드가 완전히 종료될 때까지 대기 (삼성 기기 SIGABRT 크래시 방지)
+    // stop()이 resolve 안 되는 엣지 케이스 대비 2초 타임아웃
+    if (stopPromiseRef.current) {
+      log('이전 녹음 스레드 종료 대기');
+      await Promise.race([
+        stopPromiseRef.current,
+        new Promise((resolve) => setTimeout(resolve, 2000)),
+      ]);
+      stopPromiseRef.current = null;
+    }
 
     log('AudioRecord.start()');
     AudioRecord.start();
@@ -376,7 +383,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     isRecordingRef.current = false;
 
     if (engineRef.current === 'deepgram') {
-      AudioRecord.stop().catch(() => {});
+      stopPromiseRef.current = AudioRecord.stop().catch(() => {});
       // Finalize 전송 — 버퍼 남은 오디오 처리 후 speech_final or UtteranceEnd 수신
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         log('Finalize 전송');
