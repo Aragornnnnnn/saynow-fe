@@ -59,6 +59,16 @@
           }
         }
       ],
+      [
+        "react-native-fbsdk-next",
+        {
+          "appID": "1311169574549165",
+          "clientToken": "b8d5f9f03d654d4f8577d9c767ee8cca",
+          "displayName": "Landit",
+          "autoLogAppEventsEnabled": true,
+          "advertiserIDCollectionEnabled": true
+        }
+      ],
       "expo-secure-store",
       "expo-speech-recognition",
       "expo-splash-screen",
