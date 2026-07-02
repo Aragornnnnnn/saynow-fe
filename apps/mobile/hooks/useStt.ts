@@ -1,6 +1,6 @@
 // Deepgram WebSocket 기반 실시간 STT 훅 — 실패 시 expo-speech-recognition으로 폴백
 import { useCallback, useEffect, useRef } from 'react';
-import AudioRecord from 'react-native-audio-record';
+import { useAudioStream } from 'expo-audio';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000';
@@ -58,9 +58,28 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   const wsRef = useRef<WebSocket | null>(null);
   const finalTranscriptRef = useRef('');
   const endpointingMsRef = useRef(DEFAULT_ENDPOINTING_MS);
-  // AudioRecord.stop()의 resolve = 네이티브 녹음 스레드 완전 종료. 다음 start() 전에 대기해야
-  // 이전 스레드가 새 녹음을 건드려 터지는 네이티브 크래시(SIGABRT, releaseBuffer)를 막을 수 있음
-  const stopPromiseRef = useRef<Promise<unknown> | null>(null);
+
+  // 마이크 PCM 캡처 — int16 네이티브 인코딩이라 Deepgram linear16에 ArrayBuffer 그대로 전송
+  const { stream: audioStream } = useAudioStream({
+    sampleRate: 16000,
+    channels: 1,
+    encoding: 'int16',
+    onBuffer: (buffer) => {
+      if (!isRecordingRef.current) return;
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log('onBuffer — WS 없음, 스킵');
+        return;
+      }
+      // Deepgram URL이 sample_rate=16000 고정이라 하드웨어가 다른 값을 주면 인식이 깨짐
+      if (buffer.sampleRate !== 16000) {
+        log('경고: 요청과 다른 sampleRate', buffer.sampleRate);
+      }
+      ws.send(buffer.data);
+    },
+  });
+  const audioStreamRef = useRef(audioStream);
+  audioStreamRef.current = audioStream;
 
   // ── 네이티브 폴백 ────────────────────────────────────────────────────────
 
@@ -226,7 +245,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
           if (isRecordingRef.current) {
             log('녹음 중 WS 종료 → onError');
             isRecordingRef.current = false;
-            stopPromiseRef.current = AudioRecord.stop().catch(() => {});
+            audioStreamRef.current.stop();
             onError();
           }
         };
@@ -238,12 +257,12 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 턴 종료 — AudioRecord 멈추고 onFinal 호출, 즉시 다음 턴용 WS 미리 연결
+  // 턴 종료 — 마이크 스트림 멈추고 onFinal 호출, 즉시 다음 턴용 WS 미리 연결
   function finishTurn(transcript: string) {
     log('finishTurn', transcript);
     submittedRef.current = true;
     isRecordingRef.current = false;
-    stopPromiseRef.current = AudioRecord.stop().catch(() => {});
+    audioStreamRef.current.stop();
 
     // WS 닫기
     const ws = wsRef.current;
@@ -256,35 +275,13 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     if (transcript) onFinal(transcript, 'deepgram');
   }
 
-  // ── AudioRecord 초기화 (앱 전체 생애주기에서 한 번) ─────────────────────
+  // ── 언마운트 정리 ────────────────────────────────────────────────────────
 
   useEffect(() => {
-    log('훅 마운트 — AudioRecord init');
-    AudioRecord.init({
-      sampleRate: 16000,
-      channels: 1,
-      bitsPerSample: 16,
-      wavFile: '',
-    });
-    AudioRecord.on('data', (data: string) => {
-      if (!isRecordingRef.current) return;
-      const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        log('data 콜백 — WS 없음, 스킵');
-        return;
-      }
-      const binary = atob(data);
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      ws.send(bytes.buffer);
-    });
-
     return () => {
       log('훅 언마운트 — 완전 종료');
       isRecordingRef.current = false;
-      stopPromiseRef.current = AudioRecord.stop().catch(() => {});
+      audioStreamRef.current.stop();
       wsRef.current?.close();
       wsRef.current = null;
     };
@@ -352,19 +349,15 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     submittedRef.current = false;
     engineRef.current = 'deepgram';
 
-    // 이전 턴 녹음 스레드가 완전히 종료될 때까지 대기 (삼성 기기 SIGABRT 크래시 방지)
-    // stop()이 resolve 안 되는 엣지 케이스 대비 2초 타임아웃
-    if (stopPromiseRef.current) {
-      log('이전 녹음 스레드 종료 대기');
-      await Promise.race([
-        stopPromiseRef.current,
-        new Promise((resolve) => setTimeout(resolve, 2000)),
-      ]);
-      stopPromiseRef.current = null;
+    log('audioStream.start()');
+    try {
+      await audioStreamRef.current.start();
+    } catch (e) {
+      // 다른 앱이 마이크를 점유 중이거나 초기화 실패
+      log('audioStream.start() 실패', e);
+      isRecordingRef.current = false;
+      onError();
     }
-
-    log('AudioRecord.start()');
-    AudioRecord.start();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [connectDeepgram]);
 
@@ -383,7 +376,7 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
     isRecordingRef.current = false;
 
     if (engineRef.current === 'deepgram') {
-      stopPromiseRef.current = AudioRecord.stop().catch(() => {});
+      audioStreamRef.current.stop();
       // Finalize 전송 — 버퍼 남은 오디오 처리 후 speech_final or UtteranceEnd 수신
       if (wsRef.current?.readyState === WebSocket.OPEN) {
         log('Finalize 전송');
