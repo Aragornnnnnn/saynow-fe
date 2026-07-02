@@ -37,6 +37,17 @@ Play Console 크래시: `com.goodatlas.audiorecord.RNAudioRecordModule$1.run` SI
 - 루트 package.json에 expo/react/react-native 의존성이 WIP로 추가돼 있음 (모노레포
   워크스페이스 아님, --prefix 방식). 모바일 빌드와 별개라 이번 작업에서 건드리지 않음.
 
+## 릴리즈 빌드 경로 문제 (2026-07-03)
+
+- Windows 260자 한계: 릴리즈 네이티브 컴파일 시 node_modules 안 C++ 소스의 절대경로가
+  객체 파일 경로에 박혀서 `Filename longer than 260 characters`로 실패.
+- 정션(mklink /J)은 CMake가 실제 경로로 되돌려버려서(canonicalize) 효과 없음 — 실측 확인.
+- 결론: **리포 자체를 `C:\dev\saynow-fe`로 이사**. 짧은 실제 경로만이 확실한 해법.
+- 서명 정보는 keytool로 실개봉 검증 후 `C:\dev\saynow-keystore-info.txt`에 백업.
+  빌드용은 `~/.gradle/gradle.properties`의 SAYNOW_UPLOAD_*.
+- 이사 후 첫 빌드 전 android 디렉토리 삭제 필수 (빌드 캐시에 옛 절대경로가 박혀 있음).
+  `npx expo prebuild -p android` → `npm run build:aab`.
+
 ## 미해결 / 리스크
 
 - ~~`@react-native-kakao` 2.4.5의 RN 0.85 호환 여부 미검증~~ → assembleDebug 컴파일 통과로 해소 (런타임은 실기기 확인 필요).
