@@ -1,6 +1,7 @@
 // Deepgram WebSocket 기반 실시간 STT 훅 — 실패 시 expo-speech-recognition으로 폴백
 import { useCallback, useEffect, useRef } from 'react';
-import { useAudioStream } from 'expo-audio';
+import { Platform } from 'react-native';
+import { setAudioModeAsync, useAudioStream } from 'expo-audio';
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 
 const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:3000';
@@ -293,6 +294,16 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
   // 대화 페이지 진입 시 웹에서 호출 — endpointing 값을 받아 WS 미리 연결
   // 값은 연결 URL에 박히므로 반드시 선접속 전(여기)에서 정해져야 함
   const prepare = useCallback((options: { endpointingMs?: number } = {}) => {
+    // iOS는 녹음이 켜지면 오디오 세션이 PlayAndRecord로 바뀌며 소리가 수화기로 빠진다.
+    // 대화 진입 시 스피커 출력 + 무음 스위치 무시로 세션을 잡아 TTS가 들리게 한다. (Android은 기본 동작 유지)
+    if (Platform.OS === 'ios') {
+      setAudioModeAsync({
+        playsInSilentMode: true,
+        allowsRecording: true,
+        shouldRouteThroughEarpiece: false,
+        interruptionMode: 'duckOthers',
+      }).catch(() => {});
+    }
     endpointingMsRef.current = clampEndpointingMs(options.endpointingMs);
     log('prepare() — Deepgram 미리 연결', { endpointingMs: endpointingMsRef.current });
     connectDeepgram();
