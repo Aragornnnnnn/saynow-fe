@@ -29,15 +29,22 @@ export class SocialLoginError extends Error {
   }
 }
 
+// 애플은 이름을 id_token에 넣지 않고 credential.fullName으로만, 그것도 최초 인증 1회만 준다.
+// 그래서 idToken과 별개로 name을 함께 실어 보내야 백엔드가 최초 로그인 때 저장할 수 있다.
+export interface SocialIdTokenResult {
+  idToken: string;
+  name?: string;
+}
+
 export async function requestSocialIdToken(
   provider: SocialProvider,
   nonce: string,
-): Promise<string> {
+): Promise<SocialIdTokenResult> {
   switch (provider) {
     case 'GOOGLE':
-      return requestGoogleIdToken(nonce);
+      return { idToken: await requestGoogleIdToken(nonce) };
     case 'KAKAO':
-      return requestKakaoIdToken(nonce);
+      return { idToken: await requestKakaoIdToken(nonce) };
     case 'APPLE':
       return requestAppleIdToken(nonce);
   }
@@ -45,7 +52,7 @@ export async function requestSocialIdToken(
 
 // Apple 네이티브 로그인 — OS가 시트를 띄우고 id_token을 발급하므로 별도 클라이언트 설정이 없다.
 // nonce는 요청에 넣은 값이 그대로 id_token의 nonce 클레임에 들어간다 (Google/Kakao와 동일하게 raw 전달).
-async function requestAppleIdToken(nonce: string): Promise<string> {
+async function requestAppleIdToken(nonce: string): Promise<SocialIdTokenResult> {
   if (Platform.OS !== 'ios') {
     throw new SocialLoginError('APPLE_LOGIN_UNSUPPORTED', 'Apple 로그인은 iOS에서만 쓸 수 있습니다.');
   }
@@ -58,13 +65,23 @@ async function requestAppleIdToken(nonce: string): Promise<string> {
       ],
       nonce,
     });
-    return assertIdToken(credential.identityToken ?? undefined, 'APPLE_ID_TOKEN_MISSING');
+    const idToken = assertIdToken(credential.identityToken ?? undefined, 'APPLE_ID_TOKEN_MISSING');
+    return { idToken, name: composeAppleName(credential.fullName) };
   } catch (error) {
     if (isRequestCanceled(error)) {
       throw new SocialLoginError('APPLE_LOGIN_CANCELLED', '소셜 로그인이 취소되었습니다.');
     }
     throw error;
   }
+}
+
+// 최초 로그인에만 값이 채워지고, 이후에는 필드가 모두 null이라 undefined를 반환한다.
+function composeAppleName(
+  fullName: AppleAuthentication.AppleAuthenticationFullName | null,
+): string | undefined {
+  if (!fullName) return undefined;
+  const name = [fullName.givenName, fullName.familyName].filter(Boolean).join(' ').trim();
+  return name || undefined;
 }
 
 function isRequestCanceled(error: unknown): boolean {

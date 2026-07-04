@@ -116,8 +116,8 @@ export default function App() {
     NATIVE_LOGIN: async (message) => {
       try {
         const nonce = generateNonce();
-        const idToken = await requestSocialIdToken(message.provider, nonce);
-        const session = await socialLogin(message.provider, idToken, nonce);
+        const { idToken, name } = await requestSocialIdToken(message.provider, nonce);
+        const session = await socialLogin(message.provider, idToken, nonce, name);
         await saveAuthSession(session);
         if (session.member.newUser) {
           AppEventsLogger.logEvent('fb_mobile_complete_registration', { fb_registration_method: message.provider });

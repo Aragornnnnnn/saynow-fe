@@ -42,15 +42,17 @@ export async function socialLogin(
   provider: SocialProvider,
   idToken: string,
   nonce: string,
+  name?: string,
 ): Promise<NativeAuthSession> {
   if (__DEV__) console.log('[AuthDebug][API] social-login start', {
     provider,
     idToken: describeToken(idToken),
     nonceLength: nonce.length,
+    hasName: !!name,
   });
   const raw = await request<SocialLoginResponse>('/api/v1/auth/social-login', {
     method: 'POST',
-    body: JSON.stringify({ provider, idToken, nonce }),
+    body: JSON.stringify({ provider, idToken, nonce, ...(name ? { name } : {}) }),
   });
   const session: NativeAuthSession = {
     accessToken: raw.accessToken,
