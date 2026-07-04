@@ -6,7 +6,8 @@
     "version": "1.0.3",
     "scheme": [
       "landit",
-      "com.saynow.app"
+      "com.saynow.app",
+      "com.googleusercontent.apps.1062331189445-7tb3d2u3fkmqn2o1n53sqfhi7ljopqn1"
     ],
     "orientation": "portrait",
     "icon": "./assets/icon.png",

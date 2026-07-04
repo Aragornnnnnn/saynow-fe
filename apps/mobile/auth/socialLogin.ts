@@ -86,6 +86,24 @@ function getRedirectUri() {
   });
 }
 
+// "xxx.apps.googleusercontent.com" → "com.googleusercontent.apps.xxx" (iOS redirect 스킴)
+function reversedClientId(clientId: string): string {
+  const withoutSuffix = clientId.replace(/\.apps\.googleusercontent\.com$/, '');
+  return `com.googleusercontent.apps.${withoutSuffix}`;
+}
+
+// iOS Google OAuth는 reversed client ID 스킴만 redirect로 허용한다(커스텀 스킴/웹 URL 불가).
+// Android는 기존 landit 커스텀 스킴을 그대로 쓴다.
+function getGoogleRedirectUri(clientId: string): string {
+  if (Platform.OS === 'ios') {
+    return AuthSession.makeRedirectUri({
+      scheme: reversedClientId(clientId),
+      path: REDIRECT_PATH,
+    });
+  }
+  return getRedirectUri();
+}
+
 function getGoogleClientId() {
   const platformClientId = Platform.select({
     ios: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
@@ -110,7 +128,7 @@ function getGoogleClientId() {
 
 async function requestGoogleIdToken(nonce: string): Promise<string> {
   const clientId = getGoogleClientId();
-  const redirectUri = getRedirectUri();
+  const redirectUri = getGoogleRedirectUri(clientId);
   if (__DEV__) console.log('[AuthDebug][Google] OAuth start', {
     clientId: maskClientId(clientId),
     redirectUri,
