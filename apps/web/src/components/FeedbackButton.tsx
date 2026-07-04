@@ -52,11 +52,16 @@ function FeedbackSheetContent({ onDone }: { onDone: () => void }) {
 
   async function handleSubmit() {
     if (score !== null) {
-      track(EVENTS.OPINION_SUBMITTED, { score, has_comment: comment.trim().length > 0 });
+      // comment 원문을 이벤트에 실어 API 실패 시에도 Amplitude에 백업이 남게 한다
+      track(EVENTS.OPINION_SUBMITTED, {
+        score,
+        has_comment: comment.trim().length > 0,
+        comment: comment.trim() || null,
+      });
       try {
         await submitNps(0, score, comment || undefined);
       } catch {
-        // 제출 실패해도 UX 차단 안 함
+        // 제출 실패해도 UX 차단 안 함 — 텍스트는 위 이벤트로 백업됨
       }
     }
     setSubmitted(true);
