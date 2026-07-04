@@ -30,6 +30,7 @@
     "expo-speech-recognition": "^56.0.1",
     "expo-splash-screen": "~56.0.11",
     "expo-status-bar": "~56.0.4",
+    "expo-tracking-transparency": "~56.0.5",
     "expo-web-browser": "~56.0.5",
     "react": "19.2.3",
     "react-native": "0.85.3",

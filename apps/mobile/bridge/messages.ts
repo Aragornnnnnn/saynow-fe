@@ -33,7 +33,15 @@ export type NativeToWebMessage =
   | { type: 'BACK_PRESSED' }
   | { type: 'NATIVE_LOGIN_SUCCESS'; accessToken: string; refreshToken: string; member: BridgeAuthMember }
   | { type: 'NATIVE_LOGIN_ERROR'; message: string }
-  | { type: 'APP_VERSION_INFO'; platform: string; buildNumber: string; versionName?: string };
+  | { type: 'APP_VERSION_INFO'; platform: string; buildNumber: string; versionName?: string }
+  | {
+      type: 'INSTALL_ATTRIBUTION';
+      utmSource?: string;
+      utmMedium?: string;
+      utmCampaign?: string;
+      utmContent?: string;
+      adId?: string;
+    };
 
 export function serializeNativeMessage(message: NativeToWebMessage): string {
   return JSON.stringify(message);

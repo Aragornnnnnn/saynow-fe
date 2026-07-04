@@ -20,13 +20,41 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.saynow.app",
-      "usesAppleSignIn": true
+      "buildNumber": "3",
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "사진을 첨부할 때 사진 보관함에 접근해요.",
+        "SKAdNetworkItems": [
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
+          },
+          {
+            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
+          }
+        ],
+        "NSSpeechRecognitionUsageDescription": "말한 내용을 텍스트로 바꾸기 위해 음성 인식을 사용해요.",
+        "NSMicrophoneUsageDescription": "음성으로 영어 회화를 연습하려면 마이크가 필요해요.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.saynow.app",
       "versionCode": 9,
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -77,7 +105,13 @@
       "expo-speech-recognition",
       "expo-splash-screen",
       "expo-status-bar",
-      "expo-audio"
+      "expo-audio",
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "더 잘 맞는 광고를 보여주기 위해 활동 정보를 활용해요."
+        }
+      ]
     ]
   }
 }

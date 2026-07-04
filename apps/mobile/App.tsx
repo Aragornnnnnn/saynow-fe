@@ -2,10 +2,11 @@
 const appJson = require('./app.json') as { expo: { version: string } };
 import { AppEventsLogger, Settings } from 'react-native-fbsdk-next';
 import * as Haptics from 'expo-haptics';
+import { requestTrackingPermissionsAsync } from 'expo-tracking-transparency';
 import * as Speech from 'expo-speech';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   BackHandler,
@@ -26,6 +27,7 @@ import { requestSocialIdToken } from './auth/socialLogin';
 import { usePostToWeb, useWebViewBridge } from './bridge/useWebViewBridge';
 import type { WebCommandHandlers } from './bridge/useWebViewBridge';
 import { useStt } from './hooks/useStt';
+import { readInstallAttribution, type InstallAttribution } from './attribution/installReferrer';
 
 SplashScreen.preventAutoHideAsync();
 Settings.initializeSDK();
@@ -38,6 +40,18 @@ export default function App() {
   const [hasError, setHasError] = useState(false);
   const [authScript, setAuthScript] = useState<string | null>(null);
   const postToWeb = usePostToWeb(webviewRef);
+  const attributionRef = useRef<InstallAttribution | null>(null);
+  const webLoadedRef = useRef(false);
+  const attributionSentRef = useRef(false);
+
+  // 리퍼러 읽기(비동기)와 웹 로드가 둘 다 끝났을 때 한 번만 전송한다.
+  const maybePostAttribution = useCallback(() => {
+    if (attributionSentRef.current) return;
+    if (!webLoadedRef.current || !attributionRef.current) return;
+    attributionSentRef.current = true;
+    postToWeb({ type: 'INSTALL_ATTRIBUTION', ...attributionRef.current });
+  }, [postToWeb]);
+
   const { prepare: prepareStt, start: startStt, stop: stopStt } = useStt({
     onPartial: (transcript) => postToWeb({ type: 'STT_PARTIAL', transcript }),
     onFinal: (transcript, engine) => postToWeb({ type: 'STT_FINAL', transcript, engine }),
@@ -62,6 +76,22 @@ export default function App() {
       }
     }
     bootstrap();
+  }, []);
+
+  useEffect(() => {
+    readInstallAttribution().then((attribution) => {
+      if (!attribution) return;
+      attributionRef.current = attribution;
+      maybePostAttribution();
+    });
+  }, [maybePostAttribution]);
+
+  // iOS 14.5+는 광고 추적 전에 ATT 동의를 받아야 한다. 동의 결과를 Meta SDK에 반영한다.
+  // (Android에서는 requestTrackingPermissionsAsync가 즉시 granted를 반환하는 no-op)
+  useEffect(() => {
+    requestTrackingPermissionsAsync()
+      .then(({ status }) => Settings.setAdvertiserTrackingEnabled(status === 'granted'))
+      .catch(() => {});
   }, []);
 
   const webCommandHandlers = useMemo<WebCommandHandlers>(() => ({
@@ -171,6 +201,8 @@ export default function App() {
             onLoadEnd={() => {
               SplashScreen.hideAsync();
               postToWeb({ type: 'APP_VERSION_INFO', platform: Platform.OS, buildNumber: '1', versionName: appJson.expo.version });
+              webLoadedRef.current = true;
+              maybePostAttribution();
             }}
             onMessage={handleMessage}
             onError={handleError}
