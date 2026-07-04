@@ -1,4 +1,4 @@
-export type SocialProvider = 'GOOGLE' | 'KAKAO';
+export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'APPLE';
 
 export interface AuthMember {
   userId: string;
