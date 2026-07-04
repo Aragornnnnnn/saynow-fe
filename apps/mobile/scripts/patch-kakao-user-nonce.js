@@ -146,6 +146,21 @@ const patches = [
     ],
   },
   {
+    // iOS: codegen이 패치된 spec에서 nonce 포함 셀렉터를 기대하므로 시그니처만 맞춘다.
+    // 백엔드가 nonce를 검증하지 않아 iOS는 받기만 하고 카카오 SDK에는 전달하지 않는다.
+    file: 'node_modules/@react-native-kakao/user/ios/RNCKakaoUser.mm',
+    replacements: [
+      [
+        `                          scopes resolve : (RCTPromiseResolveBlock)
+                              resolve reject : (RCTPromiseRejectBlock)reject) {
+  [[self manager] login:serviceTerms`,
+        `                          scopes nonce : (NSString*)nonce resolve : (RCTPromiseResolveBlock)
+                              resolve reject : (RCTPromiseRejectBlock)reject) {
+  [[self manager] login:serviceTerms`,
+      ],
+    ],
+  },
+  {
     file: 'node_modules/@react-native-kakao/user/android/src/oldarch/KakaoUserSpec.kt',
     replacements: [
       [

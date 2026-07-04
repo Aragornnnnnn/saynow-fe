@@ -1,0 +1,25 @@
+# EAS 업로드 제외 목록 — 이 파일이 있으면 EAS는 .gitignore 대신 이것만 적용함
+.git
+node_modules
+.next
+dist
+.expo
+.env
+.env.local
+.env*.local
+
+# 로컬 도구 상태 폴더 — .gstack은 권한 잠김이라 업로드 시 EPERM 유발
+.gstack
+.codex-logs
+.playwright-mcp
+.agents
+.claude
+.omc
+*.stackdump
+
+# 네이티브 산출물 — EAS가 prebuild로 새로 생성
+apps/mobile/android
+apps/mobile/ios
+
+# 빌드에 불필요한 대용량 문서 이미지
+docs/*.png
