@@ -8,7 +8,7 @@ export type WebToNativeMessage =
   | { type: 'OPEN_SETTINGS' }
   | { type: 'PLAY_TTS'; text: string; url: string | null }
   | { type: 'STOP_TTS' }
-  | { type: 'NATIVE_LOGIN'; provider: 'KAKAO' | 'GOOGLE' }
+  | { type: 'NATIVE_LOGIN'; provider: 'KAKAO' | 'GOOGLE' | 'APPLE' }
   | {
       type: 'AUTH_SESSION_UPDATED';
       accessToken: string;

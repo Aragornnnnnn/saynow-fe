@@ -1,3 +1,4 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { initializeKakaoSDK } from '@react-native-kakao/core';
@@ -37,7 +38,42 @@ export async function requestSocialIdToken(
       return requestGoogleIdToken(nonce);
     case 'KAKAO':
       return requestKakaoIdToken(nonce);
+    case 'APPLE':
+      return requestAppleIdToken(nonce);
   }
+}
+
+// Apple 네이티브 로그인 — OS가 시트를 띄우고 id_token을 발급하므로 별도 클라이언트 설정이 없다.
+// nonce는 요청에 넣은 값이 그대로 id_token의 nonce 클레임에 들어간다 (Google/Kakao와 동일하게 raw 전달).
+async function requestAppleIdToken(nonce: string): Promise<string> {
+  if (Platform.OS !== 'ios') {
+    throw new SocialLoginError('APPLE_LOGIN_UNSUPPORTED', 'Apple 로그인은 iOS에서만 쓸 수 있습니다.');
+  }
+
+  try {
+    const credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+      nonce,
+    });
+    return assertIdToken(credential.identityToken ?? undefined, 'APPLE_ID_TOKEN_MISSING');
+  } catch (error) {
+    if (isRequestCanceled(error)) {
+      throw new SocialLoginError('APPLE_LOGIN_CANCELLED', '소셜 로그인이 취소되었습니다.');
+    }
+    throw error;
+  }
+}
+
+function isRequestCanceled(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: string }).code === 'ERR_REQUEST_CANCELED'
+  );
 }
 
 function getRedirectUri() {
