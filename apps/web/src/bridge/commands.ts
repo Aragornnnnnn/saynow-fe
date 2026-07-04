@@ -5,7 +5,7 @@ export function openNativeSettings() {
   return webBridge.send({ type: 'OPEN_SETTINGS' });
 }
 
-export function requestNativeLogin(provider: 'KAKAO' | 'GOOGLE') {
+export function requestNativeLogin(provider: 'KAKAO' | 'GOOGLE' | 'APPLE') {
   return webBridge.send({ type: 'NATIVE_LOGIN', provider });
 }
 

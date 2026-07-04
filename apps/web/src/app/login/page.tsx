@@ -52,7 +52,7 @@ function LoginPageContent() {
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(() => searchParams.get('error'));
   const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
-  // 안드로이드 앱(웹뷰)은 네이티브 애플 로그인이 불가능하므로 버튼을 숨긴다
+  // 애플 로그인은 iOS 앱 전용 — 안드로이드 앱은 네이티브 애플 로그인 불가, 브라우저는 숨김
   const [showAppleLogin, setShowAppleLogin] = useState(false);
   const isPending = pendingProvider !== null;
   useBackButtonBridge(() => exitApp());
@@ -66,7 +66,7 @@ function LoginPageContent() {
     const saved = localStorage.getItem(LAST_LOGIN_KEY) as SocialProvider | null;
     if (saved === 'KAKAO' || saved === 'GOOGLE' || saved === 'APPLE') setLastProvider(saved);
 
-    setShowAppleLogin(!(webBridge.isAvailable() && /Android/i.test(navigator.userAgent)));
+    setShowAppleLogin(webBridge.isAvailable() && !/Android/i.test(navigator.userAgent));
 
     function resetCancelledLogin() {
       nonce.current = '';
