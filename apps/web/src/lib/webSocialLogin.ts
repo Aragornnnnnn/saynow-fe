@@ -12,6 +12,7 @@ type PendingSocialLogin = {
 export const SOCIAL_LOGIN_STORAGE_KEY = 'landit-social-login';
 
 const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+const APPLE_AUTH_URL = 'https://appleid.apple.com/auth/authorize';
 
 export async function startWebSocialLogin(provider: SocialProvider, nonce: string) {
   const state = generateRandomHex(16);
@@ -30,6 +31,11 @@ export async function startWebSocialLogin(provider: SocialProvider, nonce: strin
 
   if (provider === 'KAKAO') {
     await startKakaoSdkLogin(pending);
+    return;
+  }
+
+  if (provider === 'APPLE') {
+    window.location.assign(createAppleAuthorizationUrl(pending));
     return;
   }
 
@@ -128,12 +134,39 @@ function createGoogleAuthorizationUrl(
   return `${GOOGLE_AUTH_URL}?${params.toString()}`;
 }
 
+// Apple 웹 로그인 — code id_token 하이브리드 플로우로 authorize 응답에서 id_token을 바로 받는다
+// (토큰 교환 생략, .p8 client secret 불필요). name/email scope 요청 시 애플이 form_post를
+// 강제하므로 콜백은 /auth/apple 서버 라우트가 받는다. nonce는 raw로 전달 (백엔드 검증 일관성).
+function createAppleAuthorizationUrl(pending: PendingSocialLogin) {
+  const clientId = process.env.NEXT_PUBLIC_APPLE_SERVICES_ID;
+  if (!clientId) {
+    throw new Error('Apple Services ID가 설정되지 않았습니다.');
+  }
+
+  const params = new URLSearchParams({
+    response_type: 'code id_token',
+    response_mode: 'form_post',
+    client_id: clientId,
+    redirect_uri: pending.redirectUri,
+    scope: 'name email',
+    nonce: pending.nonce,
+    state: pending.state,
+  });
+
+  return `${APPLE_AUTH_URL}?${params.toString()}`;
+}
+
 function getRedirectUri(provider: SocialProvider) {
   const configured =
     provider === 'GOOGLE'
       ? process.env.NEXT_PUBLIC_GOOGLE_REDIRECT_URI
-      : process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI;
-  const currentOriginRedirectUri = `${window.location.origin}/auth/${provider.toLowerCase()}/callback`;
+      : provider === 'KAKAO'
+        ? process.env.NEXT_PUBLIC_KAKAO_REDIRECT_URI
+        : process.env.NEXT_PUBLIC_APPLE_REDIRECT_URI;
+  const currentOriginRedirectUri =
+    provider === 'APPLE'
+      ? `${window.location.origin}/auth/apple`
+      : `${window.location.origin}/auth/${provider.toLowerCase()}/callback`;
 
   if (!configured) return currentOriginRedirectUri;
 

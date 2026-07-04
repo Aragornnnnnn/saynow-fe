@@ -278,6 +278,7 @@ function getProviderLabel(provider?: string) {
   switch (provider) {
     case 'GOOGLE': return '구글';
     case 'KAKAO': return '카카오';
+    case 'APPLE': return '애플';
     default: return '-';
   }
 }

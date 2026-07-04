@@ -52,6 +52,8 @@ function LoginPageContent() {
   const [pendingProvider, setPendingProvider] = useState<SocialProvider | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(() => searchParams.get('error'));
   const [lastProvider, setLastProvider] = useState<SocialProvider | null>(null);
+  // 안드로이드 앱(웹뷰)은 네이티브 애플 로그인이 불가능하므로 버튼을 숨긴다
+  const [showAppleLogin, setShowAppleLogin] = useState(false);
   const isPending = pendingProvider !== null;
   useBackButtonBridge(() => exitApp());
   const typingText = useTypingLoop(HOOK_MESSAGES, haptic, hapticClear, !isPending);
@@ -62,7 +64,9 @@ function LoginPageContent() {
 
   useEffect(() => {
     const saved = localStorage.getItem(LAST_LOGIN_KEY) as SocialProvider | null;
-    if (saved === 'KAKAO' || saved === 'GOOGLE') setLastProvider(saved);
+    if (saved === 'KAKAO' || saved === 'GOOGLE' || saved === 'APPLE') setLastProvider(saved);
+
+    setShowAppleLogin(!(webBridge.isAvailable() && /Android/i.test(navigator.userAgent)));
 
     function resetCancelledLogin() {
       nonce.current = '';
@@ -151,6 +155,18 @@ function LoginPageContent() {
           className="bg-white text-foreground shadow-sm ring-1 ring-border"
           icon={<GoogleIcon />}
         />
+        {showAppleLogin && (
+          <LoginButton
+            onClick={() => startLogin('APPLE')}
+            disabled={isPending}
+            pending={pendingProvider === 'APPLE'}
+            pendingLabel="애플 로그인 중..."
+            label="애플로 로그인하기"
+            showBadge={lastProvider === 'APPLE'}
+            className="bg-black text-white shadow-sm"
+            icon={<AppleIcon />}
+          />
+        )}
         {errorMessage && (
           <div className="rounded-xl bg-zinc-100 px-4 py-3 text-center">
             <p className="text-sm text-muted-foreground leading-relaxed">{errorMessage}</p>
@@ -209,6 +225,18 @@ function KakaoIcon() {
         clipRule="evenodd"
         d="M11 2C6.029 2 2 5.186 2 9.125c0 2.537 1.664 4.764 4.18 6.054l-1.065 3.965a.298.298 0 0 0 .453.325l4.794-3.175A11.4 11.4 0 0 0 11 16.25c4.971 0 9-3.186 9-7.125S15.971 2 11 2Z"
         fill="#191919"
+      />
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.03 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09ZM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.56-1.702Z"
+        fill="#FFFFFF"
+        transform="translate(0 1) scale(0.92)"
       />
     </svg>
   );

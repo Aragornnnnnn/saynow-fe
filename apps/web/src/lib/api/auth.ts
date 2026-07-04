@@ -1,7 +1,7 @@
 import { request } from './client';
 import type { AuthMember } from '@/store/authStore';
 
-export type SocialProvider = 'GOOGLE' | 'KAKAO';
+export type SocialProvider = 'GOOGLE' | 'KAKAO' | 'APPLE';
 
 export interface AuthTokenResponse {
   tokenType: string;
