@@ -293,17 +293,20 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
 
   // 대화 페이지 진입 시 웹에서 호출 — endpointing 값을 받아 WS 미리 연결
   // 값은 연결 URL에 박히므로 반드시 선접속 전(여기)에서 정해져야 함
+  // iOS는 녹음이 켜지면 오디오 세션이 PlayAndRecord로 바뀌며 소리가 수화기로 빠진다.
+  // 스피커 출력 + 무음 스위치 무시로 세션을 잡아 TTS가 들리게 한다. (Android은 기본 동작 유지)
+  function ensureIosAudioMode() {
+    if (Platform.OS !== 'ios') return;
+    setAudioModeAsync({
+      playsInSilentMode: true,
+      allowsRecording: true,
+      shouldRouteThroughEarpiece: false,
+      interruptionMode: 'duckOthers',
+    }).catch(() => {});
+  }
+
   const prepare = useCallback((options: { endpointingMs?: number } = {}) => {
-    // iOS는 녹음이 켜지면 오디오 세션이 PlayAndRecord로 바뀌며 소리가 수화기로 빠진다.
-    // 대화 진입 시 스피커 출력 + 무음 스위치 무시로 세션을 잡아 TTS가 들리게 한다. (Android은 기본 동작 유지)
-    if (Platform.OS === 'ios') {
-      setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: true,
-        shouldRouteThroughEarpiece: false,
-        interruptionMode: 'duckOthers',
-      }).catch(() => {});
-    }
+    ensureIosAudioMode();
     endpointingMsRef.current = clampEndpointingMs(options.endpointingMs);
     log('prepare() — Deepgram 미리 연결', { endpointingMs: endpointingMsRef.current });
     connectDeepgram();
@@ -320,6 +323,8 @@ export function useStt({ onPartial, onFinal, onDenied, onError }: UseSttOptions)
       log('이미 녹음 중 — 무시');
       return;
     }
+    // 온보딩처럼 prepare 없이 start만 호출하는 경로도 세션 설정을 타도록 보강
+    ensureIosAudioMode();
     isRecordingRef.current = true;
 
     // 마이크 권한 확인
