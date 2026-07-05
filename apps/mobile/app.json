@@ -31,12 +31,6 @@
           },
           {
             "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "v9wttpbfk9.skadnetwork"
-          },
-          {
-            "SKAdNetworkIdentifier": "n38lu8286q.skadnetwork"
           }
         ],
         "NSSpeechRecognitionUsageDescription": "말한 내용을 텍스트로 바꾸기 위해 음성 인식을 사용해요.",
