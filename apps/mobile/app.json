@@ -21,7 +21,8 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.saynow.app",
-      "buildNumber": "5",
+      "version": "1.0.3",
+      "buildNumber": "6",
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "사진을 첨부할 때 사진 보관함에 접근해요.",
@@ -40,6 +41,7 @@
     },
     "android": {
       "package": "com.saynow.app",
+      "versionName": "1.0.3",
       "versionCode": 9,
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
