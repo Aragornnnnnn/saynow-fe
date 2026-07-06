@@ -110,12 +110,13 @@ function reversedClientId(clientId: string): string {
 }
 
 // iOS Google OAuth는 reversed client ID 스킴만 redirect로 허용한다(커스텀 스킴/웹 URL 불가).
+// scheme+path로 만들면 "scheme://path"(슬래시 2개, authority 형태)가 되는데 구글은 커스텀 스킴에
+// authority를 허용하지 않아 invalid_request로 막는다. native로 "scheme:/path"(슬래시 1개)를 그대로 넘긴다.
 // Android는 기존 landit 커스텀 스킴을 그대로 쓴다.
 function getGoogleRedirectUri(clientId: string): string {
   if (Platform.OS === 'ios') {
     return AuthSession.makeRedirectUri({
-      scheme: reversedClientId(clientId),
-      path: REDIRECT_PATH,
+      native: `${reversedClientId(clientId)}:/${REDIRECT_PATH}`,
     });
   }
   return getRedirectUri();
